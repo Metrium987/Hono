@@ -419,8 +419,47 @@
   "products_page": {
     "title": "Produits",
     "no_products": "Aucun produit trouvé",
+    "subtitle": "{count} produit(s) au total",
+    "new": "Nouveau produit",
     "filter_suggestion": "Essayez de modifier vos filtres ou effectuez une nouvelle recherche.",
-    "search_placeholder": "Rechercher..."
+    "search_placeholder": "Rechercher...",
+    "th_name": "Nom",
+    "th_price": "Prix",
+    "th_stock": "Stock",
+    "th_category": "Catégorie",
+    "th_status": "Statut"
+  },
+  "product_detail": {
+    "back": "Retour aux produits",
+    "price_ht": "Prix HT",
+    "price_ttc": "Prix TTC",
+    "track_stock": "Suivi de stock",
+    "current_stock": "Stock actuel",
+    "category": "Catégorie",
+    "images_title": "Images"
+  },
+  "customers_page": {
+    "title": "Clients",
+    "subtitle": "{count} client(s) au total",
+    "new": "Nouveau client",
+    "no_customers": "Aucun client trouvé",
+    "th_company": "Société",
+    "th_contact": "Contact",
+    "th_email": "Email",
+    "th_phone": "Téléphone",
+    "th_tahiti": "N° Tahiti",
+    "th_portal": "Portail"
+  },
+  "customer_detail": {
+    "back": "Retour aux clients",
+    "contact": "Contact",
+    "company": "Société",
+    "email": "Email",
+    "phone": "Téléphone",
+    "tahiti": "N° Tahiti",
+    "portal_enabled": "Accès portail",
+    "invoices_title": "Factures",
+    "quotes_title": "Devis"
   },
   "storefront": {
     "home": "Accueil",
