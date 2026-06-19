@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { CreditCard, Key, Building2 } from "lucide-react";
+import { CreditCard, Key, Building2, Percent, Coins } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function SettingsPage() {
@@ -62,17 +62,47 @@ export default async function SettingsPage() {
           </Link>
         )}
 
-        <Card className="opacity-60 cursor-not-allowed">
-          <CardHeader className="flex flex-row items-center gap-3 pb-2">
-            <Building2 className="h-5 w-5 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">{t("team_coming_soon")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              {t("team_desc")}
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="./settings/company">
+          <Card className="hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
+            <CardHeader className="flex flex-row items-center gap-3 pb-2">
+              <Building2 className="h-5 w-5 text-primary" />
+              <CardTitle className="text-sm font-medium">Mon entreprise</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Gérez les informations de votre entreprise
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="./settings/tax-rates">
+          <Card className="hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
+            <CardHeader className="flex flex-row items-center gap-3 pb-2">
+              <Percent className="h-5 w-5 text-primary" />
+              <CardTitle className="text-sm font-medium">{t("tax_rates_title")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                {t("tax_rates_desc")}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="./settings/currencies">
+          <Card className="hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
+            <CardHeader className="flex flex-row items-center gap-3 pb-2">
+              <Coins className="h-5 w-5 text-primary" />
+              <CardTitle className="text-sm font-medium">{t("currencies_title")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                {t("currencies_desc")}
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );
