@@ -2,8 +2,9 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -11,6 +12,7 @@ type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 export default async function VendorsPage(props: { searchParams: SearchParams }) {
   const sp = await props.searchParams;
   const page = Math.max(1, parseInt(typeof sp.page === "string" ? sp.page : "1"));
+  const search = typeof sp.search === "string" ? sp.search.trim() : "";
   const limit = 20;
   const offset = (page - 1) * limit;
 
@@ -32,12 +34,11 @@ export default async function VendorsPage(props: { searchParams: SearchParams })
   const teamId = memberships?.[0]?.team_id;
   if (!teamId) return <div>{common("no_team")}</div>;
 
-  const { data, count } = await supabase
-    .from("vendors")
-    .select("*", { count: "exact" })
-    .eq("team_id", teamId)
-    .order("name", { ascending: true })
-    .range(offset, offset + limit - 1);
+  let query = supabase.from("vendors").select("*", { count: "exact" }).eq("team_id", teamId);
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,contact_name.ilike.%${search}%,email.ilike.%${search}%`);
+  }
+  const { data, count } = await query.order("name", { ascending: true }).range(offset, offset + limit - 1);
 
   const vendors = data ?? [];
   const totalPages = Math.ceil((count ?? 0) / limit);
@@ -55,6 +56,18 @@ export default async function VendorsPage(props: { searchParams: SearchParams })
           </Link>
         </Button>
       </div>
+
+      <form method="GET" className="flex gap-2">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input name="search" defaultValue={search} placeholder="Rechercher un fournisseur..." className="pl-9" />
+        </div>
+        {search && (
+          <Button variant="ghost" size="sm" asChild>
+            <Link href=".">Effacer</Link>
+          </Button>
+        )}
+      </form>
 
       <Card>
         <CardContent className="p-0">
