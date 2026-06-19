@@ -1,0 +1,112 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { ShoppingCart, User, Menu, X } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { useCart } from "@/lib/cart/cart-context";
+
+export function StorefrontHeader() {
+  const t = useTranslations("storefront");
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  const navLinks = [
+    { label: t("home"), href: "/" },
+    { label: t("catalog"), href: "/products" },
+    { label: t("contact"), href: "/contact" },
+  ];
+  const locale = pathname.match(/^\/([a-z]{2})\//)?.[1] ?? "fr";
+  const { totalItems } = useCart();
+
+  return (
+    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* Logo */}
+        <Link href={`/${locale}`} className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
+            H
+          </div>
+          <span className="text-lg font-bold">Hono</span>
+        </Link>
+
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex items-center gap-6">
+          {navLinks.map((link) => {
+            const href = `/${locale}${link.href}`;
+            const isActive = pathname === href || (link.href !== "/" && pathname.startsWith(href));
+            return (
+              <Link
+                key={link.href}
+                href={href}
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary",
+                  isActive ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          <Link href={`/${locale}/portal/auth`}>
+            <Button variant="ghost" size="icon" className="hidden md:flex">
+              <User className="h-5 w-5" />
+            </Button>
+          </Link>
+          <Link href={`/${locale}/cart`}>
+            <Button variant="ghost" size="icon" className="relative">
+              <ShoppingCart className="h-5 w-5" />
+              {totalItems > 0 && (
+                <Badge className="absolute -top-1.5 -right-1.5 h-5 w-5 flex items-center justify-center p-0 text-[10px] font-bold">
+                  {totalItems > 99 ? "99+" : totalItems}
+                </Badge>
+              )}
+            </Button>
+          </Link>
+          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+        </div>
+      </div>
+
+      {/* Mobile Nav */}
+      {mobileOpen && (
+        <div className="border-t md:hidden">
+          <nav className="flex flex-col gap-2 p-4">
+            {navLinks.map((link) => {
+              const href = `/${locale}${link.href}`;
+              const isActive = pathname === href;
+              return (
+                <Link
+                  key={link.href}
+                  href={href}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+            <Link href={`/${locale}/portal/auth`} onClick={() => setMobileOpen(false)}>
+              <Button variant="outline" className="w-full mt-2">
+                <User className="mr-2 h-4 w-4" />
+                {t("client_portal")}
+              </Button>
+            </Link>
+          </nav>
+        </div>
+      )}
+    </header>
+  );
+}

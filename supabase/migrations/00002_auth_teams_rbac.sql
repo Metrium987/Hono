@@ -91,11 +91,8 @@ CREATE POLICY "Team members can view their teams"
   ON public.teams FOR SELECT
   USING (id IN (SELECT public.get_teams_for_authenticated_user()));
 
--- Team owners can update their teams
-CREATE POLICY "Team owners can update their teams"
-  ON public.teams FOR UPDATE
-  USING (EXISTS (SELECT 1 FROM public.team_members
-    WHERE team_id = teams.id AND user_id = (SELECT auth.uid()) AND is_owner = TRUE));
+-- NOTE: Team UPDATE policy referencing team_members is added
+-- after team_members table is created (see bottom of this migration).
 
 -- ============================================================
 -- Team Roles (granular JSONB permissions)
@@ -123,10 +120,8 @@ CREATE POLICY "Team members can view roles"
   ON public.team_roles FOR SELECT
   USING (team_id IN (SELECT public.get_teams_for_authenticated_user()));
 
-CREATE POLICY "Team owners can manage roles"
-  ON public.team_roles FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.team_members
-    WHERE team_id = team_roles.team_id AND user_id = (SELECT auth.uid()) AND is_owner = TRUE));
+-- NOTE: Team roles ALL policy referencing team_members is added
+-- after team_members table is created (see bottom of this migration).
 
 -- ============================================================
 -- Team Members (M2M between users and teams)
@@ -151,8 +146,7 @@ CREATE POLICY "Team members can view members"
 
 CREATE POLICY "Team owners can manage members"
   ON public.team_members FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.team_members tm
-    WHERE tm.team_id = team_members.team_id AND tm.user_id = (SELECT auth.uid()) AND tm.is_owner = TRUE));
+  USING (public.is_team_owner(team_id));
 
 -- ============================================================
 -- Company Invitations (team onboarding via email)
@@ -204,10 +198,8 @@ CREATE POLICY "Team members can view API keys"
   ON public.api_keys FOR SELECT
   USING (team_id IN (SELECT public.get_teams_for_authenticated_user()));
 
-CREATE POLICY "Team owners can manage API keys"
-  ON public.api_keys FOR ALL
-  USING (EXISTS (SELECT 1 FROM public.team_members
-    WHERE team_id = api_keys.team_id AND user_id = (SELECT auth.uid()) AND is_owner = TRUE));
+-- NOTE: API keys ALL policy referencing team_members is added
+-- after team_members table is created (see bottom of this migration).
 
 -- NOTE: portal_users and portal_login_tokens are created in the CRM
 -- module migration (00004) alongside the customers table they reference.
@@ -254,3 +246,22 @@ GRANT EXECUTE ON FUNCTION public.custom_access_token_hook TO supabase_auth_admin
 GRANT SELECT ON public.team_members TO supabase_auth_admin;
 GRANT SELECT ON public.team_roles TO supabase_auth_admin;
 GRANT SELECT ON public.users TO supabase_auth_admin;
+
+-- ============================================================
+-- Deferred RLS Policies (require team_members to exist first)
+-- ============================================================
+
+-- Team owners can update their teams (uses is_team_owner SECURITY DEFINER helper to avoid RLS recursion)
+CREATE POLICY "Team owners can update their teams"
+  ON public.teams FOR UPDATE
+  USING (public.is_team_owner(id));
+
+-- Team owners can manage roles (uses is_team_owner SECURITY DEFINER helper to avoid RLS recursion)
+CREATE POLICY "Team owners can manage roles"
+  ON public.team_roles FOR ALL
+  USING (public.is_team_owner(team_id));
+
+-- Team owners can manage API keys (uses is_team_owner SECURITY DEFINER helper to avoid RLS recursion)
+CREATE POLICY "Team owners can manage API keys"
+  ON public.api_keys FOR ALL
+  USING (public.is_team_owner(team_id));

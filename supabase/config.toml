@@ -1,32 +1,23 @@
-[project]
-name = "hono"
-plan = "free"
+# Hono ERP — Supabase Project Configuration
+# Refer to https://supabase.com/docs/reference/cli/config for configuration options
+
+project_id = "ttjpaggocubxsgekxtzu"
 
 [auth]
 enabled = true
-# Use email/password for ERP users, magic link for portal users
-smtp = "resend"
 
 [auth.email]
 enable_signup = true
-enable_confirmations = true
-# Magic link for portal users — no password required
+double_confirm_changes = true
 enable_autoconfirm = false
-
-[auth.hook]
-# JWT hook to inject custom claims from team_roles
-hook_url = "pg-functions://public/custom_access_token_hook"
 
 [api]
 enabled = true
 port = 54321
 schemas = ["public", "storage", "graphql_public"]
-# Only expose public schema to the Data API
-extra_search_path = ["public"]
 
 [db]
 port = 54322
-# Local development
 major_version = 15
 
 [analytics]
@@ -34,5 +25,4 @@ enabled = false
 
 [storage]
 enabled = true
-# File size limit: 10MB
 file_size_limit = "10MB"

@@ -1,0 +1,212 @@
+import { NextRequest, NextResponse } from "next/server";
+import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+
+// GET /api/v1/invoices — List invoices for a team
+export async function GET(request: NextRequest) {
+  return withAuth(request, async (auth, teamId, params) => {
+    requirePermission(auth, "invoices", "read");
+    const page = Math.max(1, parseInt(params.get("page") ?? "1"));
+    const limit = Math.min(100, Math.max(1, parseInt(params.get("limit") ?? "50")));
+    const offset = (page - 1) * limit;
+    const status = params.get("status");
+    const customerId = params.get("customer_id");
+    const search = params.get("search");
+
+    let query = auth.supabase
+      .from("invoices")
+      .select(`
+        *,
+        customer:customer_id(id, company_name, contact_name, n_tahiti),
+        currency:currency_id(code, symbol, symbol_position)
+      `, { count: "exact" })
+      .eq("team_id", teamId)
+      .is("deleted_at", null);
+
+    if (status) query = query.eq("status", status);
+    if (customerId) query = query.eq("customer_id", customerId);
+    if (search) {
+      query = query.or(
+        `invoice_number.ilike.%${search}%,notes.ilike.%${search}%`
+      );
+    }
+
+    query = query
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      data,
+      pagination: { page, limit, total: count ?? 0, pages: Math.ceil((count ?? 0) / limit) },
+    });
+  });
+}
+
+// POST /api/v1/invoices — Create an invoice with items
+export async function POST(request: NextRequest) {
+  return withAuth(request, async (auth, teamId) => {
+    requirePermission(auth, "invoices", "write");
+    const body = await request.json();
+    const {
+      customer_id, issue_date, service_date, due_date,
+      currency_id, late_fee_fixed, legal_vat_mention, legal_mentions,
+      discount_type, discount_value,
+      notes, message, items,
+    } = body;
+
+    if (!customer_id || !due_date || !currency_id) {
+      return NextResponse.json({
+        error: "customer_id, due_date, and currency_id are required",
+      }, { status: 400 });
+    }
+
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({
+        error: "At least one invoice item is required",
+      }, { status: 400 });
+    }
+
+    // Calculate totals with discount applied proportionally
+    // For PF compliance: discount is distributed proportionally across line items
+    let subtotal_ht = 0;
+    let tax_amount = 0;
+    const itemLineTotals: { lineTotal: number; taxRateId: string | null; taxRateValue: number }[] = [];
+
+    // Fetch tax rates in batch
+    const taxRateIds = [...new Set(items.filter((i: Record<string, unknown>) => i.tax_rate_id).map((i: Record<string, unknown>) => i.tax_rate_id))];
+    const taxRateMap = new Map<string, number>();
+    if (taxRateIds.length > 0) {
+      const { data: rates } = await auth.supabase
+        .from("tax_rates")
+        .select("id, rate")
+        .in("id", taxRateIds);
+      if (rates) {
+        for (const r of rates) {
+          taxRateMap.set(r.id, r.rate);
+        }
+      }
+    }
+
+    for (const item of items) {
+      const qty = parseFloat(item.quantity) || 1;
+      const unitPrice = parseFloat(item.unit_price_ht) || 0;
+      const lineTotal = qty * unitPrice;
+      subtotal_ht += lineTotal;
+      itemLineTotals.push({
+        lineTotal,
+        taxRateId: item.tax_rate_id ?? null,
+        taxRateValue: item.tax_rate_id ? (taxRateMap.get(item.tax_rate_id) ?? 0) : 0,
+      });
+    }
+
+    // Apply discount proportionally
+    let discountAmount = 0;
+    if (discount_type === "percentage" && discount_value) {
+      discountAmount = subtotal_ht * (parseFloat(discount_value) / 100);
+    } else if (discount_type === "fixed" && discount_value) {
+      discountAmount = parseFloat(discount_value);
+    }
+
+    const discountRatio = subtotal_ht > 0 ? (subtotal_ht - discountAmount) / subtotal_ht : 1;
+
+    // Calculate tax on discounted line totals
+    for (const lt of itemLineTotals) {
+      const discountedLineTotal = lt.lineTotal * discountRatio;
+      if (lt.taxRateId && lt.taxRateValue > 0) {
+        tax_amount += discountedLineTotal * (lt.taxRateValue / 100);
+      }
+    }
+
+    const total_ttc = (subtotal_ht - discountAmount) + tax_amount;
+
+    // Generate invoice number
+    const { data: numData, error: numError } = await auth.supabase
+      .rpc("generate_next_invoice_number", { p_team_id: teamId });
+
+    if (numError || !numData) {
+      return NextResponse.json({ error: "Failed to generate invoice number" }, { status: 500 });
+    }
+
+    const invoiceNumber = Array.isArray(numData) ? numData[0] : numData;
+
+    // Create invoice
+    const { data: invoice, error: invError } = await auth.supabase
+      .from("invoices")
+      .insert({
+        team_id: teamId,
+        customer_id,
+        invoice_number: invoiceNumber,
+        status: "draft",
+        issue_date: issue_date ?? new Date().toISOString().split("T")[0],
+        service_date: service_date ?? null,
+        due_date,
+        subtotal_ht: Math.round(subtotal_ht * 100) / 100,
+        tax_amount: Math.round(tax_amount * 100) / 100,
+        total_ttc: Math.round(total_ttc * 100) / 100,
+        currency_id,
+        late_fee_fixed: late_fee_fixed ?? null,
+        legal_vat_mention: legal_vat_mention ?? null,
+        legal_mentions: legal_mentions ?? null,
+        discount_type: discount_type ?? null,
+        discount_value: discount_value ? parseFloat(discount_value) : null,
+        discount_amount: Math.round(discountAmount * 100) / 100,
+        notes: notes ?? null,
+        message: message ?? null,
+        created_by: auth.userId,
+      })
+      .select()
+      .single();
+
+    if (invError) {
+      return NextResponse.json({ error: invError.message }, { status: 400 });
+    }
+
+    // Create invoice items
+    const itemRows = items.map((item: Record<string, unknown>, idx: number) => {
+      const qty = parseFloat(item.quantity as string) || 1;
+      const unitPrice = parseFloat(item.unit_price_ht as string) || 0;
+      const lineTotal = qty * unitPrice;
+      return {
+        invoice_id: invoice.id,
+        product_id: item.product_id ?? null,
+        group_id: item.group_id ?? null,
+        description: item.description ?? "",
+        quantity: qty,
+        unit_price_ht: Math.round(unitPrice * 100) / 100,
+        tax_rate_id: item.tax_rate_id ?? null,
+        line_total_ht: Math.round(lineTotal * 100) / 100,
+        sort_order: item.sort_order ?? idx,
+      };
+    });
+
+    const { error: itemsError } = await auth.supabase
+      .from("invoice_items")
+      .insert(itemRows);
+
+    if (itemsError) {
+      // Rollback invoice if items fail
+      await auth.supabase.from("invoices").delete().eq("id", invoice.id);
+      return NextResponse.json({ error: itemsError.message }, { status: 400 });
+    }
+
+    // Record invoice event
+    await auth.supabase.from("invoice_events").insert({
+      invoice_id: invoice.id,
+      event_type: "created",
+      payload: { items_count: items.length, total_ttc },
+      created_by: auth.userId,
+    });
+
+    return NextResponse.json({
+      data: {
+        ...invoice,
+        items: itemRows,
+      },
+    }, { status: 201 });
+  });
+}

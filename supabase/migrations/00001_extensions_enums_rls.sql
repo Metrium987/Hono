@@ -74,22 +74,42 @@ CREATE TYPE inventory_movement_type AS ENUM (
 -- ============================================================
 
 -- Returns team IDs for the authenticated user
+-- Uses plpgsql so table references are not validated at function creation time
 CREATE OR REPLACE FUNCTION public.get_teams_for_authenticated_user()
-RETURNS SETOF UUID LANGUAGE SQL STABLE AS $$
-  SELECT team_id FROM public.team_members
-  WHERE user_id = (SELECT auth.uid());
+RETURNS SETOF UUID LANGUAGE plpgsql STABLE SECURITY DEFINER AS $$
+BEGIN
+  RETURN QUERY SELECT team_id FROM public.team_members
+    WHERE user_id = (SELECT auth.uid());
+END;
 $$;
 
--- Check granular permission on a module
+-- Check granular permission on a module (SECURITY DEFINER to avoid RLS recursion)
 CREATE OR REPLACE FUNCTION public.check_permission(
   p_user_id UUID, p_team_id UUID, p_module TEXT, p_action TEXT
-) RETURNS BOOLEAN LANGUAGE SQL STABLE AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.team_members tm
-    LEFT JOIN public.team_roles tr ON tm.role_id = tr.id
-    WHERE tm.user_id = p_user_id AND tm.team_id = p_team_id
-      AND (tm.is_owner = TRUE OR (tr.permissions->p_module ? p_action))
+) RETURNS BOOLEAN LANGUAGE plpgsql STABLE SECURITY DEFINER AS $$
+BEGIN
+  RETURN (
+    SELECT EXISTS (
+      SELECT 1 FROM public.team_members tm
+      LEFT JOIN public.team_roles tr ON tm.role_id = tr.id
+      WHERE tm.user_id = p_user_id AND tm.team_id = p_team_id
+        AND (tm.is_owner = TRUE OR (tr.permissions->p_module ? p_action))
+    )
   );
+END;
+$$;
+
+-- Check if the current user is an owner of a team (SECURITY DEFINER to avoid RLS recursion)
+CREATE OR REPLACE FUNCTION public.is_team_owner(p_team_id UUID)
+RETURNS BOOLEAN LANGUAGE plpgsql STABLE SECURITY DEFINER AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.team_members
+    WHERE team_id = p_team_id
+      AND user_id = (SELECT auth.uid())
+      AND is_owner = TRUE
+  );
+END;
 $$;
 
 -- ============================================================

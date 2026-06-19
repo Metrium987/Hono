@@ -3,7 +3,7 @@
 @theme {
   --color-background: oklch(0.145 0 0);
   --color-foreground: oklch(0.985 0 0);
-  --color-primary: oklch(0.585 0.233 277.117);
+  --color-primary: oklch(0.546 0.245 262.881);
   --color-primary-foreground: oklch(0.985 0 0);
   --color-card: oklch(0.205 0.042 265.755);
   --color-card-foreground: oklch(0.985 0 0);
@@ -19,12 +19,16 @@
   --color-destructive-foreground: oklch(0.985 0 0);
   --color-border: oklch(0.269 0.021 257.438);
   --color-input: oklch(0.269 0.021 257.438);
-  --color-ring: oklch(0.585 0.233 277.117);
+  --color-ring: oklch(0.546 0.245 262.881);
   --radius: 0.625rem;
 }
 
 body {
   background: var(--color-background);
   color: var(--color-foreground);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+}
+
+code, pre, kbd, samp {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
 }

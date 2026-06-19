@@ -12,10 +12,12 @@ export type PermissionModule =
   | "invoices"
   | "orders"
   | "expenses"
+  | "income"
   | "reports"
   | "currencies"
   | "taxes"
-  | "payments";
+  | "payments"
+  | "settings";
 
 /**
  * Actions that can be checked against a module.

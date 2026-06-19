@@ -1,0 +1,105 @@
+import { cookies } from "next/headers";
+import { createClient } from "@/utils/supabase/server";
+import { getTranslations } from "next-intl/server";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
+type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+export default async function VendorsPage(props: { searchParams: SearchParams }) {
+  const sp = await props.searchParams;
+  const page = Math.max(1, parseInt(typeof sp.page === "string" ? sp.page : "1"));
+  const limit = 20;
+  const offset = (page - 1) * limit;
+
+  const cookieStore = await cookies();
+  const supabase = createClient(cookieStore);
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const t = await getTranslations("vendors_page");
+  const common = await getTranslations("common");
+
+  if (!user) return <div>{common("not_connected")}</div>;
+
+  const { data: memberships } = await supabase
+    .from("team_members")
+    .select("team_id")
+    .eq("user_id", user.id)
+    .limit(1);
+
+  const teamId = memberships?.[0]?.team_id;
+  if (!teamId) return <div>{common("no_team")}</div>;
+
+  const { data, count } = await supabase
+    .from("vendors")
+    .select("*", { count: "exact" })
+    .eq("team_id", teamId)
+    .order("name", { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  const vendors = data ?? [];
+  const totalPages = Math.ceil((count ?? 0) / limit);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle", { count: count ?? 0 })}</p>
+        </div>
+        <Button asChild>
+          <Link href="./vendors/new">
+            <Plus className="mr-2 h-4 w-4" /> {t("new_vendor")}
+          </Link>
+        </Button>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-muted-foreground">
+                <th className="text-left p-3 font-medium">{t("th_name")}</th>
+                <th className="text-left p-3 font-medium">{t("th_contact")}</th>
+                <th className="text-left p-3 font-medium">{t("th_email")}</th>
+                <th className="text-left p-3 font-medium">{t("th_phone")}</th>
+                <th className="text-right p-3 font-medium">{t("th_n_tahiti")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {vendors.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="text-center p-8 text-muted-foreground">
+                    {t("no_vendors")}
+                  </td>
+                </tr>
+              ) : (
+                vendors.map((v) => (
+                  <tr key={v.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
+                    <td className="p-3 font-medium">{v.name}</td>
+                    <td className="p-3 text-muted-foreground">{v.contact_name || "—"}</td>
+                    <td className="p-3 text-muted-foreground">{v.email || "—"}</td>
+                    <td className="p-3 text-muted-foreground">{v.phone || "—"}</td>
+                    <td className="p-3 text-right text-muted-foreground">{v.n_tahiti || "—"}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
+      {totalPages > 1 && (
+        <div className="flex justify-center gap-2">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <Link key={p} href={`?page=${p}`}>
+              <Button variant={page === p ? "default" : "outline"} size="sm">{p}</Button>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}

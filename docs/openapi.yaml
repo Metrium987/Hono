@@ -1,0 +1,948 @@
+openapi: "3.0.3"
+info:
+  title: Hono API
+  description: API for Hono — ERP & Storefront management for French Polynesia
+  version: "1.0.0"
+  contact:
+    email: contact@hono.pf
+
+servers:
+  - url: https://hono.pf/api/v1
+    description: Production
+  - url: http://localhost:3000/api/v1
+    description: Development
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: API key (hk_ prefix). Pass as `Authorization: Bearer hk_...`
+    SessionCookie:
+      type: apiKey
+      in: cookie
+      name: sb-...-auth-token
+      description: Supabase session cookie (browser)
+
+  parameters:
+    TeamId:
+      name: team_id
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Team UUID (required for all authenticated endpoints)
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 50
+        maximum: 100
+
+paths:
+  # ── Products ──
+  /products:
+    get:
+      summary: List products
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: category_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: type
+          in: query
+          schema: { type: string, enum: ["product", "service"] }
+        - name: low_stock
+          in: query
+          schema: { type: boolean }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Paginated product list
+    post:
+      summary: Create product
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "201":
+          description: Product created
+
+  /products/{id}:
+    get:
+      summary: Get product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Product detail
+    patch:
+      summary: Update product
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    delete:
+      summary: Delete product
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+
+  # ── Customers ──
+  /customers:
+    get:
+      summary: List customers
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: is_b2b
+          in: query
+          schema: { type: boolean }
+        - name: portal_enabled
+          in: query
+          schema: { type: boolean }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Paginated customer list
+    post:
+      summary: Create customer
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+
+  /customers/{id}:
+    get:
+      summary: Get customer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    patch:
+      summary: Update customer
+    delete:
+      summary: Delete customer
+
+  # ── Categories ──
+  /categories:
+    get:
+      summary: List product categories
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: locale
+          in: query
+          schema: { type: string, default: "fr" }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    post:
+      summary: Create category
+
+  /categories/{id}:
+    get:
+      summary: Get category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    patch:
+      summary: Update category
+    delete:
+      summary: Delete category
+
+  # ── Currencies (Phase 7) ──
+  /currencies:
+    get:
+      summary: List currencies for a team (reference data)
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Array of currencies with code, symbol
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        code: { type: string }
+                        symbol: { type: string }
+                        is_default: { type: boolean }
+
+  # ── Invoices ──
+  /invoices:
+    get:
+      summary: List invoices
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, sent, viewed, partial, paid, overdue, cancelled, refunded]
+        - name: customer_id
+          in: query
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Paginated invoice list
+    post:
+      summary: Create invoice with items
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+
+  /invoices/{id}:
+    get:
+      summary: Get invoice with items, payments, events
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    patch:
+      summary: Update invoice (draft only)
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    delete:
+      summary: Soft-delete invoice
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+
+  /invoices/{id}/pdf:
+    get:
+      summary: Download invoice PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /invoices/{id}/send:
+    post:
+      summary: Send invoice via email (Resend)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+
+  /invoices/{id}/payments:
+    get:
+      summary: List invoice payments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/TeamId"
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    post:
+      summary: Record a payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/TeamId"
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, currency_id, payment_method_id]
+              properties:
+                amount: { type: number }
+                currency_id: { type: string, format: uuid }
+                payment_method_id: { type: string, format: uuid }
+                reference: { type: string }
+                payment_date: { type: string, format: date }
+                notes: { type: string }
+
+  # ── Quotes ──
+  /quotes:
+    get:
+      summary: List quotes
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, sent, viewed, accepted, rejected, expired, converted]
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    post:
+      summary: Create quote with items
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+
+  /quotes/{id}:
+    get:
+      summary: Get quote with items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    patch:
+      summary: Update quote
+    delete:
+      summary: Delete quote
+
+  /quotes/{id}/pdf:
+    get:
+      summary: Download quote PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+
+  /quotes/{id}/convert:
+    post:
+      summary: Convert quote to invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+
+  # ── Credit Notes ──
+  /credit-notes:
+    get:
+      summary: List credit notes
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    post:
+      summary: Create credit note
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+
+  /credit-notes/{id}:
+    get:
+      summary: Get credit note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    patch:
+      summary: Update credit note
+    delete:
+      summary: Delete credit note
+
+  /credit-notes/{id}/pdf:
+    get:
+      summary: Download credit note PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: PDF file
+
+  # ── Orders ──
+  /orders:
+    get:
+      summary: List orders
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    post:
+      summary: Create order
+
+  /orders/{id}:
+    get:
+      summary: Get order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    patch:
+      summary: Update order status
+    delete:
+      summary: Delete order
+
+  # ── Expense Categories (Phase 7) ──
+  /expense-categories:
+    get:
+      summary: List expense categories
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Array of expense categories
+    post:
+      summary: Create expense category
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+    delete:
+      summary: Delete expense category
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+
+  # ── Income Categories (Phase 7) ──
+  /income-categories:
+    get:
+      summary: List income categories
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Array of income categories
+    post:
+      summary: Create income category
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+    delete:
+      summary: Delete income category
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+
+  # ── Vendors (Phase 7) ──
+  /vendors:
+    get:
+      summary: List vendors
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: search
+          in: query
+          schema: { type: string }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Paginated vendor list
+    post:
+      summary: Create vendor
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                contact_name: { type: string }
+                email: { type: string, format: email }
+                phone: { type: string }
+                address: { type: string }
+                n_tahiti: { type: string }
+                notes: { type: string }
+
+  /vendors/{id}:
+    get:
+      summary: Get vendor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    patch:
+      summary: Update vendor
+    delete:
+      summary: Delete vendor
+
+  # ── Expenses (Phase 7) ──
+  /expenses:
+    get:
+      summary: List expenses
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: category_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: vendor_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: date_from
+          in: query
+          schema: { type: string, format: date }
+        - name: date_to
+          in: query
+          schema: { type: string, format: date }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Paginated expense list with category, vendor, currency joins
+    post:
+      summary: Create expense
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [description, amount, currency_id, expense_date]
+              properties:
+                description: { type: string }
+                amount: { type: number }
+                currency_id: { type: string, format: uuid }
+                expense_date: { type: string, format: date }
+                category_id: { type: string, format: uuid }
+                vendor_id: { type: string, format: uuid }
+                vendor_name: { type: string }
+                receipt_url: { type: string }
+                notes: { type: string }
+
+  /expenses/{id}:
+    get:
+      summary: Get expense
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    patch:
+      summary: Update expense
+    delete:
+      summary: Delete expense
+
+  # ── Income (Phase 7) ──
+  /income:
+    get:
+      summary: List non-invoice income
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - name: category_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: date_from
+          in: query
+          schema: { type: string, format: date }
+        - name: date_to
+          in: query
+          schema: { type: string, format: date }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Paginated income list with category, currency, customer joins
+    post:
+      summary: Create income entry
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [description, amount, currency_id, income_date]
+              properties:
+                description: { type: string }
+                amount: { type: number }
+                currency_id: { type: string, format: uuid }
+                income_date: { type: string, format: date }
+                category_id: { type: string, format: uuid }
+                customer_id: { type: string, format: uuid }
+                receipt_url: { type: string }
+                notes: { type: string }
+
+  /income/{id}:
+    get:
+      summary: Get income entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    patch:
+      summary: Update income entry
+    delete:
+      summary: Delete income entry
+
+  # ── Reports (Phase 7) ──
+  /reports:
+    get:
+      summary: Generate financial reports (P&L, VAT by rate, client statement)
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [pnl, vat, client-statement]
+        - name: date_from
+          in: query
+          schema: { type: string, format: date }
+        - name: date_to
+          in: query
+          schema: { type: string, format: date }
+        - name: customer_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Required for client-statement reports
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Report data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      period: { type: object, properties: { from: { type: string }, to: { type: string } } }
+                      revenue: { type: object }
+                      expenses: { type: object }
+                      net_income: { type: number }
+                      metrics: { type: object }
+
+  # ── Inventory ──
+  /inventory/adjust:
+    post:
+      summary: Manual stock adjustment with ledger entry
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+
+  # ── Settings ──
+  /settings/payment-methods:
+    get:
+      summary: List payment methods
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    post:
+      summary: Create payment method
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    patch:
+      summary: Update payment method
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    delete:
+      summary: Delete payment method
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+
+  /settings/api-keys:
+    get:
+      summary: List API keys (without hashes)
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    post:
+      summary: Create API key (returns raw key once)
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "201":
+          description: API key created with raw_key
+    delete:
+      summary: Revoke API key
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+
+  # ── Portal Auth ──
+  /portal/auth:
+    post:
+      summary: Request magic link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+
+  /portal/verify:
+    post:
+      summary: Verify magic link token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string }
+
+  /portal/logout:
+    post:
+      summary: Clear portal session cookie and redirect
+      responses:
+        "302":
+          description: Redirects to /{locale}/portal/auth
+
+  /portal/quote-request:
+    post:
+      summary: Submit quote request from storefront (public)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, name, items]
+              properties:
+                email: { type: string }
+                name: { type: string }
+                phone: { type: string }
+                company_name: { type: string }
+                notes: { type: string }
+                items:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      product_id: { type: string }
+                      description: { type: string }
+                      quantity: { type: number }
+                      unit_price_ht: { type: number }
+
+  # ── Stripe ──
+  /stripe/create-checkout-session:
+    post:
+      summary: Create Stripe Checkout Session for invoice payment
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invoice_id]
+              properties:
+                invoice_id: { type: string, format: uuid }
+                success_url: { type: string }
+                cancel_url: { type: string }
+      responses:
+        "200":
+          description: Checkout session URL
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string }
+                  session_id: { type: string }
+
+  /stripe/webhook:
+    post:
+      summary: Stripe webhook endpoint (no auth)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: Webhook received
+
+  /payments/{id}/receipt:
+    get:
+      summary: Download payment receipt PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: PDF receipt
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
