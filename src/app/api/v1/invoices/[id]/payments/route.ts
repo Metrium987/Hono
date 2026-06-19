@@ -10,6 +10,18 @@ export async function GET(
 
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "invoices", "read");
+    // Verify invoice belongs to team
+    const { data: invoice } = await auth.supabase
+      .from("invoices")
+      .select("id")
+      .eq("id", id)
+      .eq("team_id", teamId)
+      .single();
+
+    if (!invoice) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
     const { data, error } = await auth.supabase
       .from("invoice_payments")
       .select(`
@@ -54,6 +66,7 @@ export async function POST(
       .from("invoices")
       .select("id, total_ttc, paid_amount, status, team_id")
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (invError || !invoice) {

@@ -13,6 +13,7 @@ export async function GET(request: NextRequest, props: { params: Params }) {
       .from("vendors")
       .select("*")
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (error || !data) {
@@ -44,6 +45,7 @@ export async function PATCH(request: NextRequest, props: { params: Params }) {
       .from("vendors")
       .update(updates)
       .eq("id", id)
+      .eq("team_id", teamId)
       .select()
       .single();
 
@@ -64,7 +66,8 @@ export async function DELETE(request: NextRequest, props: { params: Params }) {
     const { error } = await auth.supabase
       .from("vendors")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

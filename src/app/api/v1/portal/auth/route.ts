@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createHash, randomBytes } from "node:crypto";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { cookies } from "next/headers";
+import { rateLimit, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
 
-// POST /api/v1/portal/auth — Request a magic link for portal login
+// POST /api/v1/portal/auth — Send a Supabase Auth magic link
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -13,18 +14,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "email is required" }, { status: 400 });
     }
 
+    const normalizedEmail = (email as string).toLowerCase().trim();
+
+    const rateKey = `magic_link:${normalizedEmail}`;
+    const rateResult = rateLimit(rateKey, RATE_LIMIT_CONFIGS.MAGIC_LINK);
+    if (!rateResult.allowed) {
+      return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+    }
+
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
+    const adminSupabase = createAdminClient();
 
     // Look up portal user by email
-    const { data: portalUser, error: userError } = await supabase
+    const { data: portalUser } = await supabase
       .from("portal_users")
-      .select("id, customer_id, name, email, customer:customer_id!inner(team_id)")
-      .eq("email", email.toLowerCase().trim())
+      .select("id, customer_id, name, email, auth_user_id, customer:customer_id!inner(team_id)")
+      .eq("email", normalizedEmail)
       .single();
 
-    if (userError || !portalUser) {
-      // Don't reveal whether the email exists or not — return 200 for security
+    if (!portalUser) {
       return NextResponse.json({
         success: true,
         message: "If this email is registered, a magic link has been sent.",
@@ -42,37 +51,56 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Generate a secure random token
-    const tokenBuffer = randomBytes(32);
-    const token = tokenBuffer.toString("hex");
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min
-
-    // Store the login token
-    const { error: tokenError } = await supabase
-      .from("portal_login_tokens")
-      .insert({
-        portal_user_id: portalUser.id,
-        token,
-        expires_at: expiresAt,
+    // Create Supabase Auth user if not linked yet
+    let authUserId = portalUser.auth_user_id;
+    if (!authUserId) {
+      const { data: newUser, error: createError } = await adminSupabase.auth.admin.createUser({
+        email: normalizedEmail,
+        email_confirm: true,
+        user_metadata: { portal_user_id: portalUser.id, is_portal: true },
       });
-
-    if (tokenError) {
-      console.error("Failed to create portal login token:", tokenError);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+      if (!createError && newUser?.user) {
+        authUserId = newUser.user.id;
+        await supabase
+          .from("portal_users")
+          .update({ auth_user_id: authUserId })
+          .eq("id", portalUser.id);
+      }
     }
 
-    // Build magic link URL
+    // Generate magic link via Supabase Auth admin API
+    // Reuses the existing /auth/callback route for PKCE code exchange
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    // Detect locale — fallback to fr
-    const localeMatch = request.nextUrl.pathname.match(/\/([a-z]{2})\//);
-    const locale = localeMatch?.[1] ?? "fr";
-    const magicLink = `${baseUrl}/${locale}/portal/verify?token=${token}`;
+    const redirectTo = `${baseUrl}/auth/callback?next=/portal/dashboard`;
 
-    // Attempt to send email via Resend (if configured)
+    const { data: linkData, error: linkError } = await adminSupabase.auth.admin.generateLink({
+      type: "magiclink",
+      email: normalizedEmail,
+      options: { redirectTo },
+    });
+
+    if (linkError || !linkData) {
+      console.error("Failed to generate magic link:", linkError);
+      return NextResponse.json({
+        success: true,
+        message: "If this email is registered, a magic link has been sent.",
+      });
+    }
+
+    const magicLink = linkData.properties?.action_link ?? "";
+
+    // Send email via Resend
     const resendApiKey = process.env.RESEND_API_KEY;
     if (resendApiKey) {
       try {
         const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@votre-domaine.pf";
+        const localeMatch = request.nextUrl.pathname.match(/\/([a-z]{2})\//);
+        const locale = localeMatch?.[1] ?? "fr";
+
+        const subject = locale === "fr"
+          ? "Votre lien de connexion Hono"
+          : "Your Hono login link";
+
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -81,24 +109,26 @@ export async function POST(request: NextRequest) {
           },
           body: JSON.stringify({
             from: fromEmail,
-            to: email.toLowerCase().trim(),
-            subject: "Votre lien de connexion Hono",
+            to: normalizedEmail,
+            subject,
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
-                <h2>Connexion à votre espace client</h2>
-                <p>Bonjour ${portalUser.name ?? ""},</p>
-                <p>Cliquez sur le lien ci-dessous pour vous connecter :</p>
+                <h2>${locale === "fr" ? "Connexion à votre espace client" : "Log in to your client area"}</h2>
+                <p>${locale === "fr" ? "Bonjour" : "Hello"} ${portalUser.name ?? ""},</p>
+                <p>${locale === "fr" ? "Cliquez sur le lien ci-dessous pour vous connecter :" : "Click the link below to log in:"}</p>
                 <a href="${magicLink}"
                    style="display: inline-block; background: #2563eb; color: white;
                           padding: 12px 24px; border-radius: 6px; text-decoration: none;
                           font-weight: bold; margin: 16px 0;">
-                  Se connecter
+                  ${locale === "fr" ? "Se connecter" : "Log in"}
                 </a>
                 <p style="color: #666; font-size: 14px;">
-                  Ce lien expire dans 15 minutes.
+                  ${locale === "fr" ? "Ce lien expire dans 15 minutes." : "This link expires in 15 minutes."}
                 </p>
                 <p style="color: #666; font-size: 12px;">
-                  Si vous n'avez pas demandé cette connexion, ignorez cet email.
+                  ${locale === "fr"
+                    ? "Si vous n'avez pas demandé cette connexion, ignorez cet email."
+                    : "If you did not request this login, ignore this email."}
                 </p>
               </div>
             `,
@@ -106,16 +136,14 @@ export async function POST(request: NextRequest) {
         });
       } catch (emailError) {
         console.error("Failed to send portal magic link email:", emailError);
-        // Don't fail — the token was created
       }
     } else {
-      console.log(`[DEV] Portal magic link for ${email}: ${magicLink}`);
+      console.log(`[DEV] Portal magic link for ${normalizedEmail}: ${magicLink}`);
     }
 
     return NextResponse.json({
       success: true,
       message: "If this email is registered, a magic link has been sent.",
-      // In development, return the link for convenience
       ...((process.env.NODE_ENV === "development" || !resendApiKey) && { devLink: magicLink }),
     });
   } catch (err) {

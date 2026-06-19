@@ -8,7 +8,7 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  return withAuth(request, async (auth) => {
+  return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "orders", "read");
     const { data, error } = await auth.supabase
       .from("orders")
@@ -18,6 +18,7 @@ export async function GET(
         items:order_items(*)
       `)
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (error) {
@@ -38,7 +39,7 @@ export async function PATCH(
 ) {
   const { id } = await params;
 
-  return withAuth(request, async (auth) => {
+  return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "orders", "write");
     const body = await request.json();
 
@@ -52,7 +53,8 @@ export async function PATCH(
     const { error: updateError } = await auth.supabase
       .from("orders")
       .update(updatePayload)
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 400 });
@@ -62,6 +64,7 @@ export async function PATCH(
       .from("orders")
       .select("*, items:order_items(*)")
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     return NextResponse.json({ data });
@@ -75,12 +78,13 @@ export async function DELETE(
 ) {
   const { id } = await params;
 
-  return withAuth(_request, async (auth) => {
+  return withAuth(_request, async (auth, teamId) => {
     requirePermission(auth, "orders", "write");
     const { data: order } = await auth.supabase
       .from("orders")
       .select("status")
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (!order) {
@@ -96,7 +100,8 @@ export async function DELETE(
     const { error } = await auth.supabase
       .from("orders")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

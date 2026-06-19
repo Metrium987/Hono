@@ -18,6 +18,7 @@ export async function GET(request: NextRequest, props: { params: Params }) {
         currency:currency_id(code, symbol)
       `)
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (error || !data) {
@@ -49,6 +50,7 @@ export async function PATCH(request: NextRequest, props: { params: Params }) {
       .from("expenses")
       .update(updates)
       .eq("id", id)
+      .eq("team_id", teamId)
       .select()
       .single();
 
@@ -69,7 +71,8 @@ export async function DELETE(request: NextRequest, props: { params: Params }) {
     const { error } = await auth.supabase
       .from("expenses")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

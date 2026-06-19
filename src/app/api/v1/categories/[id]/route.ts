@@ -18,6 +18,7 @@ export async function GET(
         translations:product_category_translations(*)
       `)
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (error) {
@@ -55,7 +56,8 @@ export async function PATCH(
       const { error: updateError } = await auth.supabase
         .from("product_categories")
         .update(updatePayload)
-        .eq("id", id);
+        .eq("id", id)
+        .eq("team_id", teamId);
 
       if (updateError) {
         return NextResponse.json({ error: updateError.message }, { status: 400 });
@@ -88,6 +90,7 @@ export async function PATCH(
       .from("product_categories")
       .select(`*, translations:product_category_translations(*)`)
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (fetchError) {
@@ -110,7 +113,8 @@ export async function DELETE(
     const { error } = await auth.supabase
       .from("product_categories")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

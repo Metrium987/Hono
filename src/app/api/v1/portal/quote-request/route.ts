@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
+import { rateLimit, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
 
 /**
  * POST /api/v1/portal/quote-request
@@ -26,6 +27,15 @@ import { cookies } from "next/headers";
  */
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      ?? request.headers.get("x-real-ip")
+      ?? "unknown";
+    const rateKey = `public_quote:${ip}`;
+    const rateResult = rateLimit(rateKey, RATE_LIMIT_CONFIGS.PUBLIC_QUOTE);
+    if (!rateResult.allowed) {
+      return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+    }
+
     const body = await request.json();
     const { email, name, phone, company_name, notes, items } = body;
 

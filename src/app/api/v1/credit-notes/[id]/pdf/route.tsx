@@ -33,6 +33,7 @@ export async function GET(
         invoice:invoice_id(id, invoice_number)
       `)
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (cnError || !cn) {

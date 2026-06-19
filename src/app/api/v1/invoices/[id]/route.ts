@@ -26,6 +26,7 @@ export async function GET(
         quote:quote_id(id, quote_number)
       `)
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (error) {
@@ -53,6 +54,7 @@ export async function PATCH(
       .from("invoices")
       .select("status, team_id")
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (!current) {
@@ -87,7 +89,8 @@ export async function PATCH(
     const { error: updateError } = await auth.supabase
       .from("invoices")
       .update(updatePayload)
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 400 });
@@ -108,6 +111,7 @@ export async function PATCH(
       .from("invoices")
       .select("*, items:invoice_items(*)")
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     return NextResponse.json({ data });
@@ -127,6 +131,7 @@ export async function DELETE(
       .from("invoices")
       .select("status")
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (!current) {
@@ -143,7 +148,8 @@ export async function DELETE(
     const { error } = await auth.supabase
       .from("invoices")
       .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

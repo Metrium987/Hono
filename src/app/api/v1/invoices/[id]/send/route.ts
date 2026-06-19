@@ -22,6 +22,7 @@ export async function POST(
         currency:currency_id(code, symbol, symbol_position)
       `)
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (invError || !invoice) {
@@ -85,7 +86,8 @@ export async function POST(
     await auth.supabase
       .from("invoices")
       .update({ reminder_sent_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     // Record invoice event
     await auth.supabase.from("invoice_events").insert({

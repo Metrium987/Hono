@@ -17,6 +17,7 @@ export async function POST(
       .from("quotes")
       .select(`*, items:quote_items(*)`)
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (quoteError || !quote) {
@@ -96,7 +97,8 @@ export async function POST(
         converted_to_invoice_id: invoice.id,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", quote.id);
+      .eq("id", quote.id)
+      .eq("team_id", teamId);
 
     // Record event
     await auth.supabase.from("invoice_events").insert({

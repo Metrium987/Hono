@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
+import { rateLimit, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
 
 // POST /api/v1/stripe/webhook — Handle Stripe webhook events
 export async function POST(request: NextRequest) {
+  const rateKey = `stripe_webhook:global`;
+  const rateResult = rateLimit(rateKey, RATE_LIMIT_CONFIGS.STRIPE_WEBHOOK);
+  if (!rateResult.allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!webhookSecret) {

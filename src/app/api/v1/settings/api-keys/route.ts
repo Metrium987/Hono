@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 import { createHash, randomBytes } from "node:crypto";
+import { rateLimit, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
 
 // GET /api/v1/settings/api-keys — List API keys for a team (without key_hash)
 export async function GET(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "settings", "read");
+    const rateKey = `api_keys:${teamId}`;
+    const rateResult = rateLimit(rateKey, RATE_LIMIT_CONFIGS.API_KEYS);
+    if (!rateResult.allowed) {
+      return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+    }
     const { data, error } = await auth.supabase
       .from("api_keys")
       .select("id, name, description, key_prefix, role_id, expires_at, last_used_at, revoked_at, created_at")
@@ -25,6 +31,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "settings", "write");
+    const rateKey = `api_keys:${teamId}`;
+    const rateResult = rateLimit(rateKey, RATE_LIMIT_CONFIGS.API_KEYS);
+    if (!rateResult.allowed) {
+      return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+    }
     const body = await request.json();
     const { name, description, role_id, expires_in_days } = body;
 
@@ -73,6 +84,11 @@ export async function POST(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   return withAuth(request, async (auth, teamId, params) => {
     requirePermission(auth, "settings", "write");
+    const rateKey = `api_keys:${teamId}`;
+    const rateResult = rateLimit(rateKey, RATE_LIMIT_CONFIGS.API_KEYS);
+    if (!rateResult.allowed) {
+      return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+    }
     const id = params.get("id");
     if (!id) {
       return NextResponse.json({ error: "id query param is required" }, { status: 400 });

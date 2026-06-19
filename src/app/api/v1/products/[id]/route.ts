@@ -19,6 +19,7 @@ export async function GET(
         images:product_images(*)
       `)
       .eq("id", id)
+      .eq("team_id", teamId)
       .order("position", { foreignTable: "product_images", ascending: true })
       .single();
 
@@ -71,7 +72,8 @@ export async function PATCH(
       const { error: updateError } = await auth.supabase
         .from("products")
         .update(updatePayload)
-        .eq("id", id);
+        .eq("id", id)
+        .eq("team_id", teamId);
 
       if (updateError) {
         return NextResponse.json({ error: updateError.message }, { status: 400 });
@@ -119,6 +121,7 @@ export async function PATCH(
       .from("products")
       .select(`*, translations:product_translations(*), images:product_images(*)`)
       .eq("id", id)
+      .eq("team_id", teamId)
       .order("position", { foreignTable: "product_images", ascending: true })
       .single();
 
@@ -142,7 +145,8 @@ export async function DELETE(
     const { error } = await auth.supabase
       .from("products")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (error) {
       if (error.code === "23503") {

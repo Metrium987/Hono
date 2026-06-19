@@ -20,6 +20,7 @@ export async function GET(
         items:credit_note_items(*, tax_rates:tax_rate_id(name, rate))
       `)
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (error) {
@@ -57,7 +58,8 @@ export async function PATCH(
     const { error: updateError } = await auth.supabase
       .from("credit_notes")
       .update(updatePayload)
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 400 });
@@ -69,6 +71,7 @@ export async function PATCH(
         .from("credit_notes")
         .select("*, items:credit_note_items(*), invoice:invoice_id(id, invoice_number)")
         .eq("id", id)
+        .eq("team_id", teamId)
         .single();
 
       if (cn) {
@@ -79,6 +82,7 @@ export async function PATCH(
               .from("products")
               .select("id, current_stock, track_stock")
               .eq("id", item.product_id)
+              .eq("team_id", teamId)
               .single();
 
             if (product && product.track_stock) {
@@ -87,7 +91,8 @@ export async function PATCH(
               const { error: stockError } = await auth.supabase
                 .from("products")
                 .update({ current_stock: newBalance })
-                .eq("id", product.id);
+                .eq("id", product.id)
+                .eq("team_id", teamId);
 
               if (stockError) {
                 console.error("Failed to restore stock for product", product.id, stockError);
@@ -116,6 +121,7 @@ export async function PATCH(
             .from("invoices")
             .select("id, paid_amount, total_ttc, status")
             .eq("id", cn.invoice_id)
+            .eq("team_id", teamId)
             .single();
 
           if (invoice && invoice.paid_amount > 0) {
@@ -132,7 +138,8 @@ export async function PATCH(
                 paid_at: newPaidAmount <= 0 ? null : undefined,
                 updated_at: new Date().toISOString(),
               })
-              .eq("id", invoice.id);
+              .eq("id", invoice.id)
+              .eq("team_id", teamId);
 
             await auth.supabase.from("invoice_events").insert({
               invoice_id: invoice.id,
@@ -149,6 +156,7 @@ export async function PATCH(
       .from("credit_notes")
       .select("*, items:credit_note_items(*)")
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     return NextResponse.json({ data });
@@ -168,6 +176,7 @@ export async function DELETE(
       .from("credit_notes")
       .select("status")
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (!cn) {
@@ -183,7 +192,8 @@ export async function DELETE(
     const { error } = await auth.supabase
       .from("credit_notes")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

@@ -20,6 +20,7 @@ export async function GET(
         converted_invoice:converted_to_invoice_id(id, invoice_number, status)
       `)
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (error) {
@@ -62,7 +63,8 @@ export async function PATCH(
     const { error: updateError } = await auth.supabase
       .from("quotes")
       .update(updatePayload)
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (updateError) {
       return NextResponse.json({ error: updateError.message }, { status: 400 });
@@ -72,6 +74,7 @@ export async function PATCH(
       .from("quotes")
       .select("*, items:quote_items(*)")
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     return NextResponse.json({ data });
@@ -91,6 +94,7 @@ export async function DELETE(
       .from("quotes")
       .select("status")
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (!quote) {
@@ -106,7 +110,8 @@ export async function DELETE(
     const { error } = await auth.supabase
       .from("quotes")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });

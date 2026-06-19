@@ -14,6 +14,7 @@ export async function GET(
       .from("customers")
       .select(`*, portal_users(*)`)
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (error) {
@@ -73,7 +74,8 @@ export async function PATCH(
       const { error: updateError } = await auth.supabase
         .from("customers")
         .update(updatePayload)
-        .eq("id", id);
+        .eq("id", id)
+        .eq("team_id", teamId);
 
       if (updateError) {
         return NextResponse.json({ error: updateError.message }, { status: 400 });
@@ -84,6 +86,7 @@ export async function PATCH(
       .from("customers")
       .select("*")
       .eq("id", id)
+      .eq("team_id", teamId)
       .single();
 
     if (fetchError) {
@@ -106,7 +109,8 @@ export async function DELETE(
     const { error } = await auth.supabase
       .from("customers")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("team_id", teamId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
