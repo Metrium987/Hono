@@ -1,0 +1,11 @@
+{
+  "common": {},
+  "auth": {},
+  "nav": {},
+  "invoice": {},
+  "quote": {},
+  "product": {},
+  "customer": {},
+  "settings": {},
+  "errors": {}
+}

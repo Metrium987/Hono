@@ -1,0 +1,107 @@
+{
+  "common": {
+    "app_name": "Hono",
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "print": "Imprimer",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "back": "Retour",
+    "next": "Suivant",
+    "no_results": "Aucun résultat",
+    "required": "Requis",
+    "optional": "Optionnel"
+  },
+  "auth": {
+    "sign_in": "Connexion",
+    "sign_out": "Déconnexion",
+    "sign_up": "S'inscrire",
+    "email": "Adresse e-mail",
+    "password": "Mot de passe",
+    "forgot_password": "Mot de passe oublié ?",
+    "magic_link": "Recevoir un lien magique",
+    "magic_link_sent": "Un lien de connexion vous a été envoyé par e-mail."
+  },
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "catalog": "Catalogue",
+    "products": "Produits",
+    "categories": "Catégories",
+    "clients": "Clients",
+    "quotes": "Devis",
+    "invoices": "Factures",
+    "orders": "Commandes",
+    "expenses": "Dépenses",
+    "reports": "Rapports",
+    "settings": "Paramètres",
+    "users": "Utilisateurs",
+    "storefront": "Boutique en ligne"
+  },
+  "invoice": {
+    "status_draft": "Brouillon",
+    "status_sent": "Envoyée",
+    "status_viewed": "Consultée",
+    "status_partial": "Partiellement payée",
+    "status_paid": "Payée",
+    "status_overdue": "En retard",
+    "status_cancelled": "Annulée",
+    "status_refunded": "Remboursée",
+    "number": "N° Facture",
+    "issue_date": "Date d'émission",
+    "service_date": "Date de prestation",
+    "due_date": "Date d'échéance",
+    "subtotal_ht": "Total HT",
+    "tax_amount": "TVA",
+    "total_ttc": "Total TTC",
+    "paid_amount": "Montant payé",
+    "late_fee": "Indemnité forfaitaire de recouvrement",
+    "legal_franchise": "TVA non applicable, franchise en base"
+  },
+  "quote": {
+    "status_draft": "Brouillon",
+    "status_sent": "Envoyé",
+    "status_viewed": "Consulté",
+    "status_accepted": "Accepté",
+    "status_rejected": "Refusé",
+    "status_expired": "Expiré",
+    "status_converted": "Converti en facture",
+    "number": "N° Devis",
+    "validity_date": "Date de validité"
+  },
+  "product": {
+    "type_product": "Produit",
+    "type_service": "Service",
+    "price_ht": "Prix unitaire HT",
+    "stock": "Stock",
+    "sku": "Référence",
+    "unit": "Unité"
+  },
+  "customer": {
+    "b2b": "Professionnel",
+    "b2c": "Particulier",
+    "n_tahiti": "N° TAHITI",
+    "island": "Île",
+    "payment_terms": "Conditions de paiement"
+  },
+  "settings": {
+    "company": "Entreprise",
+    "taxes": "Taux de TVA",
+    "currencies": "Devises",
+    "payment_methods": "Moyens de paiement",
+    "educational_mode": "Mode éducatif",
+    "free_mode": "Mode libre"
+  },
+  "errors": {
+    "not_found": "Page non trouvée",
+    "unauthorized": "Accès non autorisé",
+    "server_error": "Erreur serveur",
+    "validation_error": "Erreur de validation"
+  }
+}
