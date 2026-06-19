@@ -70,6 +70,27 @@ export async function PATCH(
       return NextResponse.json({ error: updateError.message }, { status: 400 });
     }
 
+    // Update items if provided
+    if (body.items && Array.isArray(body.items) && body.items.length > 0) {
+      await auth.supabase.from("quote_items").delete().eq("quote_id", id);
+
+      const itemRows = body.items.map((item: Record<string, unknown>, idx: number) => {
+        const qty = parseFloat(item.quantity as string) || 1;
+        const unitPrice = parseFloat(item.unit_price_ht as string) || 0;
+        return {
+          quote_id: id,
+          description: item.description ?? "",
+          quantity: qty,
+          unit_price_ht: Math.round(unitPrice * 100) / 100,
+          tax_rate_id: item.tax_rate_id ?? null,
+          line_total_ht: Math.round(qty * unitPrice * 100) / 100,
+          sort_order: idx,
+        };
+      });
+
+      await auth.supabase.from("quote_items").insert(itemRows);
+    }
+
     const { data } = await auth.supabase
       .from("quotes")
       .select("*, items:quote_items(*)")

@@ -31,6 +31,7 @@ type InvoiceFormProps = {
   taxRates: TaxRate[];
   team: Team;
   teamId: string;
+  editId?: string;
   initialData?: {
     customer_id: string;
     issue_date: string;
@@ -49,7 +50,7 @@ function createLineItem(): LineItem {
   return { key: `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, description: "", quantity: "1", unit_price_ht: "0", tax_rate_id: "" };
 }
 
-export function InvoiceForm({ customers, currencies, taxRates, team, teamId, initialData }: InvoiceFormProps) {
+export function InvoiceForm({ customers, currencies, taxRates, team, teamId, editId, initialData }: InvoiceFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -123,8 +124,11 @@ export function InvoiceForm({ customers, currencies, taxRates, team, teamId, ini
     };
 
     try {
-      const res = await fetch(`/api/v1/invoices?team_id=${teamId}`, {
-        method: "POST",
+      const url = editId
+        ? `/api/v1/invoices/${editId}?team_id=${teamId}`
+        : `/api/v1/invoices?team_id=${teamId}`;
+      const res = await fetch(url, {
+        method: editId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
@@ -132,7 +136,7 @@ export function InvoiceForm({ customers, currencies, taxRates, team, teamId, ini
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? common("unknown_error"));
 
-      router.push(`./${json.data.id}`);
+      router.push(editId ? `../${json.data.id}` : `./${json.data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : common("unknown_error"));
     } finally {
@@ -329,7 +333,7 @@ export function InvoiceForm({ customers, currencies, taxRates, team, teamId, ini
         </Button>
         <Button type="submit" disabled={submitting}>
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Créer la facture
+          {editId ? "Enregistrer" : "Créer la facture"}
         </Button>
       </div>
     </form>

@@ -27,9 +27,18 @@ type QuoteFormProps = {
   currencies: Currency[];
   taxRates: TaxRate[];
   teamId: string;
+  editId?: string;
+  initialData?: {
+    customer_id: string;
+    issue_date: string;
+    validity_date: string;
+    currency_id: string;
+    notes: string;
+    items: LineItem[];
+  };
 };
 
-export function QuoteForm({ customers, currencies, taxRates, teamId }: QuoteFormProps) {
+export function QuoteForm({ customers, currencies, taxRates, teamId, editId, initialData }: QuoteFormProps) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -37,12 +46,12 @@ export function QuoteForm({ customers, currencies, taxRates, teamId }: QuoteForm
 
   const defaultCurrency = currencies.find((c) => c.is_default) ?? currencies[0];
 
-  const [customerId, setCustomerId] = useState("");
-  const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
-  const [validityDate, setValidityDate] = useState(new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0]);
-  const [currencyId, setCurrencyId] = useState(defaultCurrency?.id ?? "");
-  const [notes, setNotes] = useState("");
-  const [items, setItems] = useState<LineItem[]>([createLineItem()]);
+  const [customerId, setCustomerId] = useState(initialData?.customer_id ?? "");
+  const [issueDate, setIssueDate] = useState(initialData?.issue_date ?? new Date().toISOString().split("T")[0]);
+  const [validityDate, setValidityDate] = useState(initialData?.validity_date ?? new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0]);
+  const [currencyId, setCurrencyId] = useState(initialData?.currency_id ?? defaultCurrency?.id ?? "");
+  const [notes, setNotes] = useState(initialData?.notes ?? "");
+  const [items, setItems] = useState<LineItem[]>(initialData?.items ?? [createLineItem()]);
 
   const addItem = useCallback(() => setItems((prev) => [...prev, createLineItem()]), []);
   const removeItem = useCallback((key: string) => setItems((prev) => prev.filter((i) => i.key !== key)), []);
@@ -82,14 +91,17 @@ export function QuoteForm({ customers, currencies, taxRates, teamId }: QuoteForm
     };
 
     try {
-      const res = await fetch(`/api/v1/quotes?team_id=${teamId}`, {
-        method: "POST",
+      const url = editId
+        ? `/api/v1/quotes/${editId}?team_id=${teamId}`
+        : `/api/v1/quotes?team_id=${teamId}`;
+      const res = await fetch(url, {
+        method: editId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? common("unknown_error"));
-      router.push(`./${json.data.id}`);
+      router.push(editId ? `../${json.data.id}` : `./${json.data.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : common("unknown_error"));
     } finally {
@@ -212,7 +224,7 @@ export function QuoteForm({ customers, currencies, taxRates, teamId }: QuoteForm
         <Button type="button" variant="outline" onClick={() => router.back()}>Annuler</Button>
         <Button type="submit" disabled={submitting}>
           {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Créer le devis
+          {editId ? "Enregistrer" : "Créer le devis"}
         </Button>
       </div>
     </form>
