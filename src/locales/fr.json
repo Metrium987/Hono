@@ -570,5 +570,60 @@
     "status_issued": "Émis",
     "status_applied": "Appliqué",
     "status_cancelled": "Annulé"
+  },
+  "credit_note_status": {
+    "draft": "Brouillon",
+    "draft_plural": "Brouillons",
+    "issued": "Émis",
+    "issued_plural": "Émis",
+    "applied": "Appliqué",
+    "applied_plural": "Appliqués",
+    "cancelled": "Annulé",
+    "cancelled_plural": "Annulés"
+  },
+  "credit_notes_page": {
+    "title": "Avoirs",
+    "subtitle": "{count} avoir(s) au total",
+    "new": "Nouvel avoir",
+    "filter_all": "Tous",
+    "filter_draft": "Brouillons",
+    "filter_issued": "Émis",
+    "filter_applied": "Appliqués",
+    "filter_cancelled": "Annulés",
+    "no_credit_notes": "Aucun avoir trouvé"
+  },
+  "credit_note_detail": {
+    "back": "Retour aux avoirs",
+    "issued_on": "Émis le {date}",
+    "reason": "Motif",
+    "items_title": "Articles",
+    "invoice_linked": "Facture liée",
+    "no_invoice": "Aucune facture liée"
+  },
+  "legal": {
+    "disclaimer_pdf": "Document non contractuel — à faire valider par un professionnel compétent avant utilisation officielle",
+    "disclaimer_sidebar": "Documents non contractuels — à faire valider par un professionnel compétent",
+    "disclaimer_title": "Avertissement légal",
+    "disclaimer_body": "Tout document généré par l'application (facture, devis, avoir, reçu, rapport) doit être validé par un organisme ou une personne disposant des compétences requises (expert-comptable, conseiller juridique, service des impôts) avant d'être utilisé comme document officiel ou transmis à des tiers. L'éditeur du logiciel ne saurait être tenu responsable des conséquences découlant de l'utilisation des documents sans cette validation."
+  },
+  "dashboard_page": {
+    "title": "Tableau de bord",
+    "welcome": "Bonjour",
+    "invoices_title": "Factures",
+    "quotes_title": "Devis",
+    "revenue_title": "Revenus (année)",
+    "expenses_title": "Dépenses (année)",
+    "net_income_title": "Résultat net",
+    "recent_invoices": "Dernières factures",
+    "recent_quotes": "Derniers devis",
+    "no_invoices": "Aucune facture",
+    "no_quotes": "Aucun devis",
+    "view_all": "Voir tout",
+    "new_invoice": "Nouvelle facture",
+    "new_quote": "Nouveau devis",
+    "period_year": "Depuis janvier {year}",
+    "total": "Total",
+    "count_invoices": "{count} facture(s)",
+    "count_quotes": "{count} devis"
   }
 }
