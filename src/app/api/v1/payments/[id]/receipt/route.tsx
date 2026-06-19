@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@/lib/auth/api-auth";
+import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 import { pdf } from "@react-pdf/renderer";
 import { PaymentReceiptPdfDocument, type PaymentReceiptData } from "@/lib/pdf/payment-receipt-pdf";
 
@@ -9,6 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   return withAuth(_request, async (auth, teamId) => {
+    requirePermission(auth, "payments", "read");
     const { id } = await params;
 
     // Fetch payment with invoice chain for team verification

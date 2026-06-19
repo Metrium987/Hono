@@ -41,10 +41,4 @@ export async function getPortalSession(): Promise<PortalSession | null> {
   }
 }
 
-export async function requirePortalSession(): Promise<PortalSession> {
-  const session = await getPortalSession();
-  if (!session) {
-    throw new Error("No portal session");
-  }
-  return session;
-}
+

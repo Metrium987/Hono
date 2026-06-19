@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { render } from "@react-email/components";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { InvoiceEmail, type InvoiceEmailData } from "./invoice-email";
 
 const resendApiKey = process.env.RESEND_API_KEY;
@@ -26,7 +27,7 @@ export type SendInvoiceParams = {
  * Send an invoice email using Resend and record the attempt in the email_outbox table.
  */
 export async function sendInvoiceEmail(
-  supabase: any,
+  supabase: SupabaseClient,
   params: SendInvoiceParams
 ): Promise<SendInvoiceResult> {
   const { teamId, invoiceId, invoiceNumber, toEmail, teamName, emailData } = params;
@@ -111,7 +112,7 @@ type OutboxParams = {
   error?: string;
 };
 
-async function recordOutbox(supabase: any, params: OutboxParams) {
+async function recordOutbox(supabase: SupabaseClient, params: OutboxParams) {
   const {
     teamId, invoiceId, invoiceNumber, teamName,
     toEmail, kind, status, messageId, error,

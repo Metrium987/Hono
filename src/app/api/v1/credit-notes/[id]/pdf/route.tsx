@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@/lib/auth/api-auth";
+import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 import { pdf } from "@react-pdf/renderer";
 import { CreditNotePdfDocument, type CreditNotePdfData } from "@/lib/pdf/credit-note-pdf";
 
@@ -9,6 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   return withAuth(_request, async (auth, teamId) => {
+    requirePermission(auth, "credit_notes", "read");
     const { id } = await params;
 
     const { data: cn, error: cnError } = await auth.supabase
