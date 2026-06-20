@@ -22,6 +22,7 @@ import {
   Wallet,
   BookOpen,
   Target,
+  Percent,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ const mainNavItems = [
   { key: "reminders" as const,   href: "/reminders",   icon: Bell },
   { key: "products" as const,     href: "/catalog",             icon: Package },
   { key: "categories" as const,  href: "/catalog/categories",  icon: Tag },
+  { key: "promotions" as const,  href: "/promotions",          icon: Percent },
   { key: "clients" as const,     href: "/customers",           icon: Users },
 ];
 

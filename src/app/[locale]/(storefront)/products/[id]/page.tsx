@@ -98,6 +98,49 @@ export default async function ProductDetailPage(
   const images: { storage_path: string; alt_text?: string; position?: number }[] =
     Array.isArray(product.images) ? product.images : [];
 
+  // Active promotions for this product
+  let discountedPriceHt: number | null = null;
+  let activePromoLabel: string | null = null;
+  const DEFAULT_TEAM_ID = process.env.NEXT_PUBLIC_DEFAULT_TEAM_ID;
+  if (DEFAULT_TEAM_ID) {
+    const admin = createAdminClient();
+    const now = new Date().toISOString();
+    const { data: promoData } = await admin
+      .from("promotions")
+      .select("id, discount_type, discount_value, applies_to, category_id")
+      .eq("team_id", DEFAULT_TEAM_ID)
+      .eq("is_active", true)
+      .lte("starts_at", now)
+      .or(`ends_at.is.null,ends_at.gte.${now}`);
+
+    if (promoData && promoData.length > 0) {
+      const selectedPromoIds = promoData.filter((p) => p.applies_to === "selected_products").map((p) => p.id);
+      let promoIdsForProduct: Set<string> = new Set();
+      if (selectedPromoIds.length > 0) {
+        const { data: ppData } = await admin.from("promotion_products").select("promotion_id").eq("product_id", id).in("promotion_id", selectedPromoIds);
+        promoIdsForProduct = new Set((ppData ?? []).map((r) => r.promotion_id));
+      }
+      const applicable = promoData.filter((promo) => {
+        if (promo.applies_to === "all_products") return true;
+        if (promo.applies_to === "category") return promo.category_id === product.category_id;
+        if (promo.applies_to === "selected_products") return promoIdsForProduct.has(promo.id);
+        return false;
+      });
+      if (applicable.length > 0) {
+        const best = applicable.reduce((a, b) => b.discount_value > a.discount_value ? b : a);
+        discountedPriceHt = best.discount_type === "percent"
+          ? Math.max(0, priceHt * (1 - best.discount_value / 100))
+          : Math.max(0, priceHt - best.discount_value);
+        activePromoLabel = best.discount_type === "percent"
+          ? `-${best.discount_value}%`
+          : `-${Math.round(best.discount_value).toLocaleString("fr-FR")} F`;
+      }
+    }
+  }
+  const discountedPriceTtc = discountedPriceHt !== null && taxRate?.rate
+    ? discountedPriceHt * (1 + taxRate.rate / 100)
+    : discountedPriceHt;
+
   const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://hono.pf").replace(/\/$/, "");
   const jsonLd = {
     "@context": "https://schema.org",
@@ -192,13 +235,30 @@ export default async function ProductDetailPage(
           </div>
 
           {/* Pricing */}
-          <Card>
+          <Card className={activePromoLabel ? "border-red-200" : ""}>
             <CardContent className="p-6 space-y-3">
+              {activePromoLabel && (
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-red-500 text-white">{activePromoLabel}</Badge>
+                  <span className="text-xs text-muted-foreground">Promotion en cours</span>
+                </div>
+              )}
               <div className="flex justify-between items-baseline">
                 <span className="text-sm text-muted-foreground">{t("price_ht")}</span>
-                <span className="text-lg font-semibold">
-                  {priceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
-                </span>
+                {discountedPriceHt !== null ? (
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-lg font-semibold text-red-600">
+                      {discountedPriceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
+                    </span>
+                    <span className="text-sm text-muted-foreground line-through">
+                      {priceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-lg font-semibold">
+                    {priceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
+                  </span>
+                )}
               </div>
               {taxRate && (
                 <div className="flex justify-between items-baseline text-sm">
@@ -206,14 +266,14 @@ export default async function ProductDetailPage(
                     {t("tax_rate", { rate: taxRate.rate, name: taxRate.name ?? "" })}
                   </span>
                   <span className="text-muted-foreground">
-                    + {(priceTtc - priceHt).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
+                    + {((discountedPriceTtc ?? priceTtc) - (discountedPriceHt ?? priceHt)).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
                   </span>
                 </div>
               )}
               <div className="border-t pt-3 flex justify-between items-baseline">
                 <span className="font-semibold">{t("price_ttc")}</span>
-                <span className="text-2xl font-bold text-primary">
-                  {priceTtc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
+                <span className={`text-2xl font-bold ${discountedPriceTtc !== null ? "text-red-600" : "text-primary"}`}>
+                  {(discountedPriceTtc ?? priceTtc).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
                 </span>
               </div>
             </CardContent>

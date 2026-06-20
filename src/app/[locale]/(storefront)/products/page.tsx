@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import Link from "next/link";
 import { Search, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ type ProductRow = {
   sku: string | null;
   track_stock: boolean;
   current_stock: number;
-  category: { slug: string; name: string | null } | Array<{ slug: string; name: string | null }> | null;
+  category: { id?: string; slug: string; name: string | null } | Array<{ id?: string; slug: string; name: string | null }> | null;
   currency: { symbol?: string | null; code?: string | null } | Array<{ symbol?: string | null; code?: string | null }> | null;
   images: ProductImage[] | null;
 };
@@ -65,6 +66,55 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
 
   const categories = (categoriesRes.data ?? []) as CategoryItem[];
   const allProducts = (productsRes.data ?? []) as ProductRow[];
+
+  // Fetch active promotions for storefront (admin client — no user session)
+  const DEFAULT_TEAM_ID = process.env.NEXT_PUBLIC_DEFAULT_TEAM_ID;
+  type ActivePromo = { id: string; discount_type: string; discount_value: number; applies_to: string; category_id: string | null };
+  let activePromos: ActivePromo[] = [];
+  let promoProductIds: Record<string, string[]> = {};
+  if (DEFAULT_TEAM_ID) {
+    const admin = createAdminClient();
+    const now = new Date().toISOString();
+    const { data: promoData } = await admin
+      .from("promotions")
+      .select("id, discount_type, discount_value, applies_to, category_id")
+      .eq("team_id", DEFAULT_TEAM_ID)
+      .eq("is_active", true)
+      .lte("starts_at", now)
+      .or(`ends_at.is.null,ends_at.gte.${now}`);
+    activePromos = (promoData ?? []) as ActivePromo[];
+    const selectedIds = activePromos.filter((p) => p.applies_to === "selected_products").map((p) => p.id);
+    if (selectedIds.length > 0) {
+      const { data: ppData } = await admin.from("promotion_products").select("promotion_id, product_id").in("promotion_id", selectedIds);
+      for (const row of ppData ?? []) {
+        if (!promoProductIds[row.promotion_id]) promoProductIds[row.promotion_id] = [];
+        promoProductIds[row.promotion_id].push(row.product_id);
+      }
+    }
+  }
+
+  function getBestPromo(productId: string, categoryId: string | null): ActivePromo | null {
+    const applicable = activePromos.filter((promo) => {
+      if (promo.applies_to === "all_products") return true;
+      if (promo.applies_to === "category") return promo.category_id === categoryId;
+      if (promo.applies_to === "selected_products") return (promoProductIds[promo.id] ?? []).includes(productId);
+      return false;
+    });
+    if (!applicable.length) return null;
+    // Pick the promo with the highest discount_value (best deal for the customer)
+    return applicable.reduce((best, cur) => cur.discount_value > best.discount_value ? cur : best);
+  }
+
+  function computePromoPrice(priceHt: number, promo: ActivePromo): number {
+    if (promo.discount_type === "percent") return Math.max(0, priceHt * (1 - promo.discount_value / 100));
+    return Math.max(0, priceHt - promo.discount_value);
+  }
+
+  function promoLabel(promo: ActivePromo): string {
+    return promo.discount_type === "percent"
+      ? `-${promo.discount_value}%`
+      : `-${Math.round(promo.discount_value).toLocaleString("fr-FR")} F`;
+  }
 
   const getSlug = (p: ProductRow): string | undefined => {
     const cat = p.category;
@@ -153,6 +203,7 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filtered.map((p) => {
                 const currency = Array.isArray(p.currency) ? p.currency[0] : p.currency;
+                const catId = Array.isArray(p.category) ? (p.category[0]?.id ?? null) : (p.category as { id?: string } | null)?.id ?? null;
                 const sortedImages = Array.isArray(p.images)
                   ? [...p.images].sort((a, b) => a.position - b.position)
                   : [];
@@ -161,6 +212,9 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
                   ? `${STORAGE_BASE}/${firstImage.storage_path}`
                   : null;
                 const inStock = !p.track_stock || p.current_stock > 0;
+                const bestPromo = getBestPromo(p.id, catId);
+                const discountedPrice = bestPromo ? computePromoPrice(p.price_ht, bestPromo) : null;
+                const sym = currency?.symbol ?? currency?.code ?? "F";
 
                 return (
                   <Link key={p.id} href={`./products/${p.id}`}>
@@ -178,8 +232,11 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
                             <Package className="h-8 w-8 text-muted-foreground/40" />
                           </div>
                         )}
-                        {/* Stock badge overlay */}
-                        <div className="absolute top-2 right-2">
+                        {/* Badges overlay */}
+                        <div className="absolute top-2 left-2 right-2 flex justify-between items-start">
+                          {bestPromo ? (
+                            <Badge className="bg-red-500 text-white text-xs font-bold">{promoLabel(bestPromo)}</Badge>
+                          ) : <span />}
                           {inStock ? (
                             <Badge className="bg-green-500/90 text-white text-xs">En stock</Badge>
                           ) : (
@@ -194,9 +251,20 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
                         )}
                       </CardHeader>
                       <CardContent>
-                        <p className="text-2xl font-bold text-primary">
-                          {p.price_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? currency?.code ?? "F"}
-                        </p>
+                        {discountedPrice !== null ? (
+                          <div className="flex items-baseline gap-2">
+                            <p className="text-2xl font-bold text-red-600">
+                              {discountedPrice.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {sym}
+                            </p>
+                            <p className="text-sm text-muted-foreground line-through">
+                              {p.price_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {sym}
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-2xl font-bold text-primary">
+                            {p.price_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {sym}
+                          </p>
+                        )}
                         {(p.short_description || p.description) && (
                           <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
                             {p.short_description ?? p.description}
