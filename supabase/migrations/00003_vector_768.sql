@@ -15,7 +15,13 @@ ALTER TABLE public.customers ADD COLUMN embedding VECTOR(768);
 CREATE INDEX customers_embedding_idx ON public.customers USING hnsw (embedding vector_cosine_ops)
   WITH (m = 16, ef_construction = 200);
 
--- Update vector search functions to use VECTOR(768)
+-- Drop existing functions before recreating with new signature (PG forbids OR REPLACE on signature change)
+DROP FUNCTION IF EXISTS public.match_products(VECTOR, FLOAT, INT, UUID);
+DROP FUNCTION IF EXISTS public.match_customers(VECTOR, FLOAT, INT, UUID);
+DROP FUNCTION IF EXISTS public.hybrid_search_products(UUID, TEXT, INT);
+DROP FUNCTION IF EXISTS public.hybrid_search_customers(UUID, TEXT, INT);
+
+-- Recreate with VECTOR(768)
 CREATE OR REPLACE FUNCTION public.match_products(
   query_embedding VECTOR(768),
   match_threshold FLOAT,
