@@ -92,10 +92,10 @@ AS $$
   WHERE p.team_id = p_team_id
     AND p.is_active = true
     AND (
-      p.search_vector @@ plainto_tsquery('french', p_query)
+      p.fts @@ plainto_tsquery('french', p_query)
       OR p.name ILIKE '%' || p_query || '%'
     )
-  ORDER BY ts_rank(p.search_vector, plainto_tsquery('french', p_query)) DESC
+  ORDER BY ts_rank(p.fts, plainto_tsquery('french', p_query)) DESC
   LIMIT p_limit;
 $$;
 
