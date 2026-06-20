@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     .single();
 
   if (member) {
-    return NextResponse.redirect(`${origin}/fr/`);
+    return NextResponse.redirect(`${origin}/fr/invoices`);
   }
 
   // 2. Client existant → portal_users
