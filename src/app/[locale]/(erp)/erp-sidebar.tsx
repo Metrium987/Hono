@@ -21,6 +21,7 @@ import {
   Bell,
   Wallet,
   BookOpen,
+  Target,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ const financeNavItems = [
   { key: "vendors" as const,      href: "/vendors",      icon: Truck },
   { key: "treasury" as const,     href: "/treasury",     icon: Wallet },
   { key: "revenue_book" as const, href: "/revenue-book", icon: BookOpen },
+  { key: "break_even" as const,   href: "/break-even",   icon: Target },
 ];
 
 const bottomNavItems = [
