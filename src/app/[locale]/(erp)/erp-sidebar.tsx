@@ -19,6 +19,8 @@ import {
   ShoppingCart,
   Tag,
   Bell,
+  Wallet,
+  BookOpen,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -36,9 +38,11 @@ const mainNavItems = [
 ];
 
 const financeNavItems = [
-  { key: "expenses" as const,  href: "/expenses", icon: TrendingDown },
-  { key: "income" as const,    href: "/income",   icon: TrendingUp },
-  { key: "vendors" as const,   href: "/vendors",  icon: Truck },
+  { key: "expenses" as const,     href: "/expenses",     icon: TrendingDown },
+  { key: "income" as const,       href: "/income",       icon: TrendingUp },
+  { key: "vendors" as const,      href: "/vendors",      icon: Truck },
+  { key: "treasury" as const,     href: "/treasury",     icon: Wallet },
+  { key: "revenue_book" as const, href: "/revenue-book", icon: BookOpen },
 ];
 
 const bottomNavItems = [
