@@ -1,6 +1,8 @@
 # Hono ERP — User Creation & RBAC System
 
 > **Purpose:** This document captures the complete RBAC (Role-Based Access Control) architecture, user creation flows, permission model, and enforcement layers. Used as a reference for future development and debugging.
+>
+> **Last verified:** 2026-06-19 — 72/72 tests passing (`node scripts/test-auth.mjs`)
 
 ---
 
@@ -31,7 +33,7 @@
 │                        │ no team_members entry       │
 │                        ▼                             │
 │              portal_users.customer_id                 │
-│              RLSees to own documents                  │
+│              RLS sees to own documents                │
 │                                                       │
 │                   ┌──────────┐                       │
 │                   │  ERP User │ (password session    │
@@ -39,8 +41,8 @@
 │                   └────┬─────┘                       │
 │                        │                             │
 │                        ▼                             │
-│              team_members → team_roles                 │
-│              JSONB permissions checked server-side     │
+│              team_members → team_roles                │
+│              JSONB permissions checked server-side    │
 │                                                       │
 │                   ┌──────────┐                       │
 │                   │ API Keys │ (Bearer token →       │
@@ -143,7 +145,7 @@ CREATE TABLE public.api_keys (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   team_id       UUID NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
   role_id       UUID NOT NULL REFERENCES public.team_roles(id) ON DELETE RESTRICT,
-  key_prefix    TEXT NOT NULL,       -- e.g. "hk_a1b2c3"
+  key_prefix    TEXT NOT NULL,        -- e.g. "hk_a1b2c3"
   key_hash      TEXT NOT NULL UNIQUE, -- SHA256 of the raw key
   name          TEXT NOT NULL,
   description   TEXT,
@@ -175,9 +177,9 @@ CREATE TABLE public.portal_users (
 
 ## 3. Default Roles & Permissions
 
-These roles are recommended for new teams. They are created via seed/UI, not hardcoded.
+These roles are created via onboarding/UI. The actual JSONB values below are from the live DB (team `285eaab4`), verified by `scripts/test-auth.mjs`.
 
-### Owner / Admin (`is_owner = true`)
+### Owner (`is_owner = true`)
 
 | Property | Value |
 |---|---|
@@ -203,7 +205,7 @@ These roles are recommended for new teams. They are created via seed/UI, not har
 | payments | ✅ | ❌ |
 | settings | ❌ | ❌ |
 
-**Permissions JSONB:**
+**Permissions JSONB (live):**
 ```json
 {
   "catalog": ["read", "write"],
@@ -238,7 +240,7 @@ These roles are recommended for new teams. They are created via seed/UI, not har
 | payments | ❌ | ❌ |
 | settings | ❌ | ❌ |
 
-**Permissions JSONB:**
+**Permissions JSONB (live):**
 ```json
 {
   "catalog": ["read", "write"],
@@ -267,13 +269,13 @@ These roles are recommended for new teams. They are created via seed/UI, not har
 | orders | ❌ | ❌ |
 | expenses | ✅ | ✅ |
 | income | ✅ | ✅ |
-| reports | ✅ | ✅ |
+| reports | ✅ | ❌ |
 | currencies | ❌ | ❌ |
 | taxes | ✅ | ❌ |
 | payments | ✅ | ✅ |
 | settings | ❌ | ❌ |
 
-**Permissions JSONB:**
+**Permissions JSONB (live):**
 ```json
 {
   "catalog": [],
@@ -304,8 +306,6 @@ These roles are recommended for new teams. They are created via seed/UI, not har
 
 ## 4. Permission Module Map
 
-Defined in `src/lib/permissions/checkPermission.ts`:
-
 ```typescript
 export type PermissionModule =
   | "catalog"     // products, categories, inventory
@@ -318,8 +318,8 @@ export type PermissionModule =
   | "reports"     // reports
   | "currencies"  // currencies
   | "taxes"       // tax rates
-  | "payments"   // payment methods
-  | "settings";  // company, api-keys
+  | "payments"    // payment methods
+  | "settings";   // company, api-keys, invitations
 ```
 
 Each module supports two actions:
@@ -363,7 +363,7 @@ Email sent with token link
 User accepts → team_members row created
     │
     ▼
-User assigned explicit role (admin/manager/salesperson/accountant)
+User assigned explicit role (manager/salesperson/accountant)
     │
     ▼
 Full ERP access based on role permissions
@@ -454,7 +454,7 @@ API keys are tied to a `role_id`. When an API key authenticates, `verify_api_key
 
 ## 7. API Route Permission Map
 
-Every ERP API route is protected. Routes NOT listed below are portal routes (`/api/v1/portal/*`), Stripe webhooks, or settings/api-keys (RLS-only).
+Every ERP API route is protected. Routes NOT listed below are portal routes (`/api/v1/portal/*`), Stripe webhooks, or AI endpoints.
 
 | Route | HTTP Method | Permission Required |
 |---|---|---|
@@ -477,8 +477,6 @@ Every ERP API route is protected. Routes NOT listed below are portal routes (`/a
 | `/api/v1/customers/[id]` | PATCH | `clients` write |
 | `/api/v1/customers/[id]` | DELETE | `clients` write |
 | `/api/v1/vendors` | GET | `clients` read |
-| `/api/v1/vendors` | POST | `clients` write |
-| `/api/v1/vendors/[id]` | GET | `clients` read |
 | `/api/v1/vendors/[id]` | PATCH | `clients` write |
 | `/api/v1/vendors/[id]` | DELETE | `clients` write |
 | **Quotes** | | |
@@ -516,7 +514,7 @@ Every ERP API route is protected. Routes NOT listed below are portal routes (`/a
 | `/api/v1/expenses/[id]` | DELETE | `expenses` write |
 | `/api/v1/expense-categories` | GET | `expenses` read |
 | `/api/v1/expense-categories` | POST | `expenses` write |
-| `/api/v1/expense-categories` | DELETE | `expenses` write |
+| `/api/v1/expense-categories/[id]` | DELETE | `expenses` write |
 | **Income** | | |
 | `/api/v1/income` | GET | `income` read |
 | `/api/v1/income` | POST | `income` write |
@@ -525,7 +523,7 @@ Every ERP API route is protected. Routes NOT listed below are portal routes (`/a
 | `/api/v1/income/[id]` | DELETE | `income` write |
 | `/api/v1/income-categories` | GET | `income` read |
 | `/api/v1/income-categories` | POST | `income` write |
-| `/api/v1/income-categories` | DELETE | `income` write |
+| `/api/v1/income-categories/[id]` | DELETE | `income` write |
 | **Reports** | | |
 | `/api/v1/reports` | GET | `reports` read |
 | **Settings** | | |
@@ -533,19 +531,22 @@ Every ERP API route is protected. Routes NOT listed below are portal routes (`/a
 | `/api/v1/currencies` | POST | `currencies` write |
 | `/api/v1/currencies` | PATCH | `currencies` write |
 | `/api/v1/currencies` | DELETE | `currencies` write |
+| `/api/v1/currencies/[id]` | PATCH/DELETE | `currencies` write |
 | `/api/v1/settings/tax-rates` | GET | `taxes` read |
 | `/api/v1/settings/tax-rates` | POST | `taxes` write |
-| `/api/v1/settings/tax-rates` | PATCH | `taxes` write |
-| `/api/v1/settings/tax-rates` | DELETE | `taxes` write |
+| `/api/v1/settings/tax-rates` | PATCH/DELETE | `taxes` write |
+| `/api/v1/settings/tax-rates/[id]` | PATCH/DELETE | `taxes` write |
 | `/api/v1/settings/company` | GET | `settings` read |
 | `/api/v1/settings/company` | PATCH | `settings` write |
 | `/api/v1/settings/api-keys` | GET | `settings` read |
 | `/api/v1/settings/api-keys` | POST | `settings` write |
-| `/api/v1/settings/api-keys` | DELETE | `settings` write |
+| `/api/v1/settings/api-keys/[id]` | DELETE | `settings` write |
 | `/api/v1/settings/payment-methods` | GET | `payments` read |
 | `/api/v1/settings/payment-methods` | POST | `payments` write |
-| `/api/v1/settings/payment-methods` | PATCH | `payments` write |
-| `/api/v1/settings/payment-methods` | DELETE | `payments` write |
+| `/api/v1/settings/payment-methods/[id]` | PATCH/DELETE | `payments` write |
+| `/api/v1/invitations` | GET | `settings` read |
+| `/api/v1/invitations` | POST | `settings` write |
+| `/api/v1/invitations/[token]` | DELETE | `settings` write |
 
 ### Routes WITHOUT `requirePermission` (intentional)
 
@@ -553,6 +554,8 @@ Every ERP API route is protected. Routes NOT listed below are portal routes (`/a
 |---|---|
 | `/api/v1/portal/*` | Client portal self-service — no ERP permissions |
 | `/api/v1/stripe/*` | External webhook + checkout — no RBAC |
+| `/api/v1/ai/embeddings` | Internal — catalog.write guards via route check |
+| `/api/mcp` | MCP: auth via Bearer API key, tools registered conditionally |
 
 ---
 
@@ -605,18 +608,6 @@ END;
 $$;
 ```
 
-### Updated RLS Policies (5 total fixed)
-
-All self-referencing subqueries replaced with `is_team_owner()` helper:
-
-| Table | Policy | Fixed |
-|---|---|---|
-| `team_members` | "Team owners can manage members" | `is_team_owner(team_id)` |
-| `teams` | "Team owners can update their teams" | `is_team_owner(id)` |
-| `team_roles` | "Team owners can manage roles" | `is_team_owner(team_id)` |
-| `api_keys` | "Team owners can manage API keys" | `is_team_owner(team_id)` |
-| `check_permission()` function | Changed to SECURITY DEFINER | `LANGUAGE plpgsql STABLE SECURITY DEFINER` |
-
 ### API Key Auth Bypass (service_role)
 
 When authenticating via API key, subsequent data queries use the `service_role` key to bypass RLS entirely, since the API key was already verified by `verify_api_key()` (SECURITY DEFINER):
@@ -624,11 +615,6 @@ When authenticating via API key, subsequent data queries use the `service_role` 
 ```typescript
 // src/lib/auth/api-auth.ts
 function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new AuthError("Server misconfiguration: SERVICE_ROLE_KEY not set", 500);
-  }
   return createServerClient(supabaseUrl, serviceRoleKey, {
     cookies: { getAll: () => [], setAll: () => {} },
   });
@@ -641,58 +627,68 @@ function createAdminClient() {
 
 ## 9. Test Users
 
-Team ID: `285eaab4-44b4-4027-b65c-a1ebe7195678`
+**Team ID:** `285eaab4-44b4-4027-b65c-a1ebe7195678`
 
-| Email | Role | Password | Permissions |
-|---|---|---|---|
-| `admin@test.com` | Admin (owner) | `test123` | All modules r/w (bypass via is_owner) |
-| `manager@test.com` | Manager | `test123` | Commercial r/w, reports/currencies/taxes/payments r |
-| `salesman@test.com` | Salesperson | `test123` | Catalog/quotes r/w, clients/invoices/orders r |
-| `accountant@test.com` | Accountant | `test123` | Invoices/expenses/income/payments r/w, reports/taxes r |
-| `customer@test.com` | Client (portal) | `test123` | Portal only — own documents |
+| Email | Password | `is_owner` | Role | Accès |
+|---|---|---|---|---|
+| `admin@test.com` | `test123` | ✅ `true` | — (propriétaire) | Tous modules r/w, bypass RBAC complet |
+| `manager@test.com` | `test123` | ❌ | Manager | Commercial r/w, reports/currencies/taxes/payments r |
+| `salesman@test.com` | `test123` | ❌ | Salesperson | Catalog/quotes r/w, clients/invoices/orders r |
+| `accountant@test.com` | `test123` | ❌ | Accountant | Invoices/expenses/income/payments r/w, reports/taxes r |
+| `customer@test.com` | `test123` | ✅ `true` | — (compte admin test) | Idem admin — c'est un second compte propriétaire de test, pas un client portail |
+
+> **Note:** `customer@test.com` est un second compte propriétaire (`is_owner=true`) utilisé pour les tests admin. Ce n'est **pas** un utilisateur portail — le portail client utilise `portal_users` avec magic link, sans entrée dans `team_members`.
+
+### Résultats de tests vérifiés (2026-06-19)
+
+`node scripts/test-auth.mjs` — **72/72 tests passés**
+
+| Catégorie | Tests | Résultat |
+|---|---|---|
+| Auth edge cases (401/400/403) | 4 | ✅ |
+| Admin (owner) — 16 routes | 16 | ✅ |
+| Manager — 16 routes | 16 | ✅ |
+| Salesperson — 16 routes | 16 | ✅ |
+| Accountant — 16 routes | 16 | ✅ |
+| Sign-in + membership check | 4 | ✅ |
+
+**Résultats notables confirmés :**
+- Manager : `GET /income` → 403 (income: [] dans ses permissions)
+- Manager : `GET /settings/company` → 403 (settings: [])
+- Salesperson : `GET /expenses` → 403, `GET /reports` → 403, `POST /invoices` → 403, `POST /customers` → 403
+- Accountant : `GET /products` → 403 (catalog: []), `GET /customers` → 403 (clients: [])
 
 ---
 
 ## 10. Migration Reference
 
-| Migration | Files | RBAC Content |
+| Migration | Fichier | Contenu RBAC |
 |---|---|---|
-| `00001` | `supabase/migrations/00001_extensions_enums_rls.sql` | RLS helper functions: `get_teams_for_authenticated_user()`, `check_permission()`, `is_team_owner()` — all SECURITY DEFINER |
-| `00002` | `supabase/migrations/00002_auth_teams_rbac.sql` | `users`, `teams`, `team_roles`, `team_members`, `company_invitations`, `api_keys`, JWT hook, deferred RLS policies |
-| `00007` | `supabase/migrations/00007_inventory_rpc.sql` | `verify_api_key()` RPC — SECURITY DEFINER |
-
-### Fix Scripts (applied to live DB, migration files updated)
-
-| Script | What it fixed |
-|---|---|
-| `scripts/fix-rpc-security.mjs` | Changed `verify_api_key` to SECURITY DEFINER |
-| `scripts/fix-rls-recursion.mjs` | Changed `get_teams_for_authenticated_user()` to SECURITY DEFINER |
-| `scripts/fix-rls-owner-check.mjs` | Created `is_team_owner()` helper, updated 4 self-referencing RLS policies |
-| `scripts/create-test-users.mjs` | Created 5 test users with proper roles in Supabase Auth |
+| `00001` | `00001_extensions_enums_rls.sql` | Fonctions SECURITY DEFINER : `get_teams_for_authenticated_user()`, `check_permission()`, `is_team_owner()` |
+| `00002` | `00002_auth_teams_rbac.sql` | Tables `users`, `teams`, `team_roles`, `team_members`, `company_invitations`, `api_keys`, JWT hook, RLS policies |
+| `00007` | `00007_inventory_rpc.sql` | RPC `verify_api_key()` — SECURITY DEFINER |
+| `00030` | `00030_add_currency_fk.sql` | FK manquantes sur `invoices.currency_id` et `quotes.currency_id` → corrige PostgREST join (GET /invoices et GET /quotes retournaient 500) |
 
 ---
 
 ## Key Source Files
 
-| File | Purpose |
+| Fichier | Rôle |
 |---|---|
 | `src/lib/auth/api-auth.ts` | `withAuth()`, `authenticateRequest()`, `requirePermission()`, `hasPermission()` |
-| `src/lib/permissions/checkPermission.ts` | `checkPermission()` RPC wrapper, `PermissionModule` type |
-| `src/utils/supabase/server.ts` | Supabase server client creation |
-| `supabase/migrations/00001_extensions_enums_rls.sql` | RLS helper functions (SECURITY DEFINER) |
-| `supabase/migrations/00002_auth_teams_rbac.sql` | RBAC tables + RLS policies |
-| `supabase/migrations/00007_inventory_rpc.sql` | `verify_api_key()` RPC |
-| `scripts/create-test-users.mjs` | Test user creation |
-| `scripts/test-all-modules.mjs` | CRUD test suite |
-| `scripts/test-permissions.mjs` | Role-permission enforcement test (148 tests) |
-| `scripts/debug-api-key.mjs` | API key auth debugging |
+| `src/utils/supabase/server.ts` | Création du client Supabase serveur (SSR) |
+| `supabase/migrations/00001_extensions_enums_rls.sql` | Fonctions RLS helper (SECURITY DEFINER) |
+| `supabase/migrations/00002_auth_teams_rbac.sql` | Tables RBAC + RLS policies |
+| `supabase/migrations/00007_inventory_rpc.sql` | RPC `verify_api_key()` |
+| `supabase/migrations/00030_add_currency_fk.sql` | FK currency sur invoices et quotes |
+| `scripts/test-auth.mjs` | Suite de tests RBAC (72 tests) — `node scripts/test-auth.mjs` |
 
-## Known Bug Fix: `withAuth` Missing `await` on Handler
+---
 
-**Root cause:** `return handler(auth, teamId, searchParams)` without `await`. Since the handler is async, synchronous throws (like those from `requirePermission()`) become Promise rejections. Without `await`, the try/catch in `withAuth` never catches them, causing them to propagate to Next.js which returns 500 with empty body.
+## Bugs corrigés (historique)
 
-**Fix (one word):** `return await handler(auth, teamId, searchParams);`
-
-**Impact:** All permission denials returned 500 instead of 403. Fixed all 32 permission test failures.
-
-**Test:** 148/148 permission tests pass — `node scripts/test-permissions.mjs <TEAM_ID>`
+| Bug | Cause | Fix |
+|---|---|---|
+| `requirePermission()` retournait 500 au lieu de 403 | `withAuth` manquait `await` sur le handler — throws synchrones deviennent des rejections Promise non catchées | Ajouté `return await handler(...)` |
+| `GET /invoices` et `GET /quotes` retournaient 500 | `currency_id` dans ces tables sans FK → PostgREST ne peut pas faire le join `currency:currency_id(...)` | Migration `00030` : ajout des FK |
+| `POST /*` sans body JSON retournait 500 | `request.json()` lève `SyntaxError` catchée comme erreur générique dans `withAuth` | `withAuth` catch `SyntaxError` → retourne 400 "Invalid JSON body" |
