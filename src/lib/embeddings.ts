@@ -1,10 +1,10 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-let client: OpenAI | null = null;
+let client: GoogleGenerativeAI | null = null;
 
-function getClient(): OpenAI | null {
-  if (!process.env.OPENAI_API_KEY) return null;
-  if (!client) client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getClient(): GoogleGenerativeAI | null {
+  if (!process.env.GOOGLE_AI_API_KEY) return null;
+  if (!client) client = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
   return client;
 }
 
@@ -12,12 +12,9 @@ export async function generateEmbedding(text: string): Promise<number[] | null> 
   const ai = getClient();
   if (!ai) return null;
   try {
-    const res = await ai.embeddings.create({
-      model: "text-embedding-3-small",
-      input: text.slice(0, 8000),
-      dimensions: 1536,
-    });
-    return res.data[0]?.embedding ?? null;
+    const model = ai.getGenerativeModel({ model: "text-embedding-004" });
+    const result = await model.embedContent(text.slice(0, 8000));
+    return result.embedding.values ?? null;
   } catch {
     return null;
   }
