@@ -19,4 +19,4 @@ CREATE INDEX IF NOT EXISTS invoice_reminders_team_idx   ON public.invoice_remind
 ALTER TABLE public.invoice_reminders ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Team scoped invoice_reminders" ON public.invoice_reminders
-  FOR ALL USING (team_id = ANY(get_teams_for_authenticated_user()));
+  FOR ALL USING (team_id IN (SELECT public.get_teams_for_authenticated_user()));
