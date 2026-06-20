@@ -101,6 +101,10 @@
     "users": "Utilisateurs",
     "storefront": "Boutique en ligne",
     "credit_notes": "Avoirs",
+    "reminders": "Relances",
+    "treasury": "Trésorerie",
+    "revenue_book": "Livre de recettes",
+    "break_even": "Seuil de rentabilité",
     "main_section": "Principal",
     "finance_section": "Finance",
     "system_section": "Système"
