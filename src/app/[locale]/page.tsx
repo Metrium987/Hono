@@ -7,7 +7,7 @@ export default async function Home() {
   const supabase = createClient(cookieStore);
   const t = await getTranslations("common");
 
-  const { data: todos, error } = await supabase.from("todos").select();
+  const { data: currencies, error } = await supabase.from("currencies").select();
 
   return (
     <main>
@@ -16,11 +16,14 @@ export default async function Home() {
       {error ? (
         <p>Supabase connection test: {error.message}</p>
       ) : (
-        <ul>
-          {todos?.map((todo) => (
-            <li key={todo.id}>{todo.name}</li>
-          ))}
-        </ul>
+        <div>
+          <p>Supabase connection test: Success! Available currencies:</p>
+          <ul>
+            {currencies?.map((currency) => (
+              <li key={currency.id}>{currency.name} ({currency.code})</li>
+            ))}
+          </ul>
+        </div>
       )}
     </main>
   );
