@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     }
     const { data, error } = await auth.supabase
       .from("api_keys")
-      .select("id, name, description, key_prefix, role_id, expires_at, last_used_at, revoked_at, created_at")
+      .select("id, name, description, key_prefix, role_id, is_owner, expires_at, last_used_at, revoked_at, created_at")
       .eq("team_id", teamId)
       .is("revoked_at", null)
       .order("created_at", { ascending: false });
@@ -37,10 +37,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }
     const body = await request.json();
-    const { name, description, role_id, expires_in_days } = body;
+    const { name, description, role_id, expires_in_days, is_owner } = body;
 
     if (!name) {
       return NextResponse.json({ error: "name is required" }, { status: 400 });
+    }
+
+    if (is_owner && !auth.isOwner) {
+      return NextResponse.json({ error: "Only owners can create owner-level API keys" }, { status: 403 });
     }
 
     // Generate a key: hk_ + random bytes (34 chars total)
@@ -64,8 +68,9 @@ export async function POST(request: NextRequest) {
         key_prefix: keyPrefix,
         key_hash: keyHash,
         expires_at: expiresAt,
+        is_owner: !!is_owner,
       })
-      .select("id, name, description, key_prefix, expires_at, created_at")
+      .select("id, name, description, key_prefix, is_owner, expires_at, created_at")
       .single();
 
     if (error) {

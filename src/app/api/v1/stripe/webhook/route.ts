@@ -56,19 +56,27 @@ export async function POST(request: NextRequest) {
 
       const paymentMethodId = paymentMethod?.id;
 
-      // Get default currency
-      const { data: defaultCurrency } = await supabase
-        .from("currencies")
-        .select("id")
+      // Get invoice currency and check decimal status
+      const { data: invoice, error: invError } = await supabase
+        .from("invoices")
+        .select("currency_id, currency:currency_id(code)")
+        .eq("id", invoiceId)
         .eq("team_id", teamId)
-        .eq("is_default", true)
         .single();
 
-      const currencyId = defaultCurrency?.id;
+      if (invError || !invoice || !invoice.currency_id) {
+        console.error(`Invoice currency not found or invoice access denied for invoice ${invoiceId}`);
+        return NextResponse.json({ error: "Invoice currency mismatch or not found" }, { status: 400 });
+      }
 
-      if (!paymentMethodId || !currencyId) {
-        console.error("Stripe payment method or default currency not configured");
-        return NextResponse.json({ error: "Configuration missing" }, { status: 500 });
+      const currencyId = invoice.currency_id;
+      const currencyCode = (invoice.currency as any)?.code || "XPF";
+      const isZeroDecimal = ["xpf", "jpy"].includes(currencyCode.toLowerCase());
+      const finalAmount = isZeroDecimal ? amountTotal : amountTotal / 100;
+
+      if (!paymentMethodId) {
+        console.error("Stripe payment method not configured");
+        return NextResponse.json({ error: "Stripe payment method configuration missing" }, { status: 500 });
       }
 
       // Record payment
@@ -76,7 +84,7 @@ export async function POST(request: NextRequest) {
         .from("invoice_payments")
         .insert({
           invoice_id: invoiceId,
-          amount: amountTotal,
+          amount: finalAmount,
           currency_id: currencyId,
           payment_method_id: paymentMethodId,
           reference: `stripe_${session.id as string}`,

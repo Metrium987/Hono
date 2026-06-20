@@ -89,18 +89,13 @@ export async function POST(request: NextRequest) {
 
     const total_ttc = subtotal_ht + tax_amount;
 
-    // Generate credit note number using sequential pattern
-    // Query existing count for this team/year to create a proper sequence
-    const currentYear = new Date().getFullYear();
-    const { count: existingCount } = await auth.supabase
-      .from("credit_notes")
-      .select("*", { count: "exact", head: true })
-      .eq("team_id", teamId)
-      .gte("created_at", `${currentYear}-01-01`)
-      .lte("created_at", `${currentYear}-12-31`);
+    // Generate credit note number using sequential pattern via atomic database function
+    const { data: creditNoteNumber, error: numError } = await auth.supabase
+      .rpc("generate_next_credit_note_number", { p_team_id: teamId });
 
-    const sequence = ((existingCount ?? 0) + 1).toString().padStart(4, "0");
-    const creditNoteNumber = `AV-${currentYear}-${sequence}`;
+    if (numError || !creditNoteNumber) {
+      return NextResponse.json({ error: "Failed to generate credit note number" }, { status: 500 });
+    }
 
     // Create credit note
     const { data: creditNote, error: cnError } = await auth.supabase

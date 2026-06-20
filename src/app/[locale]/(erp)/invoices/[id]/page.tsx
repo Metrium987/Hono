@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { RecordPaymentForm } from "./record-payment-form";
 import { PaymentsList } from "./payments-list";
+import { DeleteInvoiceDialog } from "./delete-invoice-dialog";
 
 type InvoiceItem = {
   id: string;
@@ -179,6 +180,12 @@ export default async function InvoiceDetailPage(props: { params: Params }) {
               </Link>
             </Button>
           )}
+          <DeleteInvoiceDialog
+            invoiceId={id}
+            invoiceNumber={invoice.invoice_number}
+            teamId={teamId}
+            status={invoice.status}
+          />
         </div>
       </div>
 

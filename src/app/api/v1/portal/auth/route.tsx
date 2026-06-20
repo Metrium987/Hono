@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { cookies } from "next/headers";
 import { rateLimit, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
 import { Resend } from "resend";
 import { render } from "@react-email/components";
@@ -25,12 +23,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }
 
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
     const adminSupabase = createAdminClient();
 
-    // Look up portal user by email
-    const { data: portalUser } = await supabase
+    // Look up portal user by email using admin client (bypasses RLS since this is unauthenticated lookup)
+    const { data: portalUser } = await adminSupabase
       .from("portal_users")
       .select("id, customer_id, name, email, auth_user_id, customer:customer_id!inner(team_id)")
       .eq("email", normalizedEmail)
@@ -64,7 +60,7 @@ export async function POST(request: NextRequest) {
       });
       if (!createError && newUser?.user) {
         authUserId = newUser.user.id;
-        await supabase
+        await adminSupabase
           .from("portal_users")
           .update({ auth_user_id: authUserId })
           .eq("id", portalUser.id);

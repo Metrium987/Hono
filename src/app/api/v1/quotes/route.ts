@@ -68,21 +68,29 @@ export async function POST(request: NextRequest) {
     let subtotal_ht = 0;
     let tax_amount = 0;
 
+    const taxRateIds = [...new Set(items.filter((i: ItemInput) => i.tax_rate_id).map((i: ItemInput) => i.tax_rate_id))];
+    const taxRateMap = new Map<string, number>();
+    if (taxRateIds.length > 0) {
+      const { data: rates } = await auth.supabase
+        .from("tax_rates")
+        .select("id, rate")
+        .in("id", taxRateIds);
+      if (rates) {
+        for (const r of rates) {
+          taxRateMap.set(r.id, r.rate);
+        }
+      }
+    }
+
     for (const item of items) {
       const qty = parseFloat(item.quantity) || 1;
       const unitPrice = parseFloat(item.unit_price_ht) || 0;
-      subtotal_ht += qty * unitPrice;
+      const lineTotal = qty * unitPrice;
+      subtotal_ht += lineTotal;
 
       if (item.tax_rate_id) {
-        const { data: taxRate } = await auth.supabase
-          .from("tax_rates")
-          .select("rate")
-          .eq("id", item.tax_rate_id)
-          .single();
-
-        if (taxRate) {
-          tax_amount += (qty * unitPrice) * (taxRate.rate / 100);
-        }
+        const rateVal = taxRateMap.get(item.tax_rate_id) ?? 0;
+        tax_amount += lineTotal * (rateVal / 100);
       }
     }
 

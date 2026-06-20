@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FileText, FileSignature, ClipboardList, LogOut } from "lucide-react";
+import { FileText, FileSignature, ClipboardList, LogOut, ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPortalSession } from "@/lib/portal/session";
@@ -27,7 +27,7 @@ export default async function PortalDashboardPage() {
     .single();
 
   // Fetch counts
-  const [{ count: quotesCount }, { count: invoicesCount }, { count: ordersCount }] = await Promise.all([
+  const [{ count: quotesCount }, { count: invoicesCount }, { count: ordersCount }, { count: creditNotesCount }] = await Promise.all([
     supabase
       .from("quotes")
       .select("*", { count: "exact", head: true })
@@ -38,6 +38,10 @@ export default async function PortalDashboardPage() {
       .eq("customer_id", session.customerId),
     supabase
       .from("orders")
+      .select("*", { count: "exact", head: true })
+      .eq("customer_id", session.customerId),
+    supabase
+      .from("credit_notes")
       .select("*", { count: "exact", head: true })
       .eq("customer_id", session.customerId),
   ]);
@@ -64,7 +68,7 @@ export default async function PortalDashboardPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-3 mb-8">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <Link href="./quotes">
           <Card className="hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
             <CardHeader className="flex flex-row items-center gap-3 pb-2">
@@ -95,6 +99,17 @@ export default async function PortalDashboardPage() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">{ordersCount ?? 0}</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="./credit-notes">
+          <Card className="hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
+            <CardHeader className="flex flex-row items-center gap-3 pb-2">
+              <ReceiptText className="h-5 w-5 text-primary" />
+              <CardTitle className="text-sm font-medium">{pt("my_credit_notes")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold">{creditNotesCount ?? 0}</p>
             </CardContent>
           </Card>
         </Link>

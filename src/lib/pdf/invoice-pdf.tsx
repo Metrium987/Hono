@@ -19,6 +19,7 @@ import { InvoiceBuyer } from "./components/invoice-buyer";
 import { InvoiceItems } from "./components/invoice-items";
 import { InvoiceTotals } from "./components/invoice-totals";
 import { InvoiceFooter } from "./components/invoice-footer";
+import { InvoiceStamp } from "./components/invoice-stamp";
 
 // ──────────────────────────────────────────────────────────
 // Types
@@ -123,6 +124,7 @@ export function InvoicePdfDocument({ data }: { data: InvoicePdfData }) {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        <InvoiceStamp status={data.status} />
         <InvoiceHeader data={data} />
         <InvoiceBuyer data={data} />
         <InvoiceItems data={data} />

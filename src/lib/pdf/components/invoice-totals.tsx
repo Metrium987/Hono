@@ -44,12 +44,20 @@ export function InvoiceTotals({ data }: Props) {
           <Text style={styles.totalValue}>{formatCurrency(data.subtotal_ht, currency)}</Text>
         </View>
 
-        {taxGroups.map((g) => (
+        {!data.team.is_franchise_en_base && taxGroups.map((g) => (
           <View key={g.rate} style={styles.totalRow}>
             <Text style={styles.totalLabel}>TVA {g.name} ({g.rate}%)</Text>
             <Text style={styles.totalValue}>{formatCurrency(g.amount, currency)}</Text>
           </View>
         ))}
+
+        {data.team.is_franchise_en_base && (
+          <View style={styles.totalRow}>
+            <Text style={[styles.totalLabel, { fontSize: 7, fontStyle: "italic" }]}>
+              TVA non applicable, franchise en base
+            </Text>
+          </View>
+        )}
 
         <View style={styles.grandTotalRow}>
           <Text style={styles.grandTotalLabel}>Total TTC</Text>

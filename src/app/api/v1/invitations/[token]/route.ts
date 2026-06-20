@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { cookies } from "next/headers";
 
 type Params = Promise<{ token: string }>;
@@ -8,10 +9,9 @@ type Params = Promise<{ token: string }>;
 // GET /api/v1/invitations/[token] — Check invitation validity
 export async function GET(request: NextRequest, props: { params: Params }) {
   const { token } = await props.params;
-  const cookieStore = await cookies();
-  const sb = createClient(cookieStore);
+  const admin = createAdminClient();
 
-  const { data: invitation } = await sb
+  const { data: invitation } = await admin
     .from("company_invitations")
     .select(`
       id, email, role_id, is_owner, expires_at, accepted_at, created_at,
@@ -42,13 +42,14 @@ export async function POST(request: NextRequest, props: { params: Params }) {
 
   const cookieStore = await cookies();
   const sb = createClient(cookieStore);
+  const admin = createAdminClient();
 
   const { data: { user } } = await sb.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
-  const { data: invitation } = await sb
+  const { data: invitation } = await admin
     .from("company_invitations")
     .select("*")
     .eq("token", token)
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest, props: { params: Params }) {
     return NextResponse.json({ error: "This invitation was sent to a different email address" }, { status: 403 });
   }
 
-  const { error: memberError } = await sb
+  const { error: memberError } = await admin
     .from("team_members")
     .insert({
       team_id: invitation.team_id,
@@ -77,7 +78,7 @@ export async function POST(request: NextRequest, props: { params: Params }) {
     return NextResponse.json({ error: memberError.message }, { status: 400 });
   }
 
-  await sb
+  await admin
     .from("company_invitations")
     .update({ accepted_at: new Date().toISOString() })
     .eq("id", invitation.id);

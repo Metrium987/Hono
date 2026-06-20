@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { rateLimit, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
 
 type ItemInput = { description?: string; quantity?: string | number; unit_price_ht?: string | number; product_id?: string | null };
@@ -49,12 +48,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "At least one item is required" }, { status: 400 });
     }
 
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = createAdminClient();
 
-    // Detect team from first product or use env default
-    let teamId = body.team_id;
-    if (!teamId) {
+    // Detect team from first product or use env default — never trust body.team_id from untrusted caller
+    let teamId: string | undefined;
+    {
       const firstProductId = items[0]?.product_id;
       if (firstProductId) {
         const { data: product } = await supabase

@@ -54,7 +54,7 @@ export async function PATCH(
     // Check current status first
     const { data: current } = await auth.supabase
       .from("invoices")
-      .select("status, team_id")
+      .select("status, team_id, discount_type, discount_value")
       .eq("id", id)
       .eq("team_id", teamId)
       .single();
@@ -82,7 +82,84 @@ export async function PATCH(
       if (body[field] !== undefined) updatePayload[field] = body[field];
     }
 
-    if (Object.keys(updatePayload).length === 0) {
+    const isItemsUpdated = body.items && Array.isArray(body.items);
+    const isDiscountUpdated = body.discount_type !== undefined || body.discount_value !== undefined;
+
+    if (isItemsUpdated || isDiscountUpdated) {
+      let itemsToUse = [];
+      if (isItemsUpdated) {
+        if (body.items.length === 0) {
+          return NextResponse.json({ error: "At least one invoice item is required" }, { status: 400 });
+        }
+        itemsToUse = body.items;
+      } else {
+        const { data: dbItems } = await auth.supabase
+          .from("invoice_items")
+          .select("quantity, unit_price_ht, tax_rate_id, description, product_id, group_id")
+          .eq("invoice_id", id);
+        itemsToUse = dbItems || [];
+      }
+
+      let subtotal_ht = 0;
+      let tax_amount = 0;
+      const itemLineTotals: { lineTotal: number; taxRateId: string | null; taxRateValue: number }[] = [];
+
+      // Fetch tax rates in batch
+      const taxRateIds = [...new Set(itemsToUse.filter((i: any) => i.tax_rate_id).map((i: any) => i.tax_rate_id))];
+      const taxRateMap = new Map<string, number>();
+      if (taxRateIds.length > 0) {
+        const { data: rates } = await auth.supabase
+          .from("tax_rates")
+          .select("id, rate")
+          .in("id", taxRateIds);
+        if (rates) {
+          for (const r of rates) {
+            taxRateMap.set(r.id, r.rate);
+          }
+        }
+      }
+
+      for (const item of itemsToUse) {
+        const qty = parseFloat(item.quantity as string) || 1;
+        const unitPrice = parseFloat(item.unit_price_ht as string) || 0;
+        const lineTotal = qty * unitPrice;
+        subtotal_ht += lineTotal;
+        itemLineTotals.push({
+          lineTotal,
+          taxRateId: item.tax_rate_id ?? null,
+          taxRateValue: item.tax_rate_id ? (taxRateMap.get(item.tax_rate_id) ?? 0) : 0,
+        });
+      }
+
+      const discountType = body.discount_type !== undefined ? body.discount_type : current.discount_type;
+      const discountValStr = body.discount_value !== undefined ? body.discount_value : current.discount_value;
+      const discountValue = discountValStr ? parseFloat(discountValStr as string) : 0;
+
+      let discountAmount = 0;
+      if (discountType === "percentage" && discountValue) {
+        discountAmount = subtotal_ht * (discountValue / 100);
+      } else if (discountType === "fixed" && discountValue) {
+        discountAmount = discountValue;
+      }
+
+      const discountRatio = subtotal_ht > 0 ? (subtotal_ht - discountAmount) / subtotal_ht : 1;
+
+      for (const lt of itemLineTotals) {
+        const discountedLineTotal = lt.lineTotal * discountRatio;
+        if (lt.taxRateId && lt.taxRateValue > 0) {
+          tax_amount += discountedLineTotal * (lt.taxRateValue / 100);
+        }
+      }
+
+      const total_ttc = (subtotal_ht - discountAmount) + tax_amount;
+
+      updatePayload.subtotal_ht = Math.round(subtotal_ht * 100) / 100;
+      updatePayload.tax_amount = Math.round(tax_amount * 100) / 100;
+      updatePayload.total_ttc = Math.round(total_ttc * 100) / 100;
+      updatePayload.discount_amount = Math.round(discountAmount * 100) / 100;
+    }
+
+    if (Object.keys(updatePayload).length === 0 && !isItemsUpdated) {
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
 
@@ -108,15 +185,13 @@ export async function PATCH(
       });
     }
 
-    // Update items if provided
-    if (body.items && Array.isArray(body.items) && body.items.length > 0) {
-      await auth.supabase.from("invoice_items").delete().eq("invoice_id", id);
-
+    // Update items atomically via RPC (delete + insert in one transaction)
+    if (isItemsUpdated) {
       const itemRows = body.items.map((item: ItemInput, idx: number) => {
         const qty = parseFloat(item.quantity as string) || 1;
         const unitPrice = parseFloat(item.unit_price_ht as string) || 0;
         return {
-          invoice_id: id,
+          product_id: item.product_id ?? null,
           description: item.description ?? "",
           quantity: qty,
           unit_price_ht: Math.round(unitPrice * 100) / 100,
@@ -126,7 +201,15 @@ export async function PATCH(
         };
       });
 
-      await auth.supabase.from("invoice_items").insert(itemRows);
+      const { error: itemsError } = await auth.supabase.rpc("replace_invoice_items", {
+        p_invoice_id: id,
+        p_team_id: teamId,
+        p_items: itemRows,
+      });
+
+      if (itemsError) {
+        return NextResponse.json({ error: `Failed to update invoice items: ${itemsError.message}` }, { status: 400 });
+      }
     }
 
     // Return updated invoice

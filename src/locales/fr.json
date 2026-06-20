@@ -638,7 +638,17 @@
     "portal_enabled": "Accès portail",
     "invoices_title": "Factures",
     "quotes_title": "Devis",
-    "edit": "Modifier"
+    "edit": "Modifier",
+    "crm_title": "CRM",
+    "crm_notes_title": "Notes internes",
+    "crm_requests_title": "Demandes",
+    "add_note": "Ajouter une note",
+    "note_placeholder": "Rédiger une note...",
+    "no_notes": "Aucune note interne",
+    "no_requests": "Aucune demande",
+    "request_open": "Ouverte",
+    "request_closed": "Fermée",
+    "request_in_progress": "En cours"
   },
   "customer_form": {
     "title_new": "Nouveau client",
@@ -798,7 +808,15 @@
     "order_item_description": "Description",
     "order_item_quantity": "Qté",
     "order_item_unit_price": "Prix unitaire",
-    "order_item_special_request": "Demande spéciale"
+    "order_item_special_request": "Demande spéciale",
+    "my_credit_notes": "Mes avoirs",
+    "no_credit_notes": "Aucun avoir",
+    "credit_note_ref": "N° Avoir",
+    "credit_note_count": "{count} avoir(s)",
+    "credit_note_number": "Avoir n°{number}",
+    "back_to_credit_notes": "Retour aux avoirs",
+    "credit_note_reason": "Motif",
+    "credit_note_linked_invoice": "Facture liée"
   },
   "errors": {
     "not_found": "Page non trouvée",

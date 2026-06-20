@@ -1,13 +1,52 @@
 import { getTranslations } from "next-intl/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AddToCartButton } from "@/lib/cart/add-to-cart-button";
+
+type Props = { params: Promise<{ id: string; locale: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const admin = createAdminClient();
+  const { data: product } = await admin
+    .from("products")
+    .select("name, description, price_ht, currency:currency_id(symbol, code)")
+    .eq("id", id)
+    .eq("is_active", true)
+    .eq("is_published", true)
+    .single();
+
+  if (!product) return {};
+
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://hono.pf";
+  const currency = Array.isArray(product.currency) ? product.currency[0] : product.currency;
+  const title = `${product.name} — Hono`;
+  const description = product.description ?? `${product.name} disponible sur Hono PF`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: `${base}/fr/products/${id}`,
+      siteName: "Hono PF",
+    },
+    other: {
+      "product:price:amount": String(product.price_ht),
+      "product:price:currency": currency?.code ?? "XPF",
+    },
+  };
+}
 
 export default async function ProductDetailPage(
   props: { params: Promise<{ id: string; locale: string }> }
@@ -47,8 +86,28 @@ export default async function ProductDetailPage(
   const priceHt = parseFloat(product.price_ht) || 0;
   const priceTtc = taxRate?.rate ? priceHt * (1 + taxRate.rate / 100) : priceHt;
 
+  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://hono.pf";
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.name,
+    description: product.description ?? undefined,
+    sku: product.sku ?? undefined,
+    offers: {
+      "@type": "Offer",
+      price: priceTtc.toFixed(2),
+      priceCurrency: (Array.isArray(product.currency) ? product.currency[0] : product.currency)?.code ?? "XPF",
+      availability: "https://schema.org/InStock",
+      url: `${base}/fr/products/${id}`,
+    },
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Back link */}
       <Link
         href="./.."

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+import { generateEmbedding } from "@/lib/embeddings";
 
 // GET /api/v1/products — List products for a team
 export async function GET(request: NextRequest) {
@@ -161,6 +162,13 @@ export async function POST(request: NextRequest) {
         created_by: auth.userId,
       });
     }
+
+    // Generate embedding non-blocking
+    generateEmbedding(`${name} ${description ?? ""} ${sku ?? ""}`.trim()).then((embedding) => {
+      if (embedding) {
+        auth.supabase.from("products").update({ embedding }).eq("id", product.id).then(() => {});
+      }
+    });
 
     return NextResponse.json({ data: product }, { status: 201 });
   });

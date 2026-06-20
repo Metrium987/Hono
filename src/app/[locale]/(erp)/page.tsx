@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, FileSignature, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import { RevenueChart } from "./_components/revenue-chart";
 
 function formatCurrency(amount: number) {
   return `${amount.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} F`;
@@ -30,14 +31,37 @@ export default async function DashboardPage() {
   const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0];
   const today = new Date().toISOString().split("T")[0];
 
-  const [{ data: invoices }, { data: quotes }, { data: invoicesRevenue }, { data: expenses }, { data: recentInvoices }, { data: recentQuotes }] = await Promise.all([
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  sixMonthsAgo.setDate(1);
+  const chartStart = sixMonthsAgo.toISOString().split("T")[0];
+
+  const [{ data: invoices }, { data: quotes }, { data: invoicesRevenue }, { data: expenses }, { data: recentInvoices }, { data: recentQuotes }, { data: chartInvoices }, { data: chartExpenses }] = await Promise.all([
     supabase.from("invoices").select("id, status").eq("team_id", teamId),
     supabase.from("quotes").select("id, status").eq("team_id", teamId),
     supabase.from("invoices").select("total_ttc").eq("team_id", teamId).in("status", ["paid", "partial", "sent"]).gte("issue_date", yearStart).lte("issue_date", today),
     supabase.from("expenses").select("amount").eq("team_id", teamId).gte("expense_date", yearStart).lte("expense_date", today),
     supabase.from("invoices").select("id, invoice_number, total_ttc, status, created_at").eq("team_id", teamId).order("created_at", { ascending: false }).limit(5),
     supabase.from("quotes").select("id, quote_number, total_ttc, status, created_at").eq("team_id", teamId).order("created_at", { ascending: false }).limit(5),
+    supabase.from("invoices").select("total_ttc, issue_date").eq("team_id", teamId).in("status", ["paid", "partial", "sent"]).gte("issue_date", chartStart),
+    supabase.from("expenses").select("amount, expense_date").eq("team_id", teamId).gte("expense_date", chartStart),
   ]);
+
+  const MONTH_LABELS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+  const chartData = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - (5 - i));
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const key = `${y}-${String(m + 1).padStart(2, "0")}`;
+    const rev = (chartInvoices ?? [])
+      .filter((inv) => inv.issue_date?.startsWith(key))
+      .reduce((s, inv) => s + parseFloat(String(inv.total_ttc || 0)), 0);
+    const exp = (chartExpenses ?? [])
+      .filter((e) => e.expense_date?.startsWith(key))
+      .reduce((s, e) => s + parseFloat(String(e.amount || 0)), 0);
+    return { month: MONTH_LABELS[m], revenue: Math.round(rev), expenses: Math.round(exp) };
+  });
 
   const invoiceCounts = {
     total: invoices?.length ?? 0,
@@ -144,6 +168,15 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">CA & Dépenses — 6 derniers mois</CardTitle>
+        </CardHeader>
+        <CardContent className="pb-4">
+          <RevenueChart data={chartData} />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

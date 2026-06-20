@@ -62,6 +62,51 @@ export async function PATCH(
       updatePayload.validity_date = updatePayload.validity_date ?? new Date().toISOString().split("T")[0];
     }
 
+    const isItemsUpdated = body.items && Array.isArray(body.items);
+
+    if (isItemsUpdated) {
+      if (body.items.length === 0) {
+        return NextResponse.json({ error: "At least one quote item is required" }, { status: 400 });
+      }
+
+      let subtotal_ht = 0;
+      let tax_amount = 0;
+
+      // Fetch tax rates in batch
+      const taxRateIds = [...new Set(body.items.filter((i: any) => i.tax_rate_id).map((i: any) => i.tax_rate_id))];
+      const taxRateMap = new Map<string, number>();
+      if (taxRateIds.length > 0) {
+        const { data: rates } = await auth.supabase
+          .from("tax_rates")
+          .select("id, rate")
+          .in("id", taxRateIds);
+        if (rates) {
+          for (const r of rates) {
+            taxRateMap.set(r.id, r.rate);
+          }
+        }
+      }
+
+      for (const item of body.items) {
+        const qty = parseFloat(item.quantity as string) || 1;
+        const unitPrice = parseFloat(item.unit_price_ht as string) || 0;
+        const lineTotal = qty * unitPrice;
+        subtotal_ht += lineTotal;
+        if (item.tax_rate_id) {
+          const rateVal = taxRateMap.get(item.tax_rate_id) ?? 0;
+          tax_amount += lineTotal * (rateVal / 100);
+        }
+      }
+
+      updatePayload.subtotal_ht = Math.round(subtotal_ht * 100) / 100;
+      updatePayload.tax_amount = Math.round(tax_amount * 100) / 100;
+      updatePayload.total_ttc = Math.round((subtotal_ht + tax_amount) * 100) / 100;
+    }
+
+    if (Object.keys(updatePayload).length === 0 && !isItemsUpdated) {
+      return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+    }
+
     const { error: updateError } = await auth.supabase
       .from("quotes")
       .update(updatePayload)
@@ -72,15 +117,13 @@ export async function PATCH(
       return NextResponse.json({ error: updateError.message }, { status: 400 });
     }
 
-    // Update items if provided
-    if (body.items && Array.isArray(body.items) && body.items.length > 0) {
-      await auth.supabase.from("quote_items").delete().eq("quote_id", id);
-
+    // Update items atomically via RPC (delete + insert in one transaction)
+    if (isItemsUpdated) {
       const itemRows = body.items.map((item: ItemInput, idx: number) => {
         const qty = parseFloat(item.quantity as string) || 1;
         const unitPrice = parseFloat(item.unit_price_ht as string) || 0;
         return {
-          quote_id: id,
+          product_id: item.product_id ?? null,
           description: item.description ?? "",
           quantity: qty,
           unit_price_ht: Math.round(unitPrice * 100) / 100,
@@ -90,7 +133,15 @@ export async function PATCH(
         };
       });
 
-      await auth.supabase.from("quote_items").insert(itemRows);
+      const { error: itemsError } = await auth.supabase.rpc("replace_quote_items", {
+        p_quote_id: id,
+        p_team_id: teamId,
+        p_items: itemRows,
+      });
+
+      if (itemsError) {
+        return NextResponse.json({ error: `Failed to update quote items: ${itemsError.message}` }, { status: 400 });
+      }
     }
 
     const { data } = await auth.supabase

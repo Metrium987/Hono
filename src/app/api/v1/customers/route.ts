@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+import { generateEmbedding } from "@/lib/embeddings";
 
 // GET /api/v1/customers — List customers for a team (with search and pagination)
 export async function GET(request: NextRequest) {
@@ -104,6 +105,14 @@ export async function POST(request: NextRequest) {
     if (custError) {
       return NextResponse.json({ error: custError.message }, { status: 400 });
     }
+
+    // Generate embedding non-blocking
+    const embedText = [company_name, contact_name, email, city, island, n_tahiti].filter(Boolean).join(" ");
+    generateEmbedding(embedText).then((embedding) => {
+      if (embedding) {
+        auth.supabase.from("customers").update({ embedding }).eq("id", customer.id).then(() => {});
+      }
+    });
 
     return NextResponse.json({ data: customer }, { status: 201 });
   });

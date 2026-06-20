@@ -127,6 +127,14 @@ export function registerTools(
         })).min(1).describe("Lignes du devis")
       },
       async ({ customer_id, currency_id, issue_date, valid_until, notes, items }) => {
+        // Validate customer belongs to team
+        const { data: customer } = await supabase.from("customers").select("id").eq("id", customer_id).eq("team_id", teamId).single();
+        if (!customer) return textResult("Erreur : Le client spécifié n'existe pas ou n'appartient pas à votre équipe.");
+
+        // Validate currency belongs to team
+        const { data: currency } = await supabase.from("currencies").select("id").eq("id", currency_id).eq("team_id", teamId).single();
+        if (!currency) return textResult("Erreur : La devise spécifiée n'existe pas ou n'appartient pas à votre équipe.");
+
         const { data: quote, error: qErr } = await supabase.rpc("generate_next_quote_number", { p_team_id: teamId });
         if (qErr) return textResult(`Erreur numérotation : ${qErr.message}`);
 
@@ -140,6 +148,27 @@ export function registerTools(
         }));
         const subtotal_ht = lineItems.reduce((s, i) => s + Number(i.line_total_ht), 0);
 
+        // Fetch tax rates in batch
+        const taxRateIds = [...new Set(items.filter(i => i.tax_rate_id).map(i => i.tax_rate_id))];
+        const taxRateMap = new Map<string, number>();
+        if (taxRateIds.length > 0) {
+          const { data: rates } = await supabase
+            .from("tax_rates")
+            .select("id, rate")
+            .eq("team_id", teamId)
+            .in("id", taxRateIds);
+          rates?.forEach(r => taxRateMap.set(r.id, r.rate));
+        }
+
+        let tax_amount = 0;
+        for (const item of lineItems) {
+          if (item.tax_rate_id) {
+            const rateVal = taxRateMap.get(item.tax_rate_id) ?? 0;
+            tax_amount += item.line_total_ht * (rateVal / 100);
+          }
+        }
+        const total_ttc = subtotal_ht + tax_amount;
+
         const { data: newQuote, error: insertErr } = await supabase.from("quotes").insert({
           team_id: teamId,
           customer_id,
@@ -149,14 +178,18 @@ export function registerTools(
           issue_date,
           valid_until: valid_until ?? null,
           notes: notes ?? null,
-          subtotal_ht,
-          tax_amount: 0,
-          total_ttc: subtotal_ht,
+          subtotal_ht: Math.round(subtotal_ht * 100) / 100,
+          tax_amount: Math.round(tax_amount * 100) / 100,
+          total_ttc: Math.round(total_ttc * 100) / 100,
         }).select("id, quote_number").single();
 
         if (insertErr || !newQuote) return textResult(`Erreur création : ${insertErr?.message}`);
 
-        await supabase.from("quote_items").insert(lineItems.map(li => ({ ...li, quote_id: newQuote.id })));
+        const { error: itemsErr } = await supabase.from("quote_items").insert(lineItems.map(li => ({ ...li, quote_id: newQuote.id })));
+        if (itemsErr) {
+          await supabase.from("quotes").delete().eq("id", newQuote.id);
+          return textResult(`Erreur création lignes : ${itemsErr.message}`);
+        }
 
         return textResult(`Devis ${newQuote.quote_number} créé avec succès. ID : ${newQuote.id}`);
       }
@@ -220,6 +253,18 @@ export function registerTools(
         notes: z.string().optional(),
       },
       async ({ invoice_id, amount, payment_date, payment_method_id, reference, notes }) => {
+        // Verify invoice exists and belongs to the team
+        const { data: invoice, error: invError } = await supabase
+          .from("invoices")
+          .select("id")
+          .eq("id", invoice_id)
+          .eq("team_id", teamId)
+          .single();
+
+        if (invError || !invoice) {
+          return textResult("Erreur : Facture introuvable ou n'appartient pas à votre équipe.");
+        }
+
         const { error } = await supabase.from("invoice_payments").insert({
           invoice_id,
           team_id: teamId,
