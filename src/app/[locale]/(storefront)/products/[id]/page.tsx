@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!product) return {};
 
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://hono.pf";
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://hono.pf").replace(/\/$/, "");
   const currency = Array.isArray(product.currency) ? product.currency[0] : product.currency;
   const title = `${product.name} — Hono`;
   const description = product.description ?? `${product.name} disponible sur Hono PF`;
@@ -86,7 +86,7 @@ export default async function ProductDetailPage(
   const priceHt = parseFloat(product.price_ht) || 0;
   const priceTtc = taxRate?.rate ? priceHt * (1 + taxRate.rate / 100) : priceHt;
 
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://hono.pf";
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://hono.pf").replace(/\/$/, "");
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",

@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? "https://hono.pf";
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://hono.pf").replace(/\/$/, "");
   const teamId = process.env.NEXT_PUBLIC_DEFAULT_TEAM_ID;
 
   const static_pages: MetadataRoute.Sitemap = [
