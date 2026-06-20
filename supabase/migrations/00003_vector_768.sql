@@ -35,7 +35,7 @@ RETURNS TABLE (
   price_ht        NUMERIC,
   similarity      FLOAT
 )
-LANGUAGE sql STABLE SET search_path = ''
+LANGUAGE sql STABLE SET search_path = public, extensions
 AS $$
   SELECT
     p.id,
@@ -63,7 +63,7 @@ RETURNS TABLE (
   email        TEXT,
   similarity   FLOAT
 )
-LANGUAGE sql STABLE SET search_path = ''
+LANGUAGE sql STABLE SET search_path = public, extensions
 AS $$
   SELECT
     c.id,
@@ -85,7 +85,7 @@ CREATE OR REPLACE FUNCTION public.hybrid_search_products(
   p_limit   INT DEFAULT 20
 )
 RETURNS SETOF public.products
-LANGUAGE sql STABLE SET search_path = ''
+LANGUAGE sql STABLE SET search_path = public, extensions
 AS $$
   SELECT p.*
   FROM public.products p
@@ -105,7 +105,7 @@ CREATE OR REPLACE FUNCTION public.hybrid_search_customers(
   p_limit   INT DEFAULT 20
 )
 RETURNS SETOF public.customers
-LANGUAGE sql STABLE SET search_path = ''
+LANGUAGE sql STABLE SET search_path = public, extensions
 AS $$
   SELECT c.*
   FROM public.customers c
