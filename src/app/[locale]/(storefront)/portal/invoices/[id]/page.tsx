@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
@@ -75,6 +76,26 @@ export default async function PortalInvoiceDetailPage(
     .single<PortalInvoice>();
 
   if (!invoice) notFound();
+
+  // Record viewed event + update viewed_at (non-blocking — don't fail page if logging fails)
+  try {
+    const admin = createAdminClient();
+    await admin.from("invoices").update({
+      viewed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq("id", id);
+    // Only record 'viewed' event if status is 'sent' or 'viewed' (not draft/paid/cancelled)
+    if (["sent", "viewed"].includes(invoice.status)) {
+      await admin.from("invoice_events").insert({
+        invoice_id: id,
+        event_type: "viewed",
+        payload: { source: "portal" },
+      }).select().single();
+    }
+  } catch (logError) {
+    // Non-critical — logging failure shouldn't prevent page render
+    console.error("Failed to record viewed event:", logError);
+  }
 
   const currency = unwrapInvoiceCurrency(invoice.currency);
   const items: InvoiceItem[] = Array.isArray(invoice.items) ? invoice.items : [];

@@ -11,10 +11,11 @@ export type ProductRow = {
   id: string;
   name: string;
   type: string;
-  unit_price_ht: number;
+  price_ht: number;
   current_stock: number;
   track_stock: boolean;
   is_active: boolean;
+  is_published: boolean;
   category: string | null;
 };
 
@@ -47,6 +48,7 @@ export function ProductsListClient({ products, currentPage, totalPages, baseUrl 
             <TableHead className="text-right">{t("th_price")}</TableHead>
             <TableHead className="text-right">{t("th_stock")}</TableHead>
             <TableHead>{t("th_status")}</TableHead>
+            <TableHead>Vitrine</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -61,7 +63,7 @@ export function ProductsListClient({ products, currentPage, totalPages, baseUrl 
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">{p.category ?? "-"}</TableCell>
               <TableCell className="text-sm">{p.type === "service" ? "Service" : "Produit"}</TableCell>
-              <TableCell className="text-right">{formatCurrency(p.unit_price_ht)}</TableCell>
+              <TableCell className="text-right">{formatCurrency(p.price_ht)}</TableCell>
               <TableCell className="text-right">
                 {p.track_stock ? (
                   <span className={p.current_stock <= 5 ? "text-red-600 font-medium" : ""}>{p.current_stock}</span>
@@ -69,6 +71,9 @@ export function ProductsListClient({ products, currentPage, totalPages, baseUrl 
               </TableCell>
               <TableCell>
                 <Badge variant={p.is_active ? "success" : "secondary"}>{p.is_active ? "Actif" : "Inactif"}</Badge>
+              </TableCell>
+              <TableCell>
+                <Badge variant={p.is_published ? "default" : "outline"}>{p.is_published ? "Publié" : "Brouillon"}</Badge>
               </TableCell>
               <TableCell className="text-right">
                 <Button variant="ghost" size="icon" asChild>

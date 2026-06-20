@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
               product_data: {
                 name: `Facture ${invoice.invoice_number}`,
               },
-              unit_amount: Math.round(remaining * 100), // XPF has no decimals
+              unit_amount: Math.round(remaining), // XPF is zero-decimal
             },
             quantity: 1,
           },

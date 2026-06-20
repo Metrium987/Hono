@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Plus, Loader2, Trash2, Check, X, AlertCircle, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,8 @@ type TaxRate = {
 };
 
 export default function TaxRatesPage() {
+  const t = useTranslations("tax_rates_page");
+  const common = useTranslations("common");
   const [taxes, setTaxes] = useState<TaxRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [teamId, setTeamId] = useState("");
@@ -79,7 +82,7 @@ export default function TaxRatesPage() {
 
       if (!res.ok) {
         const d = await res.json();
-        setError(d.error ?? "Erreur");
+        setError(d.error ?? common("unknown_error"));
         return;
       }
 
@@ -90,7 +93,7 @@ export default function TaxRatesPage() {
       setNewDesc("");
       setDialogOpen(false);
     } catch {
-      setError("Erreur de connexion");
+      setError(common("connection_error"));
     } finally {
       setSaving(false);
     }
@@ -132,32 +135,32 @@ export default function TaxRatesPage() {
             <Link href="../settings"><ChevronLeft className="h-5 w-5" /></Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Taux de TVA</h1>
-            <p className="text-sm text-muted-foreground">{taxes.length} taux</p>
+            <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("rates_count", { count: taxes.length })}</p>
           </div>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="mr-2 h-4 w-4" /> Ajouter un taux</Button>
+            <Button size="sm"><Plus className="mr-2 h-4 w-4" /> {t("add_button")}</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Nouveau taux de TVA</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("new_dialog_title")}</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Nom *</Label>
-                <Input id="name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="TVA standard" required />
+                <Label htmlFor="name">{t("name_label")}</Label>
+                <Input id="name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t("new_name_placeholder")} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rate">Taux (%) *</Label>
-                <Input id="rate" type="number" step="0.01" value={newRate} onChange={(e) => setNewRate(e.target.value)} placeholder="16" required />
+                <Label htmlFor="rate">{t("rate_label")}</Label>
+                <Input id="rate" type="number" step="0.01" value={newRate} onChange={(e) => setNewRate(e.target.value)} placeholder={t("new_rate_placeholder")} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="desc">Description</Label>
-                <Input id="desc" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="Taux applicable aux produits standard" />
+                <Label htmlFor="desc">{t("desc_label")}</Label>
+                <Input id="desc" value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder={t("desc_placeholder")} />
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button type="submit" className="w-full" disabled={saving}>
-                {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Création...</> : "Enregistrer"}
+                {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {common("creating")}</> : t("save_button")}
               </Button>
             </form>
           </DialogContent>
@@ -166,7 +169,7 @@ export default function TaxRatesPage() {
 
       <div className="space-y-2">
         {taxes.length === 0 ? (
-          <Card><CardContent className="text-center py-8 text-muted-foreground text-sm">Aucun taux de TVA configuré</CardContent></Card>
+          <Card><CardContent className="text-center py-8 text-muted-foreground text-sm">{t("no_tax_rates")}</CardContent></Card>
         ) : (
           taxes.map((tax) => (
             <Card key={tax.id}>
@@ -179,7 +182,7 @@ export default function TaxRatesPage() {
                     <p className="font-medium text-sm">{tax.name} — {tax.rate}%</p>
                     {tax.description && <p className="text-xs text-muted-foreground">{tax.description}</p>}
                   </div>
-                  {tax.is_active ? <Badge variant="success" className="text-[10px]">Actif</Badge> : <Badge variant="secondary" className="text-[10px]">Inactif</Badge>}
+                  {tax.is_active ? <Badge variant="success" className="text-[10px]">{common("active")}</Badge> : <Badge variant="secondary" className="text-[10px]">{common("inactive")}</Badge>}
                 </div>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteTax(tax.id)}>
                   <Trash2 className="h-4 w-4" />

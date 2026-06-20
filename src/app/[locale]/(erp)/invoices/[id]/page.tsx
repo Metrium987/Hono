@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Download, Plus } from "lucide-react";
+import { ArrowLeft, Download, Plus, FileX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -170,6 +170,13 @@ export default async function InvoiceDetailPage(props: { params: Params }) {
           {invoice.status === "draft" && (
             <Button variant="outline" size="sm" asChild>
               <Link href={`./${id}/edit`}>{common("edit")}</Link>
+            </Button>
+          )}
+          {["sent", "viewed", "partial", "paid", "overdue"].includes(invoice.status) && (
+            <Button variant="outline" size="sm" asChild>
+              <Link href={`../../credit-notes/new?invoice_id=${id}`}>
+                <FileX className="mr-2 h-4 w-4" /> {det("generate_credit_note")}
+              </Link>
             </Button>
           )}
         </div>

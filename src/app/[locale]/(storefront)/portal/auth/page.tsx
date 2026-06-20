@@ -37,7 +37,7 @@ export default function PortalAuthPage() {
 
       setSent(true);
     } catch {
-      setError("Erreur de connexion. Veuillez réessayer.");
+      setError(t("connection_error_retry"));
     } finally {
       setLoading(false);
     }
@@ -47,9 +47,9 @@ export default function PortalAuthPage() {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <CheckCircle2 className="mx-auto h-12 w-12 text-green-600 mb-4" />
-        <h1 className="text-2xl font-bold tracking-tight mb-2">Email envoyé !</h1>
+        <h1 className="text-2xl font-bold tracking-tight mb-2">{t("email_sent_title")}</h1>
         <p className="text-muted-foreground">
-          Si cette adresse est associée à un compte, vous recevrez un lien de connexion par email.
+          {t("email_sent_description")}
         </p>
       </div>
     );
@@ -59,19 +59,19 @@ export default function PortalAuthPage() {
     <div className="mx-auto max-w-md px-4 py-20">
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Espace client</CardTitle>
+          <CardTitle className="text-2xl">{t("portal_title")}</CardTitle>
           <CardDescription>
-            Connectez-vous avec votre adresse email pour accéder à vos devis, factures et commandes.
+            {t("portal_subtitle")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Adresse email</Label>
+              <Label htmlFor="email">{t("email_label")}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="votre@email.pf"
+                placeholder={t("email_placeholder")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -85,12 +85,12 @@ export default function PortalAuthPage() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Envoi en cours...
+                  {t("sending")}
                 </>
               ) : (
                 <>
                   <Mail className="mr-2 h-4 w-4" />
-                  Recevoir le lien de connexion
+                  {t("portal_submit")}
                 </>
               )}
             </Button>

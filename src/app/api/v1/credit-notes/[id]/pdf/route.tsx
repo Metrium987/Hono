@@ -5,7 +5,8 @@ import { CreditNotePdfDocument, type CreditNotePdfData } from "@/lib/pdf/credit-
 
 export const maxDuration = 60;
 
-// GET /api/v1/credit-notes/[id]/pdf — Download credit note as PDF
+// GET /api/v1/credit-notes/[id]/pdf
+// Proxies to Supabase Edge Function when SUPABASE_FUNCTIONS_URL is configured.
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -46,26 +47,49 @@ export async function GET(
     const pdfData: CreditNotePdfData = cn as CreditNotePdfData;
 
     if (!pdfData.team || !pdfData.customer || !pdfData.currency) {
-      return NextResponse.json(
-        { error: "Credit note data is incomplete" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Credit note data is incomplete" }, { status: 500 });
+    }
+
+    const filename = `avoir-${pdfData.credit_note_number.replace(/[^a-zA-Z0-9-_]/g, "_")}.pdf`;
+    const functionsUrl = process.env.SUPABASE_FUNCTIONS_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (functionsUrl && serviceKey) {
+      try {
+        const efRes = await fetch(`${functionsUrl}/generate-pdf`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ type: "credit_note", data: pdfData }),
+        });
+        if (efRes.ok && efRes.body) {
+          return new NextResponse(efRes.body, {
+            status: 200,
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Disposition": `attachment; filename="${filename}"`,
+            },
+          });
+        }
+      } catch (proxyErr) {
+        console.warn("[credit-note/pdf] Edge Function unavailable, falling back to local:", proxyErr);
+      }
     }
 
     try {
-      const pdfStream = await pdf(<CreditNotePdfDocument data={pdfData} />).toBlob();
-      const filename = `avoir-${pdfData.credit_note_number.replace(/[^a-zA-Z0-9-_]/g, "_")}.pdf`;
-
-      return new NextResponse(pdfStream, {
+      const pdfBlob = await pdf(<CreditNotePdfDocument data={pdfData} />).toBlob();
+      return new NextResponse(pdfBlob, {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename="${filename}"`,
-          "Content-Length": pdfStream.size.toString(),
+          "Content-Length": pdfBlob.size.toString(),
         },
       });
     } catch (renderError) {
-      console.error("Credit note PDF generation error:", renderError);
+      console.error("[credit-note/pdf] Local render error:", renderError);
       return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 });
     }
   });

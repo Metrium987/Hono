@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
       .select(`
         id, name, email, phone,
         address_line1, address_line2, city, island, postal_code, country,
-        n_tahiti, rcs_number, tax_id, is_franchise_en_base,
+        n_tahiti, dicp_id, rcs_number, tax_id, is_franchise_en_base,
         logo_url, website, default_currency_id,
         invoice_prefix, quote_prefix, late_fee_fixed,
         bank_name, bank_rib, bank_iban, bank_bic,
@@ -35,7 +35,7 @@ export async function PATCH(request: NextRequest) {
     const allowedFields = [
       "name", "email", "phone",
       "address_line1", "address_line2", "city", "island", "postal_code", "country",
-      "n_tahiti", "rcs_number", "tax_id", "is_franchise_en_base",
+      "n_tahiti", "dicp_id", "rcs_number", "tax_id", "is_franchise_en_base",
       "logo_url", "website", "default_currency_id",
       "invoice_prefix", "quote_prefix", "late_fee_fixed",
       "bank_name", "bank_rib", "bank_iban", "bank_bic",

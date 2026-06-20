@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { rateLimit, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
 
 // POST /api/v1/stripe/webhook — Handle Stripe webhook events
@@ -45,8 +44,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
       }
 
-      const cookieStore = await cookies();
-      const supabase = createClient(cookieStore);
+      const supabase = createAdminClient();
 
       // Get the default payment method for Stripe
       const { data: paymentMethod } = await supabase
@@ -78,7 +76,7 @@ export async function POST(request: NextRequest) {
         .from("invoice_payments")
         .insert({
           invoice_id: invoiceId,
-          amount: amountTotal / 100,
+          amount: amountTotal,
           currency_id: currencyId,
           payment_method_id: paymentMethodId,
           reference: `stripe_${session.id as string}`,
@@ -95,10 +93,10 @@ export async function POST(request: NextRequest) {
       await supabase.from("invoice_events").insert({
         invoice_id: invoiceId,
         event_type: "payment_recorded",
-        payload: { source: "stripe", session_id: session.id, amount: amountTotal / 100 },
+        payload: { source: "stripe", session_id: session.id, amount: amountTotal },
       });
 
-      console.log(`Stripe payment recorded for invoice ${invoiceId}: ${amountTotal / 100} XPF`);
+      console.log(`Stripe payment recorded for invoice ${invoiceId}: ${amountTotal} XPF`);
     }
 
     return NextResponse.json({ received: true });

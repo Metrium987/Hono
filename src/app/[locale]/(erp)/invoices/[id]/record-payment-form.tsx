@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Plus, Loader2, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,8 @@ export function RecordPaymentForm({
   invoiceId, teamId, remaining, currencySymbol, invoiceTotal, paidAmount,
   paymentMethods, currencies,
 }: RecordPaymentFormProps) {
+  const t = useTranslations("payment_form");
+  const common = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -57,7 +60,7 @@ export function RecordPaymentForm({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!amount || parseFloat(amount) <= 0 || !paymentMethodId || !currencyId) {
-      setError("Montant, méthode et devise requis");
+      setError(t("validation_error"));
       return;
     }
 
@@ -80,7 +83,7 @@ export function RecordPaymentForm({
 
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error ?? "Erreur lors de l'enregistrement");
+        setError(data.error ?? t("save_error"));
         return;
       }
 
@@ -91,7 +94,7 @@ export function RecordPaymentForm({
         window.location.reload();
       }, 1500);
     } catch {
-      setError("Erreur de connexion");
+      setError(common("connection_error"));
     } finally {
       setLoading(false);
     }
@@ -101,36 +104,36 @@ export function RecordPaymentForm({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm">
-          <Plus className="mr-2 h-4 w-4" /> Enregistrer un paiement
+          <Plus className="mr-2 h-4 w-4" /> {t("title")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Enregistrer un paiement</DialogTitle>
+          <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
 
         {success ? (
           <div className="flex flex-col items-center py-8 text-center">
             <Check className="h-12 w-12 text-green-600 mb-4" />
-            <p className="font-medium">Paiement enregistré !</p>
+            <p className="font-medium">{t("success_message")}</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="bg-muted rounded-lg p-3 text-sm space-y-1">
-              <div className="flex justify-between"><span>Total TTC</span><span>{invoiceTotal.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currencySymbol}</span></div>
-              {paidAmount > 0 && <div className="flex justify-between text-green-600"><span>Déjà payé</span><span>-{paidAmount.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currencySymbol}</span></div>}
-              <div className="flex justify-between font-medium"><span>Reste à payer</span><span>{remaining.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currencySymbol}</span></div>
+              <div className="flex justify-between"><span>{common("total_ttc")}</span><span>{invoiceTotal.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currencySymbol}</span></div>
+              {paidAmount > 0 && <div className="flex justify-between text-green-600"><span>{t("already_paid")}</span><span>-{paidAmount.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currencySymbol}</span></div>}
+              <div className="flex justify-between font-medium"><span>{t("remaining_to_pay")}</span><span>{remaining.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currencySymbol}</span></div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Montant *</Label>
+              <Label htmlFor="amount">{t("amount_label")}</Label>
               <Input id="amount" type="number" step="0.01" min="0.01" max={remaining} value={amount} onChange={(e) => setAmount(e.target.value)} required />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="pm">Moyen de paiement *</Label>
+              <Label htmlFor="pm">{t("method_label")}</Label>
               <Select value={paymentMethodId} onValueChange={setPaymentMethodId}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={common("select_placeholder")} /></SelectTrigger>
                 <SelectContent>
                   {paymentMethods.map((pm) => (
                     <SelectItem key={pm.id} value={pm.id}>{pm.display_name ?? pm.name}</SelectItem>
@@ -140,9 +143,9 @@ export function RecordPaymentForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="currency">Devise *</Label>
+              <Label htmlFor="currency">{t("currency_label")}</Label>
               <Select value={currencyId} onValueChange={setCurrencyId}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={common("select_placeholder")} /></SelectTrigger>
                 <SelectContent>
                   {currencies.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.code} ({c.symbol})</SelectItem>
@@ -152,17 +155,17 @@ export function RecordPaymentForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="reference">Référence</Label>
-              <Input id="reference" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="N° chèque, virement..." />
+              <Label htmlFor="reference">{t("reference_label")}</Label>
+              <Input id="reference" value={reference} onChange={(e) => setReference(e.target.value)} placeholder={t("reference_placeholder")} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date">Date de paiement</Label>
+              <Label htmlFor="date">{t("date_label")}</Label>
               <Input id="date" type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">{t("notes_label")}</Label>
               <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
 
@@ -173,7 +176,7 @@ export function RecordPaymentForm({
             )}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enregistrement...</> : "Enregistrer le paiement"}
+              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("saving")}</> : t("submit_button")}
             </Button>
           </form>
         )}

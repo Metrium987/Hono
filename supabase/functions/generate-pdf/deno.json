@@ -1,0 +1,11 @@
+{
+  "imports": {
+    "react": "npm:react@18",
+    "react/jsx-runtime": "npm:react@18/jsx-runtime",
+    "@react-pdf/renderer": "npm:@react-pdf/renderer@4"
+  },
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
+  }
+}

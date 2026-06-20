@@ -55,7 +55,7 @@ export default function NewIncomePage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!description || !amount || !incomeDate) {
-      setError("Description, montant et date requis");
+      setError(t("validation_error"));
       return;
     }
 
@@ -86,7 +86,7 @@ export default function NewIncomePage() {
       router.push("../income");
       router.refresh();
     } catch {
-      setError("Erreur de connexion");
+      setError(common("connection_error"));
     } finally {
       setLoading(false);
     }
@@ -96,35 +96,35 @@ export default function NewIncomePage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <Link href="../income" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mb-2">
-          <ArrowLeft className="h-4 w-4" /> Retour aux revenus
+          <ArrowLeft className="h-4 w-4" /> {t("back")}
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">Nouveau revenu</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
       </div>
 
       <Card>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
-              <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ex: Subvention, don, conseil..." required />
+              <Label htmlFor="description">{t("description_label")}</Label>
+              <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("description_placeholder")} required />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">Montant *</Label>
+                <Label htmlFor="amount">{t("amount_label")}</Label>
                 <Input id="amount" type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="date">Date *</Label>
+                <Label htmlFor="date">{t("date_label")}</Label>
                 <Input id="date" type="date" value={incomeDate} onChange={(e) => setIncomeDate(e.target.value)} required />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="category">Catégorie</Label>
+                <Label htmlFor="category">{t("category_label")}</Label>
                 <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={common("select_placeholder")} /></SelectTrigger>
                   <SelectContent>
                     {categories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
@@ -133,9 +133,9 @@ export default function NewIncomePage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="currency">Devise</Label>
+                <Label htmlFor="currency">{t("currency_label")}</Label>
                 <Select value={currencyId} onValueChange={setCurrencyId}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={common("select_placeholder")} /></SelectTrigger>
                   <SelectContent>
                     {currencies.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.code} ({c.symbol})</SelectItem>
@@ -146,9 +146,9 @@ export default function NewIncomePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="customer">Client (optionnel)</Label>
+              <Label htmlFor="customer">{t("client_label")}</Label>
               <Select value={customerId} onValueChange={setCustomerId}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner un client..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={common("select_placeholder")} /></SelectTrigger>
                 <SelectContent>
                   {customers.map((c) => (
                     <SelectItem key={c.id} value={c.id}>{c.company_name ?? c.contact_name}</SelectItem>
@@ -158,8 +158,8 @@ export default function NewIncomePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes optionnelles..." />
+              <Label htmlFor="notes">{t("notes_label")}</Label>
+              <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("notes_placeholder")} />
             </div>
 
             {error && (

@@ -21,6 +21,7 @@ type CompanyData = {
   postal_code: string | null;
   country: string | null;
   n_tahiti: string | null;
+  dicp_id: string | null;
   rcs_number: string | null;
   tax_id: string | null;
   is_franchise_en_base: boolean;
@@ -150,6 +151,10 @@ export default function CompanyPage() {
             <div className="space-y-2">
               <Label htmlFor="n_tahiti">{t("tahiti")}</Label>
               <Input id="n_tahiti" value={data.n_tahiti ?? ""} onChange={(e) => update("n_tahiti", e.target.value || null)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dicp_id">{t("dicp")}</Label>
+              <Input id="dicp_id" value={data.dicp_id ?? ""} onChange={(e) => update("dicp_id", e.target.value || null)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="rcs">{t("rcs")}</Label>

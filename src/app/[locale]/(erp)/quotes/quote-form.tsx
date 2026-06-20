@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,16 +14,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { formatCurrency } from "@/lib/format-currency";
 
 type Customer = { id: string; company_name: string | null; contact_name: string; email: string | null };
 type Currency = { id: string; code: string; symbol: string; symbol_position: string; is_default: boolean };
 type TaxRate = { id: string; name: string; rate: number; is_active: boolean };
 
-type LineItem = { key: string; description: string; quantity: string; unit_price_ht: string; tax_rate_id: string };
+const quoteItemSchema = z.object({
+  description: z.string().min(1, "La description est requise"),
+  quantity: z.coerce.number().positive("Doit être > 0").default(1),
+  unit_price_ht: z.coerce.number().nonnegative().default(0),
+  tax_rate_id: z.string().optional().default(""),
+});
 
-function createLineItem(): LineItem {
-  return { key: `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, description: "", quantity: "1", unit_price_ht: "0", tax_rate_id: "" };
-}
+const quoteFormSchema = z.object({
+  customer_id: z.string().min(1, "Veuillez sélectionner un client"),
+  issue_date: z.string().min(1, "Date requise"),
+  validity_date: z.string().optional().default(""),
+  currency_id: z.string().min(1, "Devise requise"),
+  notes: z.string().optional().default(""),
+  items: z.array(quoteItemSchema).min(1, "Ajoutez au moins une ligne de devis"),
+});
+
+type QuoteFormValues = z.infer<typeof quoteFormSchema>;
 
 type QuoteFormProps = {
   customers: Customer[];
@@ -28,64 +44,74 @@ type QuoteFormProps = {
   taxRates: TaxRate[];
   teamId: string;
   editId?: string;
-  initialData?: {
-    customer_id: string;
-    issue_date: string;
-    validity_date: string;
-    currency_id: string;
-    notes: string;
-    items: LineItem[];
-  };
+  initialData?: Partial<QuoteFormValues> & { items?: { key?: string; description: string; quantity: string | number; unit_price_ht: string | number; tax_rate_id: string }[] };
 };
 
 export function QuoteForm({ customers, currencies, taxRates, teamId, editId, initialData }: QuoteFormProps) {
   const router = useRouter();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
   const common = useTranslations("common");
+  const t = useTranslations("quote_form");
+  const errT = useTranslations("errors");
 
   const defaultCurrency = currencies.find((c) => c.is_default) ?? currencies[0];
 
-  const [customerId, setCustomerId] = useState(initialData?.customer_id ?? "");
-  const [issueDate, setIssueDate] = useState(initialData?.issue_date ?? new Date().toISOString().split("T")[0]);
-  const [validityDate, setValidityDate] = useState(initialData?.validity_date ?? new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0]);
-  const [currencyId, setCurrencyId] = useState(initialData?.currency_id ?? defaultCurrency?.id ?? "");
-  const [notes, setNotes] = useState(initialData?.notes ?? "");
-  const [items, setItems] = useState<LineItem[]>(initialData?.items ?? [createLineItem()]);
+  const { control, register, watch, setError, setValue, formState, handleSubmit } = useForm<QuoteFormValues>({
+    resolver: zodResolver(quoteFormSchema) as any,
+    defaultValues: {
+      customer_id: initialData?.customer_id ?? "",
+      issue_date: initialData?.issue_date ?? new Date().toISOString().split("T")[0],
+      validity_date: initialData?.validity_date ?? new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
+      currency_id: initialData?.currency_id ?? defaultCurrency?.id ?? "",
+      notes: initialData?.notes ?? "",
+      items: initialData?.items?.map((i) => ({
+        description: i.description,
+        quantity: typeof i.quantity === "string" ? parseFloat(i.quantity) || 1 : i.quantity,
+        unit_price_ht: typeof i.unit_price_ht === "string" ? parseFloat(i.unit_price_ht) || 0 : i.unit_price_ht,
+        tax_rate_id: i.tax_rate_id ?? "",
+      })) ?? [{ description: "", quantity: 1, unit_price_ht: 0, tax_rate_id: "" }],
+    },
+  });
 
-  const addItem = useCallback(() => setItems((prev) => [...prev, createLineItem()]), []);
-  const removeItem = useCallback((key: string) => setItems((prev) => prev.filter((i) => i.key !== key)), []);
-  const updateItem = useCallback((key: string, field: keyof LineItem, value: string) => {
-    setItems((prev) => prev.map((i) => (i.key === key ? { ...i, [field]: value } : i)));
-  }, []);
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "items",
+  });
 
-  const subtotal = items.reduce((sum, i) => sum + (parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price_ht) || 0), 0);
-  const taxTotal = items.reduce((sum, i) => {
-    const lineTotal = (parseFloat(i.quantity) || 0) * (parseFloat(i.unit_price_ht) || 0);
-    if (i.tax_rate_id) {
-      const rate = taxRates.find((r) => r.id === i.tax_rate_id);
-      if (rate) return sum + lineTotal * (rate.rate / 100);
-    }
-    return sum;
-  }, 0);
-  const total = subtotal + taxTotal;
+  const watchedItems = watch("items");
+  const currencyId = watch("currency_id");
   const activeCurrency = currencies.find((c) => c.id === currencyId);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
-    setError("");
+  const { subtotal, taxTotal, total } = useMemo(() => {
+    const items = watchedItems ?? [];
+    const sub = items.reduce((sum, item) => {
+      const qty = item.quantity || 0;
+      const price = item.unit_price_ht || 0;
+      return sum + qty * price;
+    }, 0);
+    const tax = items.reduce((sum, item) => {
+      const qty = item.quantity || 0;
+      const price = item.unit_price_ht || 0;
+      const lineTotal = qty * price;
+      if (item.tax_rate_id) {
+        const rate = taxRates.find((r) => r.id === item.tax_rate_id);
+        if (rate) return sum + lineTotal * (rate.rate / 100);
+      }
+      return sum;
+    }, 0);
+    return { subtotal: sub, taxTotal: tax, total: sub + tax };
+  }, [watchedItems, taxRates]);
 
+  const onSubmit = useCallback(async (data: QuoteFormValues) => {
     const payload = {
-      customer_id: customerId,
-      issue_date: issueDate,
-      validity_date: validityDate || null,
-      currency_id: currencyId,
-      notes: notes || null,
-      items: items.filter((i) => i.description.trim()).map((i) => ({
+      customer_id: data.customer_id,
+      issue_date: data.issue_date,
+      validity_date: data.validity_date || null,
+      currency_id: data.currency_id,
+      notes: data.notes || null,
+      items: data.items.filter((i) => i.description.trim()).map((i) => ({
         description: i.description,
-        quantity: parseFloat(i.quantity) || 1,
-        unit_price_ht: parseFloat(i.unit_price_ht) || 0,
+        quantity: i.quantity,
+        unit_price_ht: i.unit_price_ht,
         tax_rate_id: i.tax_rate_id || null,
       })),
     };
@@ -100,131 +126,176 @@ export function QuoteForm({ customers, currencies, taxRates, teamId, editId, ini
         body: JSON.stringify(payload),
       });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error ?? common("unknown_error"));
+      if (!res.ok) throw new Error(json.error ?? errT("validation_error"));
       router.push(editId ? `../${json.data.id}` : `./${json.data.id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : common("unknown_error"));
-    } finally {
-      setSubmitting(false);
+      const message = err instanceof Error ? err.message : "Erreur";
+      setError("root", { message });
     }
-  }
+  }, [editId, teamId, router, errT, setError]);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {formState.errors.root && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          {formState.errors.root.message}
+        </div>
       )}
 
       <Card>
-        <CardHeader><CardTitle>Client &amp; Dates</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t("section_customer_dates")}</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="customer">Client</Label>
-            <Select value={customerId} onValueChange={setCustomerId}>
-              <SelectTrigger id="customer"><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
+            <Label htmlFor="customer">{t("customer_label")}</Label>
+            <Select value={watch("customer_id")} onValueChange={(v) => setValue("customer_id", v as any, { shouldValidate: true })}>
+              <SelectTrigger id="customer" className={formState.errors.customer_id ? "border-destructive" : ""}>
+                <SelectValue placeholder={t("select_customer_placeholder")} />
+              </SelectTrigger>
               <SelectContent>
                 {customers.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.company_name || c.contact_name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {formState.errors.customer_id && <p className="text-xs text-destructive">{formState.errors.customer_id.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="currency">Devise</Label>
-            <Select value={currencyId} onValueChange={setCurrencyId}>
-              <SelectTrigger id="currency"><SelectValue /></SelectTrigger>
+            <Label htmlFor="currency">{t("currency_label")}</Label>
+            <Select value={watch("currency_id")} onValueChange={(v) => setValue("currency_id", v as any, { shouldValidate: true })}>
+              <SelectTrigger id="currency" className={formState.errors.currency_id ? "border-destructive" : ""}>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {currencies.map((c) => (
                   <SelectItem key={c.id} value={c.id}>{c.code} ({c.symbol})</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {formState.errors.currency_id && <p className="text-xs text-destructive">{formState.errors.currency_id.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="issue_date">Date d&apos;émission</Label>
-            <Input id="issue_date" type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+            <Label htmlFor="issue_date">{t("issue_date_label")}</Label>
+            <Input id="issue_date" type="date" {...register("issue_date")} className={formState.errors.issue_date ? "border-destructive" : ""} />
+            {formState.errors.issue_date && <p className="text-xs text-destructive">{formState.errors.issue_date.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="validity_date">Date de validité</Label>
-            <Input id="validity_date" type="date" value={validityDate} onChange={(e) => setValidityDate(e.target.value)} />
+            <Label htmlFor="validity_date">{t("validity_date_label")}</Label>
+            <Input id="validity_date" type="date" {...register("validity_date")} />
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Lignes du devis</CardTitle>
-          <Button type="button" variant="outline" size="sm" onClick={addItem}>
-            <Plus className="mr-2 h-4 w-4" /> Ajouter une ligne
+          <CardTitle>{t("section_items")}</CardTitle>
+          <Button type="button" variant="outline" size="sm" onClick={() => append({ description: "", quantity: 1, unit_price_ht: 0, tax_rate_id: "" })}>
+            <Plus className="mr-2 h-4 w-4" /> {t("add_line")}
           </Button>
         </CardHeader>
         <CardContent>
           <div className="hidden sm:grid sm:grid-cols-12 gap-2 mb-2 px-1 text-xs font-medium text-muted-foreground">
-            <div className="col-span-5">Description</div>
-            <div className="col-span-2 text-right">Quantité</div>
-            <div className="col-span-2 text-right">Prix unitaire HT</div>
-            <div className="col-span-2">TVA</div>
+            <div className="col-span-5">{t("th_description")}</div>
+            <div className="col-span-2 text-right">{t("th_quantity")}</div>
+            <div className="col-span-2 text-right">{t("th_unit_price")}</div>
+            <div className="col-span-2">{t("th_tax")}</div>
             <div className="col-span-1" />
           </div>
-          {items.map((item) => (
-            <div key={item.key} className="grid grid-cols-12 gap-2 mb-2 items-start">
-              <div className="col-span-12 sm:col-span-5">
-                <Input placeholder="Description" value={item.description} onChange={(e) => updateItem(item.key, "description", e.target.value)} />
+
+          {fields.map((field, idx) => {
+            const itemErrors = formState.errors.items?.[idx];
+            return (
+              <div key={field.id} className="grid grid-cols-12 gap-2 mb-2 items-start">
+                <div className="col-span-12 sm:col-span-5">
+                  <Input
+                    placeholder={t("description_placeholder")}
+                    {...register(`items.${idx}.description`)}
+                    className={itemErrors?.description ? "border-destructive" : ""}
+                  />
+                  {itemErrors?.description && typeof itemErrors.description === 'object' && 'message' in itemErrors.description && (
+                    <p className="text-xs text-destructive mt-0.5">{itemErrors.description.message as string}</p>
+                  )}
+                </div>
+                <div className="col-span-4 sm:col-span-2">
+                  <Input
+                    type="number" step="any" min="0"
+                    placeholder={t("qty_placeholder")}
+                    {...register(`items.${idx}.quantity`, { valueAsNumber: true })}
+                    className={`text-right ${itemErrors?.quantity ? "border-destructive" : ""}`}
+                  />
+                  {itemErrors?.quantity && typeof itemErrors.quantity === 'object' && 'message' in itemErrors.quantity && (
+                    <p className="text-xs text-destructive mt-0.5">{itemErrors.quantity.message as string}</p>
+                  )}
+                </div>
+                <div className="col-span-4 sm:col-span-2">
+                  <Input
+                    type="number" step="0.01" min="0"
+                    placeholder={t("price_placeholder")}
+                    {...register(`items.${idx}.unit_price_ht`, { valueAsNumber: true })}
+                    className={`text-right ${itemErrors?.unit_price_ht ? "border-destructive" : ""}`}
+                  />
+                  {itemErrors?.unit_price_ht && typeof itemErrors.unit_price_ht === 'object' && 'message' in itemErrors.unit_price_ht && (
+                    <p className="text-xs text-destructive mt-0.5">{itemErrors.unit_price_ht.message as string}</p>
+                  )}
+                </div>
+                <div className="col-span-3 sm:col-span-2">
+                  <Select
+                    value={watch(`items.${idx}.tax_rate_id`)}
+                    onValueChange={(v) => setValue(`items.${idx}.tax_rate_id`, v as any, { shouldValidate: true })}
+                  >
+                    <SelectTrigger className={itemErrors?.tax_rate_id ? "border-destructive" : ""}>
+                      <SelectValue placeholder={t("th_tax")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {taxRates.filter((r) => r.is_active).map((r) => (
+                        <SelectItem key={r.id} value={r.id}>{r.rate}%</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="col-span-1 flex justify-end">
+                  <Button type="button" variant="ghost" size="icon" onClick={() => remove(idx)} disabled={fields.length <= 1}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
-              <div className="col-span-4 sm:col-span-2">
-                <Input type="number" step="any" min="0" placeholder="Qté" value={item.quantity} onChange={(e) => updateItem(item.key, "quantity", e.target.value)} className="text-right" />
-              </div>
-              <div className="col-span-4 sm:col-span-2">
-                <Input type="number" step="0.01" min="0" placeholder="Prix" value={item.unit_price_ht} onChange={(e) => updateItem(item.key, "unit_price_ht", e.target.value)} className="text-right" />
-              </div>
-              <div className="col-span-3 sm:col-span-2">
-                <Select value={item.tax_rate_id} onValueChange={(v) => updateItem(item.key, "tax_rate_id", v)}>
-                  <SelectTrigger><SelectValue placeholder="TVA" /></SelectTrigger>
-                  <SelectContent>
-                    {taxRates.filter((r) => r.is_active).map((r) => (
-                      <SelectItem key={r.id} value={r.id}>{r.rate}%</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="col-span-1 flex justify-end">
-                <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(item.key)} disabled={items.length <= 1}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
+
+          {formState.errors.items && !Array.isArray(formState.errors.items) && (
+            <p className="text-xs text-destructive mt-2">{formState.errors.items.message}</p>
+          )}
+
           <Separator className="my-4" />
+
           <div className="ml-auto space-y-1 sm:w-64">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Total HT</span>
-              <span>{subtotal.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {activeCurrency?.symbol ?? "F"}</span>
+              <span className="text-muted-foreground">{common("total_ht")}</span>
+              <span>{formatCurrency(subtotal, activeCurrency?.code ?? "XPF")}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">TVA</span>
-              <span>{taxTotal.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {activeCurrency?.symbol ?? "F"}</span>
+              <span className="text-muted-foreground">{common("tax")}</span>
+              <span>{formatCurrency(taxTotal, activeCurrency?.code ?? "XPF")}</span>
             </div>
             <Separator />
             <div className="flex justify-between text-base font-bold">
-              <span>Total TTC</span>
-              <span className="text-primary">{total.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {activeCurrency?.symbol ?? "F"}</span>
+              <span>{common("total_ttc")}</span>
+              <span className="text-primary">{formatCurrency(total, activeCurrency?.code ?? "XPF")}</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
-        <CardContent>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes internes..." />
+        <CardHeader><CardTitle>{t("section_notes")}</CardTitle></CardHeader>
+        <CardContent>            <Textarea {...register("notes")} placeholder={t("notes_placeholder")} />
         </CardContent>
       </Card>
 
       <div className="flex justify-end gap-3">
-        <Button type="button" variant="outline" onClick={() => router.back()}>Annuler</Button>
-        <Button type="submit" disabled={submitting}>
-          {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {editId ? "Enregistrer" : "Créer le devis"}
+        <Button type="button" variant="outline" onClick={() => router.back()}>{t("cancel_button")}</Button>
+        <Button type="submit" disabled={formState.isSubmitting}>
+          {formState.isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          {editId ? t("save_button") : t("submit_button")}
         </Button>
       </div>
     </form>

@@ -1,6 +1,9 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { CustomersListClient, type CustomerRow } from "./customers-list-client";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -56,6 +59,9 @@ export default async function CustomersPage(props: { searchParams: SearchParams 
           <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">{t("subtitle", { count: count ?? 0 })}</p>
         </div>
+        <Button asChild>
+          <Link href="customers/new"><Plus className="mr-2 h-4 w-4" />{t("new")}</Link>
+        </Button>
       </div>
       <CustomersListClient customers={customerRows} currentPage={page} totalPages={totalPages} baseUrl="." />
     </div>

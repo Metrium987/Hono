@@ -56,7 +56,7 @@ export default function NewExpensePage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!description || !amount || !expenseDate) {
-      setError("Description, montant et date requis");
+      setError(t("validation_error"));
       return;
     }
 
@@ -88,7 +88,7 @@ export default function NewExpensePage() {
       router.push("../expenses");
       router.refresh();
     } catch {
-      setError("Erreur de connexion");
+      setError(common("connection_error"));
     } finally {
       setLoading(false);
     }
@@ -98,35 +98,35 @@ export default function NewExpensePage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <Link href="../expenses" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mb-2">
-          <ArrowLeft className="h-4 w-4" /> Retour aux dépenses
+          <ArrowLeft className="h-4 w-4" /> {t("back")}
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">Nouvelle dépense</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
       </div>
 
       <Card>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
-              <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ex: Fournitures de bureau" required />
+              <Label htmlFor="description">{t("description_label")}</Label>
+              <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("description_placeholder")} required />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="amount">Montant *</Label>
+                <Label htmlFor="amount">{t("amount_label")}</Label>
                 <Input id="amount" type="number" step="0.01" min="0" value={amount} onChange={(e) => setAmount(e.target.value)} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="date">Date *</Label>
+                <Label htmlFor="date">{t("date_label")}</Label>
                 <Input id="date" type="date" value={expenseDate} onChange={(e) => setExpenseDate(e.target.value)} required />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="category">Catégorie</Label>
+                <Label htmlFor="category">{t("category_label")}</Label>
                 <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={common("select_placeholder")} /></SelectTrigger>
                   <SelectContent>
                     {categories.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
@@ -135,9 +135,9 @@ export default function NewExpensePage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="currency">Devise</Label>
+                <Label htmlFor="currency">{t("currency_label")}</Label>
                 <Select value={currencyId} onValueChange={setCurrencyId}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={common("select_placeholder")} /></SelectTrigger>
                   <SelectContent>
                     {currencies.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.code} ({c.symbol})</SelectItem>
@@ -149,9 +149,9 @@ export default function NewExpensePage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="vendor">Fournisseur (existant)</Label>
+                <Label htmlFor="vendor">{t("vendor_label")}</Label>
                 <Select value={vendorId} onValueChange={setVendorId}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner..." /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={common("select_placeholder")} /></SelectTrigger>
                   <SelectContent>
                     {vendors.map((v) => (
                       <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
@@ -160,14 +160,14 @@ export default function NewExpensePage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vendorName">Ou nom libre</Label>
-                <Input id="vendorName" value={vendorName} onChange={(e) => setVendorName(e.target.value)} placeholder="Nom du fournisseur" />
+                <Label htmlFor="vendorName">{t("vendor_name_label")}</Label>
+                <Input id="vendorName" value={vendorName} onChange={(e) => setVendorName(e.target.value)} placeholder={t("vendor_name_placeholder")} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes optionnelles..." />
+              <Label htmlFor="notes">{t("notes_label")}</Label>
+              <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("notes_placeholder")} />
             </div>
 
             {error && (

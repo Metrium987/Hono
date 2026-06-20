@@ -2,11 +2,34 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 import { pdf } from "@react-pdf/renderer";
 import { InvoicePdfDocument, type InvoicePdfData } from "@/lib/pdf/invoice-pdf";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Vercel Hobby caps at 10s; Pro uses the 60s here. See Bloc 4 in MASTER_TODO for Edge Function migration.
 export const maxDuration = 60;
 
-// GET /api/v1/invoices/[id]/pdf — Download invoice as PDF
+/**
+ * Record a PDF download event and update viewed_at (non-blocking — fire & forget).
+ */
+async function recordPdfDownload(supabase: SupabaseClient, invoiceId: string) {
+  try {
+    await supabase.from("invoices").update({
+      viewed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq("id", invoiceId);
+
+    await supabase.from("invoice_events").insert({
+      invoice_id: invoiceId,
+      event_type: "pdf_downloaded",
+      payload: { source: "erp" },
+    });
+  } catch (err) {
+    // Non-critical — logging failure shouldn't block PDF delivery
+    console.error("[invoice/pdf] Failed to record download event:", err);
+  }
+}
+
+// GET /api/v1/invoices/[id]/pdf
+// Proxy to Supabase Edge Function when SUPABASE_FUNCTIONS_URL is set (avoids Vercel Hobby 10s timeout).
+// Falls back to local rendering if the env var is absent or the Edge Function fails.
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -15,7 +38,6 @@ export async function GET(
     requirePermission(auth, "invoices", "read");
     const { id } = await params;
 
-    // Fetch invoice with all related data
     const { data: invoice, error: invError } = await auth.supabase
       .from("invoices")
       .select(`
@@ -23,7 +45,7 @@ export async function GET(
         team:team_id!inner(
           name, email, phone,
           address_line1, address_line2, city, island, postal_code,
-          n_tahiti, rcs_number, is_franchise_en_base, logo_url,
+          n_tahiti, dicp_id, rcs_number, is_franchise_en_base, logo_url,
           invoice_prefix, late_fee_fixed,
           bank_name, bank_rib, bank_iban, bank_bic
         ),
@@ -43,16 +65,11 @@ export async function GET(
       .single();
 
     if (invError || !invoice) {
-      return NextResponse.json(
-        { error: "Invoice not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
-    // Type assertion after validation
     const pdfData: InvoicePdfData = invoice as InvoicePdfData;
 
-    // Validate required relationships loaded
     if (!pdfData.team || !pdfData.customer || !pdfData.currency) {
       return NextResponse.json(
         { error: "Invoice data is incomplete — missing team, customer, or currency" },
@@ -60,28 +77,49 @@ export async function GET(
       );
     }
 
+    const filename = `facture-${pdfData.invoice_number.replace(/[^a-zA-Z0-9-_]/g, "_")}.pdf`;
+    const functionsUrl = process.env.SUPABASE_FUNCTIONS_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (functionsUrl && serviceKey) {
+      try {
+        const efRes = await fetch(`${functionsUrl}/generate-pdf`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${serviceKey}`,
+          },
+          body: JSON.stringify({ type: "invoice", data: pdfData }),
+        });
+        if (efRes.ok && efRes.body) {
+          await recordPdfDownload(auth.supabase, id);
+          return new NextResponse(efRes.body, {
+            status: 200,
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Disposition": `attachment; filename="${filename}"`,
+            },
+          });
+        }
+      } catch (proxyErr) {
+        console.warn("[invoice/pdf] Edge Function unavailable, falling back to local:", proxyErr);
+      }
+    }
+
     try {
-      // Render PDF to a stream
-      const pdfStream = await pdf(
-        <InvoicePdfDocument data={pdfData} />
-      ).toBlob();
-
-      const filename = `facture-${pdfData.invoice_number.replace(/[^a-zA-Z0-9-_]/g, "_")}.pdf`;
-
-      return new NextResponse(pdfStream, {
+      const pdfBlob = await pdf(<InvoicePdfDocument data={pdfData} />).toBlob();
+      await recordPdfDownload(auth.supabase, id);
+      return new NextResponse(pdfBlob, {
         status: 200,
         headers: {
           "Content-Type": "application/pdf",
           "Content-Disposition": `attachment; filename="${filename}"`,
-          "Content-Length": pdfStream.size.toString(),
+          "Content-Length": pdfBlob.size.toString(),
         },
       });
     } catch (renderError) {
-      console.error("PDF generation error:", renderError);
-      return NextResponse.json(
-        { error: "Failed to generate PDF" },
-        { status: 500 }
-      );
+      console.error("[invoice/pdf] Local render error:", renderError);
+      return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 });
     }
   });
 }

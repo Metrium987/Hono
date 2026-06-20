@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Users } from "lucide-react";
+import { ArrowLeft, Users, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -85,6 +85,9 @@ export default async function CustomerDetailPage(props: { params: Params }) {
             <p className="text-sm text-muted-foreground">{customer.contact_name}</p>
           )}
         </div>
+        <Button variant="outline" asChild>
+          <Link href={`${id}/edit`}><Pencil className="mr-2 h-4 w-4" />{t("edit")}</Link>
+        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

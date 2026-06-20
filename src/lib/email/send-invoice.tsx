@@ -25,6 +25,11 @@ export type SendInvoiceParams = {
 
 /**
  * Send an invoice email using Resend and record the attempt in the email_outbox table.
+ *
+ * Uses a transactional pattern:
+ * 1. INSERT a 'pending' outbox record FIRST (ensures trace even if process crashes)
+ * 2. Send via Resend
+ * 3. UPDATE record to 'sent' or 'failed'
  */
 export async function sendInvoiceEmail(
   supabase: SupabaseClient,
@@ -37,11 +42,25 @@ export async function sendInvoiceEmail(
     return { success: false, error: "Resend not configured" };
   }
 
+  // 1. Insert a 'pending' outbox record FIRST — ensures legal trace even if crash occurs
+  const outboxId = await createPendingOutboxRecord(supabase, {
+    teamId,
+    invoiceId,
+    invoiceNumber,
+    teamName,
+    toEmail,
+  });
+
+  if (!outboxId) {
+    console.error("Failed to create pending outbox record — aborting send");
+    return { success: false, error: "Failed to create outbox trace" };
+  }
+
   try {
     // Render the email template to HTML
     const html = await render(<InvoiceEmail data={emailData} />);
 
-    // Send via Resend
+    // 2. Send via Resend
     const { data, error } = await resend.emails.send({
       from: `${teamName} <${resendFromEmail}>`,
       to: [toEmail],
@@ -52,13 +71,8 @@ export async function sendInvoiceEmail(
     if (error) {
       console.error("Resend send error:", error);
 
-      await recordOutbox(supabase, {
-        teamId,
-        invoiceId,
-        invoiceNumber,
-        teamName,
-        toEmail,
-        kind: "invoice_sent",
+      // 3. UPDATE to failed
+      await updateOutboxStatus(supabase, outboxId, {
         status: "failed",
         error: error.message,
       });
@@ -66,14 +80,8 @@ export async function sendInvoiceEmail(
       return { success: false, error: error.message };
     }
 
-    // Record success in email_outbox
-    await recordOutbox(supabase, {
-      teamId,
-      invoiceId,
-      invoiceNumber,
-      teamName,
-      toEmail,
-      kind: "invoice_sent",
+    // 3. UPDATE to sent
+    await updateOutboxStatus(supabase, outboxId, {
       status: "sent",
       messageId: data?.id,
     });
@@ -83,13 +91,8 @@ export async function sendInvoiceEmail(
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("sendInvoiceEmail error:", err);
 
-    await recordOutbox(supabase, {
-      teamId,
-      invoiceId,
-      invoiceNumber,
-      teamName,
-      toEmail,
-      kind: "invoice_sent",
+    // 3. UPDATE to failed
+    await updateOutboxStatus(supabase, outboxId, {
       status: "failed",
       error: message,
     });
@@ -100,43 +103,80 @@ export async function sendInvoiceEmail(
 
 // ── Internal helpers ──
 
-type OutboxParams = {
+type PendingOutboxParams = {
   teamId: string;
   invoiceId: string;
   invoiceNumber: string;
   teamName: string;
   toEmail: string;
-  kind: string;
-  status: "sent" | "failed";
-  messageId?: string;
-  error?: string;
 };
 
-async function recordOutbox(supabase: SupabaseClient, params: OutboxParams) {
-  const {
-    teamId, invoiceId, invoiceNumber, teamName,
-    toEmail, kind, status, messageId, error,
-  } = params;
+/**
+ * Insert a 'pending' email_outbox record BEFORE attempting the Resend call.
+ * Returns the record ID, or null if the insert failed.
+ */
+async function createPendingOutboxRecord(
+  supabase: SupabaseClient,
+  params: PendingOutboxParams
+): Promise<string | null> {
+  const { teamId, invoiceId, invoiceNumber, teamName, toEmail } = params;
 
   try {
-    await supabase.from("email_outbox").insert({
-      team_id: teamId,
-      kind,
-      to_email: toEmail,
-      subject: `Facture ${invoiceNumber} — ${teamName}`,
-      related_type: "invoice",
-      related_id: invoiceId,
-      status,
-      message_id: messageId ?? null,
-      last_error: error ?? null,
-      last_attempted_at: new Date().toISOString(),
-      sent_at: status === "sent" ? new Date().toISOString() : null,
-      next_attempt_at: status === "failed"
-        ? new Date(Date.now() + 3600000).toISOString()
-        : null,
-    });
+    const { data, error } = await supabase
+      .from("email_outbox")
+      .insert({
+        team_id: teamId,
+        kind: "invoice_sent",
+        to_email: toEmail,
+        subject: `Facture ${invoiceNumber} — ${teamName}`,
+        related_type: "invoice",
+        related_id: invoiceId,
+        status: "pending",
+        last_attempted_at: new Date().toISOString(),
+        next_attempt_at: new Date(Date.now() + 3600000).toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("Failed to create pending outbox record:", error);
+      return null;
+    }
+
+    return data.id;
   } catch (dbError) {
-    // Non-critical — logging the outbox failure shouldn't fail the email send
-    console.error("Failed to record email_outbox entry:", dbError);
+    console.error("Failed to create pending outbox record:", dbError);
+    return null;
+  }
+}
+
+/**
+ * Update an existing email_outbox record with the final status after Resend completes.
+ */
+async function updateOutboxStatus(
+  supabase: SupabaseClient,
+  id: string,
+  params: { status: "sent" | "failed"; messageId?: string; error?: string }
+) {
+  const { status, messageId, error } = params;
+
+  try {
+    await supabase
+      .from("email_outbox")
+      .update({
+        status,
+        message_id: messageId ?? null,
+        last_error: error ?? null,
+        last_attempted_at: new Date().toISOString(),
+        sent_at: status === "sent" ? new Date().toISOString() : null,
+        next_attempt_at: status === "failed"
+          ? new Date(Date.now() + 3600000).toISOString()
+          : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+  } catch (dbError) {
+    // Non-critical — failing to update the outbox shouldn't propagate
+    console.error("Failed to update email_outbox status:", dbError);
   }
 }

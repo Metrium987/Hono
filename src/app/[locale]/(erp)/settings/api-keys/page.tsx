@@ -25,6 +25,7 @@ type ApiKey = {
 
 export default function ApiKeysPage() {
   const t = useTranslations("api_keys_page");
+  const common = useTranslations("common");
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [teamId, setTeamId] = useState("");
@@ -84,7 +85,7 @@ export default function ApiKeysPage() {
 
       if (!res.ok) {
         const d = await res.json();
-        setError(d.error ?? "Erreur");
+        setError(d.error ?? common("unknown_error"));
         return;
       }
 
@@ -94,14 +95,14 @@ export default function ApiKeysPage() {
       setName("");
       setDescription("");
     } catch {
-      setError("Erreur de connexion");
+      setError(common("connection_error"));
     } finally {
       setSaving(false);
     }
   }
 
   async function revokeKey(id: string) {
-    if (!confirm("Révoquer cette clé API ? Les applications utilisant cette clé perdront l'accès.")) return;
+    if (!confirm(t("revoke_confirm"))) return;
     try {
       const res = await fetch(`/api/v1/settings/api-keys?id=${id}&team_id=${teamId}`, {
         method: "DELETE",
@@ -126,24 +127,24 @@ export default function ApiKeysPage() {
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Clés API</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">
-            {keys.length} clé{keys.length !== 1 ? "s" : ""} active{keys.length !== 1 ? "s" : ""}
+            {t("keys_count", { count: keys.length })}
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="mr-2 h-4 w-4" /> Nouvelle clé</Button>
+            <Button size="sm"><Plus className="mr-2 h-4 w-4" /> {t("new_key_button")}</Button>
           </DialogTrigger>
           <DialogContent className={newKey ? "max-w-lg" : ""}>
             {newKey ? (
               <div className="space-y-4 py-4">
                 <div className="flex items-center gap-2 text-green-600">
                   <Check className="h-5 w-5" />
-                  <p className="font-medium">Clé créée avec succès !</p>
+                  <p className="font-medium">{t("key_created_success")}</p>
                 </div>
                 <p className="text-sm text-destructive font-medium">
-                  Copiez cette clé maintenant — elle ne sera plus jamais affichée.
+                  {t("key_once_message")}
                 </p>
                 <div className="flex gap-2">
                   <Input value={newKey} readOnly className="font-mono text-xs" />
@@ -152,28 +153,28 @@ export default function ApiKeysPage() {
                   </Button>
                 </div>
                 <Button className="w-full" onClick={() => { setDialogOpen(false); setNewKey(null); }}>
-                  J&apos;ai copié la clé
+                  {t("key_copied_button")}
                 </Button>
               </div>
             ) : (
               <>
-                <DialogHeader><DialogTitle>Nouvelle clé API</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>{t("new_key_dialog_title")}</DialogTitle></DialogHeader>
                 <form onSubmit={handleCreate} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Nom *</Label>
-                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ma clé de production" required />
+                    <Label htmlFor="name">{t("name_label")}</Label>
+                    <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("name_placeholder")} required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="desc">Description</Label>
-                    <Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Utilisée pour..." rows={2} />
+                    <Label htmlFor="desc">{t("description_label")}</Label>
+                    <Textarea id="desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t("description_placeholder")} rows={2} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="expires">Expiration (jours)</Label>
+                    <Label htmlFor="expires">{t("expires_label")}</Label>
                     <Input id="expires" type="number" value={expiresIn} onChange={(e) => setExpiresIn(e.target.value)} min="1" max="3650" />
                   </div>
                   {error && <p className="text-sm text-destructive">{error}</p>}
                   <Button type="submit" className="w-full" disabled={saving}>
-                    {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Création...</> : t("create_button")}
+                    {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {common("creating")}</> : t("create_button")}
                   </Button>
                 </form>
               </>
@@ -184,7 +185,7 @@ export default function ApiKeysPage() {
 
       <div className="space-y-3">
         {keys.length === 0 ? (
-          <Card><CardContent className="text-center py-8 text-muted-foreground text-sm">Aucune clé API. Créez-en une pour l&apos;accès automatisé et MCP.</CardContent></Card>
+          <Card><CardContent className="text-center py-8 text-muted-foreground text-sm">{t("no_keys_hint")}</CardContent></Card>
         ) : (
           keys.map((key) => (
             <Card key={key.id}>
@@ -196,9 +197,9 @@ export default function ApiKeysPage() {
                   </div>
                   {key.description && <p className="text-xs text-muted-foreground">{key.description}</p>}
                   <p className="text-xs text-muted-foreground">
-                    Créée le {new Date(key.created_at).toLocaleDateString("fr-FR")}
-                    {key.expires_at && <> — Expire le {new Date(key.expires_at).toLocaleDateString("fr-FR")}</>}
-                    {key.last_used_at && <> — Dernière utilisation : {new Date(key.last_used_at).toLocaleDateString("fr-FR")}</>}
+                    {t("created_on", { date: new Date(key.created_at).toLocaleDateString("fr-FR") })}
+                    {key.expires_at && <> — {t("expires_on", { date: new Date(key.expires_at).toLocaleDateString("fr-FR") })}</>}
+                    {key.last_used_at && <> — {t("last_used_on", { date: new Date(key.last_used_at).toLocaleDateString("fr-FR") })}</>}
                   </p>
                 </div>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => revokeKey(key.id)}>

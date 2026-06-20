@@ -28,7 +28,7 @@ export default function NewVendorPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!name) {
-      setError("Le nom est requis");
+      setError(t("validation_error"));
       return;
     }
 
@@ -59,7 +59,7 @@ export default function NewVendorPage() {
       router.push("../vendors");
       router.refresh();
     } catch {
-      setError("Erreur de connexion");
+      setError(common("connection_error"));
     } finally {
       setLoading(false);
     }
@@ -69,48 +69,48 @@ export default function NewVendorPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <Link href="../vendors" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mb-2">
-          <ArrowLeft className="h-4 w-4" /> Retour aux fournisseurs
+          <ArrowLeft className="h-4 w-4" /> {t("back")}
         </Link>
-        <h1 className="text-2xl font-bold tracking-tight">Nouveau fournisseur</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
       </div>
 
       <Card>
         <CardContent className="pt-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nom *</Label>
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nom du fournisseur" required />
+              <Label htmlFor="name">{t("name_label")}</Label>
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("name_placeholder")} required />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="contact">Contact</Label>
-              <Input id="contact" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="Nom du contact" />
+              <Label htmlFor="contact">{t("contact_label")}</Label>
+              <Input id="contact" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder={t("contact_placeholder")} />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.com" />
+                <Label htmlFor="email">{t("email_label")}</Label>
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t("email_placeholder")} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Téléphone</Label>
-                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="40 00 00 00" />
+                <Label htmlFor="phone">{t("phone_label")}</Label>
+                <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("phone_placeholder")} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Adresse</Label>
-              <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Adresse complète" />
+              <Label htmlFor="address">{t("address_label")}</Label>
+              <Input id="address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("address_placeholder")} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ntahiti">N° Tahiti</Label>
-              <Input id="ntahiti" value={nTahiti} onChange={(e) => setNTahiti(e.target.value)} placeholder="Ex: 123456" />
+              <Label htmlFor="ntahiti">{t("n_tahiti_label")}</Label>
+              <Input id="ntahiti" value={nTahiti} onChange={(e) => setNTahiti(e.target.value)} placeholder={t("n_tahiti_placeholder")} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes optionnelles..." />
+              <Label htmlFor="notes">{t("notes_label")}</Label>
+              <Input id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("notes_placeholder")} />
             </div>
 
             {error && (

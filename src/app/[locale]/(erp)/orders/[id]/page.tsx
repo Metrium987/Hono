@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OrderStatusActions } from "./order-status-actions";
 
 type Params = { id: string };
 
@@ -66,13 +67,19 @@ export default async function OrderDetailPage({ params }: { params: Promise<Para
     <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/orders"><ArrowLeft className="h-5 w-5" /></Link>
+          <Link href="../orders"><ArrowLeft className="h-5 w-5" /></Link>
         </Button>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{common("order_detail")}</h1>
           <p className="text-sm text-muted-foreground"><span className="font-mono">{order.id.slice(0, 8)}</span> — {formatDate(order.created_at)}</p>
         </div>
       </div>
+
+      <OrderStatusActions
+        orderId={id}
+        teamId={teamId}
+        initialStatus={order.status as "pending" | "processing" | "completed" | "cancelled"}
+      />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

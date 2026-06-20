@@ -3,11 +3,12 @@ import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Package } from "lucide-react";
+import { ArrowLeft, Package, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProductImageUpload } from "./product-image-upload";
+import { ProductPublishToggle } from "./product-publish-toggle";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
@@ -86,7 +87,16 @@ export default async function ProductDetailPage(props: { params: Params }) {
           </div>
           {product.sku && <p className="text-sm text-muted-foreground">SKU : {product.sku}</p>}
         </div>
+        <Button variant="outline" asChild>
+          <Link href={`${id}/edit`}><Pencil className="mr-2 h-4 w-4" />{t("edit")}</Link>
+        </Button>
       </div>
+
+      <Card>
+        <CardContent className="pt-4">
+          <ProductPublishToggle productId={id} teamId={teamId} initialPublished={product.is_published ?? false} />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

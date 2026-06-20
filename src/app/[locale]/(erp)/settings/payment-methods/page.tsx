@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent } from "react";
+import { useTranslations } from "next-intl";
 import { Plus, Loader2, Trash2, Check, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,8 @@ type PaymentMethod = {
 };
 
 export default function PaymentMethodsPage() {
+  const t = useTranslations("payment_methods_page");
+  const common = useTranslations("common");
   const [methods, setMethods] = useState<PaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [teamId, setTeamId] = useState("");
@@ -78,7 +81,7 @@ export default function PaymentMethodsPage() {
 
       if (!res.ok) {
         const d = await res.json();
-        setError(d.error ?? "Erreur");
+        setError(d.error ?? common("unknown_error"));
         return;
       }
 
@@ -88,7 +91,7 @@ export default function PaymentMethodsPage() {
       setNewDisplayName("");
       setDialogOpen(false);
     } catch {
-      setError("Erreur de connexion");
+      setError(common("connection_error"));
     } finally {
       setSaving(false);
     }
@@ -126,29 +129,29 @@ export default function PaymentMethodsPage() {
     <div className="space-y-6 max-w-2xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Moyens de paiement</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">
-            {methods.length} méthode{methods.length !== 1 ? "s" : ""}
+            {t("methods_count", { count: methods.length })}
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="mr-2 h-4 w-4" /> Ajouter</Button>
+            <Button size="sm"><Plus className="mr-2 h-4 w-4" /> {t("add_button")}</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Nouveau moyen de paiement</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t("new_dialog_title")}</DialogTitle></DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Identifiant *</Label>
-                <Input id="name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="cash, check, card..." required />
+                <Label htmlFor="name">{t("id_label")}</Label>
+                <Input id="name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder={t("id_placeholder")} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="display">Nom affiché</Label>
-                <Input id="display" value={newDisplayName} onChange={(e) => setNewDisplayName(e.target.value)} placeholder="Espèces, Chèque, Carte..." />
+                <Label htmlFor="display">{t("display_name_label")}</Label>
+                <Input id="display" value={newDisplayName} onChange={(e) => setNewDisplayName(e.target.value)} placeholder={t("new_name_placeholder")} />
               </div>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <Button type="submit" className="w-full" disabled={saving}>
-                {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Création...</> : "Créer"}
+                {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {common("creating")}</> : t("create_button")}
               </Button>
             </form>
           </DialogContent>
@@ -157,7 +160,7 @@ export default function PaymentMethodsPage() {
 
       <div className="space-y-2">
         {methods.length === 0 ? (
-          <Card><CardContent className="text-center py-8 text-muted-foreground text-sm">Aucune méthode de paiement</CardContent></Card>
+          <Card><CardContent className="text-center py-8 text-muted-foreground text-sm">{t("no_methods")}</CardContent></Card>
         ) : (
           methods.map((method) => (
             <Card key={method.id}>
@@ -170,7 +173,7 @@ export default function PaymentMethodsPage() {
                     <p className="font-medium text-sm">{method.display_name ?? method.name}</p>
                     <p className="text-xs text-muted-foreground">{method.name}</p>
                   </div>
-                  {method.is_active ? <Badge variant="success" className="text-[10px]">Actif</Badge> : <Badge variant="secondary" className="text-[10px]">Inactif</Badge>}
+                  {method.is_active ? <Badge variant="success" className="text-[10px]">{common("active")}</Badge> : <Badge variant="secondary" className="text-[10px]">{common("inactive")}</Badge>}
                 </div>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteMethod(method.id)}>
                   <Trash2 className="h-4 w-4" />

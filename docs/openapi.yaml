@@ -108,6 +108,54 @@ paths:
         - BearerAuth: []
         - SessionCookie: []
 
+  /products/{id}/image:
+    post:
+      summary: Upload product image (multipart/form-data)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file (JPEG, PNG, WebP, GIF, max 5MB)
+                alt_text:
+                  type: string
+      responses:
+        "201":
+          description: Image uploaded
+    delete:
+      summary: Delete product image
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: image_id
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Image deleted
+        "400":
+          description: image_id query param required
+
   # ── Customers ──
   /customers:
     get:
@@ -364,6 +412,28 @@ paths:
                 reference: { type: string }
                 payment_date: { type: string, format: date }
                 notes: { type: string }
+
+  /invoices/{id}/payments/{paymentId}:
+    delete:
+      summary: Void a recorded payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: paymentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/TeamId"
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Payment voided
+        "404":
+          description: Payment or invoice not found
 
   # ── Quotes ──
   /quotes:
@@ -759,6 +829,89 @@ paths:
     delete:
       summary: Delete income entry
 
+  # ── CRM ──
+  /crm-notes:
+    get:
+      summary: List CRM notes (filter: customer_id)
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+        - name: customer_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Paginated CRM notes list
+    post:
+      summary: Create CRM note
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customer_id, content]
+              properties:
+                customer_id: { type: string, format: uuid }
+                content: { type: string }
+      responses:
+        "201":
+          description: CRM note created
+
+  /crm-requests:
+    get:
+      summary: List CRM requests (filter: customer_id, status)
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+        - name: customer_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string, enum: [open, in_progress, resolved, closed] }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Paginated CRM requests list
+    post:
+      summary: Create CRM request
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customer_id, subject]
+              properties:
+                customer_id: { type: string, format: uuid }
+                subject: { type: string }
+                message: { type: string }
+      responses:
+        "201":
+          description: CRM request created
+
   # ── Reports (Phase 7) ──
   /reports:
     get:
@@ -1006,6 +1159,27 @@ paths:
       responses:
         "302":
           description: Redirects to /{locale}/portal/auth
+
+  /portal/invoices/{id}/pdf:
+    get:
+      summary: Download invoice PDF from customer portal (authenticated via portal session)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Unauthorized (no portal session)
+        "404":
+          description: Invoice not found
 
   /portal/quote-request:
     post:

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, Check, X, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +19,8 @@ type Currency = {
 };
 
 export default function CurrenciesPage() {
+  const t = useTranslations("currencies_page");
+  const common = useTranslations("common");
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,14 +61,14 @@ export default function CurrenciesPage() {
           <Link href="../settings"><ChevronLeft className="h-5 w-5" /></Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Devises</h1>
-          <p className="text-sm text-muted-foreground">{currencies.length} devise{currencies.length !== 1 ? "s" : ""}</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("currencies_count", { count: currencies.length })}</p>
         </div>
       </div>
 
       <div className="space-y-2">
         {currencies.length === 0 ? (
-          <Card><CardContent className="text-center py-8 text-muted-foreground text-sm">Aucune devise configurée</CardContent></Card>
+          <Card><CardContent className="text-center py-8 text-muted-foreground text-sm">{t("no_currencies")}</CardContent></Card>
         ) : (
           currencies.map((cur) => (
             <Card key={cur.id}>
@@ -81,8 +84,8 @@ export default function CurrenciesPage() {
                     )}
                   </div>
                   <div className="flex gap-1">
-                    {cur.is_default && <Badge className="text-[10px]">Par défaut</Badge>}
-                    {cur.is_active ? <Badge variant="success" className="text-[10px]">Actif</Badge> : <Badge variant="secondary" className="text-[10px]">Inactif</Badge>}
+                    {cur.is_default && <Badge className="text-[10px]">{common("default")}</Badge>}
+                    {cur.is_active ? <Badge variant="success" className="text-[10px]">{common("active")}</Badge> : <Badge variant="secondary" className="text-[10px]">{common("inactive")}</Badge>}
                   </div>
                 </div>
               </CardContent>

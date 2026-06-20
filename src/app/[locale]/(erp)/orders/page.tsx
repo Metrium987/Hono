@@ -81,7 +81,7 @@ export default async function OrdersPage(props: { searchParams: SearchParams }) 
           <p className="text-sm text-muted-foreground">{common("total_orders", { count: count ?? 0 })}</p>
         </div>
         <Button asChild>
-          <Link href="./orders/new">
+          <Link href="orders/new">
             <Plus className="mr-2 h-4 w-4" /> {common("new_order")}
           </Link>
         </Button>
