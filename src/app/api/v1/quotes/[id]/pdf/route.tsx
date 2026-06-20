@@ -3,6 +3,8 @@ import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 import { pdf } from "@react-pdf/renderer";
 import { QuotePdfDocument, type QuotePdfData } from "@/lib/pdf/quote-pdf";
 
+export const maxDuration = 60;
+
 // GET /api/v1/quotes/[id]/pdf — Download quote as PDF
 export async function GET(
   _request: NextRequest,
@@ -41,7 +43,7 @@ export async function GET(
       return NextResponse.json({ error: "Quote not found" }, { status: 404 });
     }
 
-    const pdfData: QuotePdfData = quote as unknown as QuotePdfData;
+    const pdfData: QuotePdfData = quote as QuotePdfData;
 
     if (!pdfData.team || !pdfData.customer || !pdfData.currency) {
       return NextResponse.json(

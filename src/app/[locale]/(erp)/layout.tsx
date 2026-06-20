@@ -19,7 +19,7 @@ export default async function ErpLayout({ children }: { children: React.ReactNod
 
   if (!memberships) redirect("/onboarding");
 
-  const activeTeam = memberships as unknown as {
+  const activeTeam = memberships as {
     team_id: string;
     teams: { name: string } | { name: string }[];
   };

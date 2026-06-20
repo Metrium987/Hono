@@ -11,6 +11,41 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getPortalSession } from "@/lib/portal/session";
 
+type InvoiceItem = {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price_ht: number;
+  line_total_ht: number;
+  tax_rate: { rate: number } | Array<{ rate: number }> | null;
+};
+
+type PortalInvoice = {
+  id: string;
+  invoice_number: string;
+  status: string;
+  issue_date: string;
+  service_date: string | null;
+  due_date: string;
+  subtotal_ht: number;
+  tax_amount: number;
+  total_ttc: number;
+  paid_amount: number;
+  notes: string | null;
+  currency: { symbol?: string | null } | Array<{ symbol?: string | null }> | null;
+  items: InvoiceItem[];
+};
+
+function unwrapInvoiceCurrency(value: PortalInvoice["currency"]): { symbol?: string | null } | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+function unwrapRate(item: InvoiceItem["tax_rate"]): number | null {
+  if (Array.isArray(item)) return item[0]?.rate ?? null;
+  return item?.rate ?? null;
+}
+
 export default async function PortalInvoiceDetailPage(
   props: { params: Promise<{ id: string }> }
 ) {
@@ -30,27 +65,28 @@ export default async function PortalInvoiceDetailPage(
   const { data: invoice } = await supabase
     .from("invoices")
     .select(`
-      *, 
+      id, invoice_number, status, issue_date, service_date, due_date,
+      subtotal_ht, tax_amount, total_ttc, paid_amount, notes,
       currency:currency_id(symbol, code),
       items:invoice_items(*, tax_rate:tax_rate_id(name, rate))
     `)
     .eq("id", id)
     .eq("customer_id", session.customerId)
-    .single();
+    .single<PortalInvoice>();
 
   if (!invoice) notFound();
 
-  const currency = Array.isArray(invoice.currency) ? invoice.currency[0] : invoice.currency;
-  const items: Array<Record<string, unknown>> = Array.isArray(invoice.items) ? invoice.items : [];
-  const paidAmount = parseFloat(invoice.paid_amount) || 0;
-  const totalTtc = parseFloat(invoice.total_ttc) || 0;
+  const currency = unwrapInvoiceCurrency(invoice.currency);
+  const items: InvoiceItem[] = Array.isArray(invoice.items) ? invoice.items : [];
+  const paidAmount = Number(invoice.paid_amount) || 0;
+  const totalTtc = Number(invoice.total_ttc) || 0;
   const remaining = totalTtc - paidAmount;
 
   function getStatusBadge(s: string) {
-    const variants: Record<string, "default" | "success" | "warning" | "destructive" | "secondary" | "info"> = {
+    const variants: Record<string, "default" | "success" | "warning" | "destructive" | "secondary"> = {
       draft: "secondary",
-      sent: "info",
-      viewed: "info",
+      sent: "default",
+      viewed: "default",
       partial: "warning",
       paid: "success",
       overdue: "destructive",
@@ -62,12 +98,8 @@ export default async function PortalInvoiceDetailPage(
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      <Link
-        href="./.."
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-6"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Retour aux factures
+      <Link href="./.." className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-6">
+        <ArrowLeft className="h-4 w-4" /> Retour aux factures
       </Link>
 
       <div className="flex items-center justify-between mb-6">
@@ -85,17 +117,13 @@ export default async function PortalInvoiceDetailPage(
         </div>
         <Button variant="outline" asChild>
           <Link href={`/api/v1/invoices/${id}/pdf`} target="_blank">
-            <Download className="mr-2 h-4 w-4" />
-            Télécharger PDF
+            <Download className="mr-2 h-4 w-4" /> Télécharger PDF
           </Link>
         </Button>
       </div>
 
-      {/* Items table */}
       <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-lg">Détails de la facture</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="text-lg">Détails de la facture</CardTitle></CardHeader>
         <CardContent>
           <table className="w-full text-sm">
             <thead>
@@ -108,22 +136,16 @@ export default async function PortalInvoiceDetailPage(
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id as string} className="border-b last:border-0">
+                <tr key={item.id} className="border-b last:border-0">
                   <td className="py-3">
-                    <p>{item.description as string}</p>
+                    <p>{item.description}</p>
                     {item.tax_rate ? (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        TVA {((Array.isArray(item.tax_rate) ? item.tax_rate[0] : item.tax_rate) as Record<string, unknown>)?.rate as number ?? 0}%
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">TVA {unwrapRate(item.tax_rate)}%</p>
                     ) : null}
                   </td>
-                  <td className="text-right py-3">{item.quantity as string}</td>
-                  <td className="text-right py-3">
-                    {(item.unit_price_ht as number).toLocaleString("fr-FR", { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="text-right py-3 font-medium">
-                    {(item.line_total_ht as number).toLocaleString("fr-FR", { minimumFractionDigits: 2 })}
-                  </td>
+                  <td className="text-right py-3">{typeof item.quantity === "number" ? item.quantity.toLocaleString("fr-FR") : item.quantity}</td>
+                  <td className="text-right py-3">{typeof item.unit_price_ht === "number" ? item.unit_price_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) : "—"}</td>
+                  <td className="text-right py-3 font-medium">{typeof item.line_total_ht === "number" ? item.line_total_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -131,16 +153,15 @@ export default async function PortalInvoiceDetailPage(
         </CardContent>
       </Card>
 
-      {/* Totals */}
       <Card className="mb-6">
         <CardContent className="p-6 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Sous-total HT</span>
-            <span>{(invoice.subtotal_ht as number).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? "F"}</span>
+            <span>{invoice.subtotal_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? "F"}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">TVA</span>
-            <span>+ {(invoice.tax_amount as number).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? "F"}</span>
+            <span>+ {invoice.tax_amount.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? "F"}</span>
           </div>
           <Separator />
           <div className="flex justify-between text-lg font-bold">
@@ -164,14 +185,11 @@ export default async function PortalInvoiceDetailPage(
         </CardContent>
       </Card>
 
-      {/* Notes */}
       {invoice.notes && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Notes</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-sm font-medium">Notes</CardTitle></CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-line">{invoice.notes as string}</p>
+            <p className="text-sm text-muted-foreground whitespace-pre-line">{invoice.notes}</p>
           </CardContent>
         </Card>
       )}

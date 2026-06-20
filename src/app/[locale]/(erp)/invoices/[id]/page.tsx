@@ -11,6 +11,51 @@ import { Separator } from "@/components/ui/separator";
 import { RecordPaymentForm } from "./record-payment-form";
 import { PaymentsList } from "./payments-list";
 
+type InvoiceItem = {
+  id: string;
+  description: string;
+  quantity: string;
+  unit_price_ht: string | number | null;
+  line_total_ht: string | number | null;
+  tax_rates: Array<{ name: string; rate: number }> | null;
+};
+
+type InvoicePayment = {
+  id: string;
+  amount: number;
+  payment_date: string;
+  reference: string | null;
+  notes: string | null;
+  created_at: string;
+  payment_method: { id: string; name: string; display_name: string | null } | null;
+};
+
+type InvoiceEvent = {
+  id: string;
+  event_type: string;
+  created_at: string;
+};
+
+type InvoiceWithRelations = {
+  id: string;
+  invoice_number: string;
+  status: string;
+  issue_date: string;
+  service_date: string | null;
+  due_date: string;
+  total_ttc: number;
+  subtotal_ht: number;
+  tax_amount: number;
+  paid_amount: number;
+  legal_mentions: string | null;
+  currency: { symbol?: string | null } | Array<{ symbol?: string | null }> | null;
+  customer: { company_name: string | null; contact_name: string; email: string | null; phone: string | null } | Array<{ company_name: string | null; contact_name: string; email: string | null; phone: string | null }> | null;
+  team: { name: string } | Array<{ name: string }> | null;
+  items: InvoiceItem[];
+  payments: InvoicePayment[];
+  events: InvoiceEvent[];
+};
+
 type Params = Promise<{ id: string }>;
 
 export default async function InvoiceDetailPage(props: { params: Params }) {
@@ -68,8 +113,8 @@ export default async function InvoiceDetailPage(props: { params: Params }) {
   if (error || !invoice) notFound();
 
   const currency = Array.isArray(invoice.currency) ? invoice.currency[0] : invoice.currency;
-  const items: Array<Record<string, unknown>> = Array.isArray(invoice.items) ? invoice.items : [];
-  const payments: Array<Record<string, unknown>> = Array.isArray(invoice.payments) ? invoice.payments : [];
+  const items: InvoiceItem[] = Array.isArray(invoice.items) ? invoice.items : [];
+  const payments: InvoicePayment[] = Array.isArray(invoice.payments) ? invoice.payments : [];
   const totalTtc = parseFloat(invoice.total_ttc) || 0;
   const paidAmount = parseFloat(invoice.paid_amount) || 0;
   const remaining = Math.max(0, totalTtc - paidAmount);
@@ -192,7 +237,7 @@ export default async function InvoiceDetailPage(props: { params: Params }) {
               <CardHeader><CardTitle className="text-lg">{det("history_title")}</CardTitle></CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {(invoice.events as Array<Record<string, unknown>>).map((evt) => (
+                  {(invoice.events ?? []).map((evt: InvoiceEvent) => (
                     <div key={evt.id as string} className="flex justify-between text-sm">
                       <span className="text-muted-foreground">
                         {evt.event_type === "created" ? det("event_created")

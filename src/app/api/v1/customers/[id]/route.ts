@@ -49,7 +49,7 @@ export async function PATCH(
       return NextResponse.json({ error: "n_tahiti is required for B2B customers" }, { status: 400 });
     }
 
-    const updatePayload: Record<string, unknown> = {};
+    const updatePayload: Record<string, string | number | boolean | null> = {};
     const updatableFields = [
       "company_name", "contact_name", "is_b2b", "n_tahiti",
       "email", "phone", "address_line1", "address_line2",

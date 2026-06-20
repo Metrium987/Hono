@@ -45,7 +45,7 @@ export async function PATCH(
     const { slug, parent_id, is_active, sort_order, translations } = body;
 
     // Build update payload
-    const updatePayload: Record<string, unknown> = {};
+    const updatePayload: Record<string, string | number | boolean | null> = {};
     if (slug !== undefined) updatePayload.slug = slug;
     if (parent_id !== undefined) updatePayload.parent_id = parent_id;
     if (is_active !== undefined) updatePayload.is_active = is_active;

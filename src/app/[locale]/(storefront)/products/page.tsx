@@ -9,6 +9,19 @@ import { Input } from "@/components/ui/input";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
+type ProductImage = { storage_path: string; position: number };
+
+type ProductRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  price_ht: number;
+  sku: string | null;
+  category: { slug: string } | Array<{ slug: string }> | null;
+  currency: { symbol?: string | null; code?: string | null } | Array<{ symbol?: string | null; code?: string | null }> | null;
+  images: ProductImage[] | null;
+};
+
 export default async function ProductsPage(props: { searchParams: SearchParams }) {
   const sp = await props.searchParams;
   const categorySlug = typeof sp.category === "string" ? sp.category : "";
@@ -22,14 +35,14 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  // Fetch published products and categories
   const [productsRes, categoriesRes] = await Promise.all([
     supabase
       .from("products")
       .select(`
         id, name, description, price_ht, sku, type,
         category:category_id(id, slug),
-        currency:currency_id(symbol, code)
+        currency:currency_id(symbol, code),
+        images:product_images(storage_path, position)
       `)
       .eq("is_active", true)
       .eq("is_published", true)
@@ -42,26 +55,25 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
   ]);
 
   const categories = categoriesRes.data ?? [];
-  const allProducts = productsRes.data ?? [];
+  const allProducts = (productsRes.data ?? []) as ProductRow[];
 
-  // Apply filters
+  const getSlug = (p: ProductRow): string | undefined => {
+    const cat = p.category;
+    if (Array.isArray(cat)) return cat[0]?.slug;
+    return cat?.slug;
+  };
+
   let filtered = allProducts;
   if (categorySlug) {
-    const cat = categories.find((c) => c.slug === categorySlug);
-    if (cat) {
-      filtered = filtered.filter(
-        (p: Record<string, unknown>) =>
-          (Array.isArray(p.category) ? (p.category[0] as Record<string, unknown>)?.slug : (p.category as Record<string, unknown>)?.slug) === categorySlug
-      );
-    }
+    filtered = filtered.filter((p) => getSlug(p) === categorySlug);
   }
   if (search) {
     const q = search.toLowerCase();
     filtered = filtered.filter(
-      (p: Record<string, unknown>) =>
-        (p.name as string)?.toLowerCase().includes(q) ||
-        (p.description as string)?.toLowerCase().includes(q) ||
-        (p.sku as string)?.toLowerCase().includes(q)
+      (p) =>
+        p.name?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q) ||
+        p.sku?.toLowerCase().includes(q)
     );
   }
 
@@ -132,28 +144,39 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((p: Record<string, unknown>) => {
-                const currency = Array.isArray(p.currency)
-                  ? (p.currency[0] as { symbol?: string; code?: string }) ?? null
-                  : (p.currency as { symbol?: string; code?: string }) ?? null;
-                const price = p.price_ht as number;
+              {filtered.map((p) => {
+                const currency = Array.isArray(p.currency) ? p.currency[0] : p.currency;
+                const sortedImages = Array.isArray(p.images)
+                  ? [...p.images].sort((a, b) => a.position - b.position)
+                  : [];
+                const firstImage = sortedImages[0];
+                const imgSrc = firstImage
+                  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${firstImage.storage_path}`
+                  : null;
                 return (
-                  <Link key={p.id as string} href={`./products/${p.id}`}>
-                    <Card className="h-full hover:shadow-lg transition-all hover:-translate-y-0.5">
+                  <Link key={p.id} href={`./products/${p.id}`}>
+                    <Card className="h-full hover:shadow-lg transition-all hover:-translate-y-0.5 overflow-hidden">
+                      {imgSrc && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={imgSrc}
+                          alt={p.name}
+                          className="w-full h-40 object-cover"
+                        />
+                      )}
                       <CardHeader>
-                        <CardTitle className="text-base">{p.name as string}</CardTitle>
+                        <CardTitle className="text-base">{p.name}</CardTitle>
                         {p.sku ? (
-                          <p className="text-xs text-muted-foreground">{t("ref_label")} {p.sku as string}</p>
+                          <p className="text-xs text-muted-foreground">{t("ref_label")} {p.sku}</p>
                         ) : null}
                       </CardHeader>
                       <CardContent>
                         <p className="text-2xl font-bold text-primary">
-                          {price.toLocaleString("fr-FR", { minimumFractionDigits: 2 })}{" "}
-                          {currency?.symbol ?? currency?.code ?? "F"}
+                          {p.price_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? currency?.code ?? "F"}
                         </p>
                         {p.description ? (
                           <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-                            {p.description as string}
+                            {p.description}
                           </p>
                         ) : null}
                       </CardContent>

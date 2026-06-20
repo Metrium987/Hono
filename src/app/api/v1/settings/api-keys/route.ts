@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "settings", "read");
     const rateKey = `api_keys:${teamId}`;
-    const rateResult = rateLimit(rateKey, RATE_LIMIT_CONFIGS.API_KEYS);
+    const rateResult = await rateLimit(rateKey, RATE_LIMIT_CONFIGS.API_KEYS);
     if (!rateResult.allowed) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "settings", "write");
     const rateKey = `api_keys:${teamId}`;
-    const rateResult = rateLimit(rateKey, RATE_LIMIT_CONFIGS.API_KEYS);
+    const rateResult = await rateLimit(rateKey, RATE_LIMIT_CONFIGS.API_KEYS);
     if (!rateResult.allowed) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }
@@ -85,7 +85,7 @@ export async function DELETE(request: NextRequest) {
   return withAuth(request, async (auth, teamId, params) => {
     requirePermission(auth, "settings", "write");
     const rateKey = `api_keys:${teamId}`;
-    const rateResult = rateLimit(rateKey, RATE_LIMIT_CONFIGS.API_KEYS);
+    const rateResult = await rateLimit(rateKey, RATE_LIMIT_CONFIGS.API_KEYS);
     if (!rateResult.allowed) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }

@@ -213,6 +213,38 @@ paths:
                         symbol: { type: string }
                         is_default: { type: boolean }
 
+  /currencies/{id}:
+    patch:
+      summary: Update a currency (code, symbol, symbol_position, is_default, exchange_rate_to_xpf, is_active)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Updated currency
+        "400":
+          description: No fields to update / validation error
+    delete:
+      summary: Delete a currency (blocked if default or in use)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Currency deleted
+        "409":
+          description: Cannot delete default currency, or currency in use
+
   # ── Invoices ──
   /invoices:
     get:
@@ -497,11 +529,13 @@ paths:
               required: [name]
               properties:
                 name: { type: string }
+
+  /expense-categories/{id}:
     delete:
-      summary: Delete expense category
+      summary: Delete expense category by path ID (standardized)
       parameters:
         - name: id
-          in: query
+          in: path
           required: true
           schema: { type: string, format: uuid }
       security:
@@ -534,18 +568,18 @@ paths:
               required: [name]
               properties:
                 name: { type: string }
+
+  /income-categories/{id}:
     delete:
-      summary: Delete income category
+      summary: Delete income category by path ID (standardized)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
       security:
         - BearerAuth: []
         - SessionCookie: []
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema: { type: string, format: uuid }
-
-  # ── Vendors (Phase 7) ──
   /vendors:
     get:
       summary: List vendors
@@ -828,6 +862,116 @@ paths:
           required: true
           schema: { type: string, format: uuid }
 
+  /settings/api-keys/{id}:
+    delete:
+      summary: Revoke API key by path id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: API key revoked
+
+  /settings/tax-rates:
+    get:
+      summary: List tax rates for a team
+      parameters:
+        - $ref: "#/components/parameters/TeamId"
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    post:
+      summary: Create a tax rate (name, rate, description?, is_active?)
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "201":
+          description: Tax rate created
+        "400":
+          description: name and rate are required
+
+  /settings/tax-rates/{id}:
+    patch:
+      summary: Update a tax rate (name, rate, description, is_active)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Updated tax rate
+        "400":
+          description: No fields to update / validation error
+    delete:
+      summary: Delete a tax rate (blocked if in use)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Tax rate deleted
+        "409":
+          description: Tax rate is in use on invoices or products
+
+  /settings/payment-methods/{id}:
+    patch:
+      summary: Update a payment method
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+    delete:
+      summary: Delete a payment method
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+
+  /settings/company:
+    get:
+      summary: Get company/team settings (identity, address, bank, billing, educational_mode)
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Company settings object
+        "404":
+          description: Company not found
+    patch:
+      summary: Update company/team settings (allow-list of ~25 fields)
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Updated company settings
+        "400":
+          description: No fields to update / validation error
+
   # ── Portal Auth ──
   /portal/auth:
     post:
@@ -844,7 +988,8 @@ paths:
 
   /portal/verify:
     post:
-      summary: Verify magic link token
+      summary: "[DEPRECATED] Verify magic link token — returns 410 Gone"
+      deprecated: true
       requestBody:
         required: true
         content:
@@ -946,3 +1091,124 @@ paths:
               schema:
                 type: string
                 format: binary
+
+  # ── Invitations ──
+  /invitations/{token}:
+    get:
+      summary: Check invitation validity
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Invitation details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      email: { type: string }
+                      role_id: { type: string, format: uuid }
+                      expires_at: { type: string, format: date-time }
+        "404":
+          description: Invalid or expired invitation
+    post:
+      summary: Accept invitation
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      security:
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [accept]
+      responses:
+        "200":
+          description: Invitation accepted, team membership created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  team_id: { type: string, format: uuid }
+        "401":
+          description: Authentication required
+        "403":
+          description: Email mismatch
+    delete:
+      summary: Reject/cancel invitation (requires settings write permission)
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      responses:
+        "200":
+          description: Invitation deleted
+
+  # ── AI / Embeddings ──
+  /ai/embeddings:
+    post:
+      summary: Batch generate OpenAI embeddings for products or customers
+      security:
+        - BearerAuth: []
+        - SessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entity]
+              properties:
+                entity:
+                  type: string
+                  enum: [product, customer]
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Optional list of IDs to re-embed (excludes these and processes the rest)
+      responses:
+        "200":
+          description: Embedding generation results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        status:
+                          type: string
+                          enum: [ok, skipped, error]
+                        error:
+                          type: string
+                          nullable: true
+        "400":
+          description: Invalid entity

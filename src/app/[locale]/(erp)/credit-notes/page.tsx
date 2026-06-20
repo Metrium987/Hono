@@ -58,7 +58,7 @@ export default async function CreditNotesPage(props: { searchParams: SearchParam
     id: cn.id,
     credit_note_number: cn.credit_note_number,
     status: cn.status,
-    total_ttc: cn.total_ttc as unknown as number,
+    total_ttc: cn.total_ttc,
     issue_date: cn.issue_date,
     reason: cn.reason,
     customer: Array.isArray(cn.customer) ? (cn.customer[0] ?? null) : (cn.customer ?? null),

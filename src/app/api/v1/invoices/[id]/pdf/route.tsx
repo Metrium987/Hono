@@ -3,6 +3,9 @@ import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 import { pdf } from "@react-pdf/renderer";
 import { InvoicePdfDocument, type InvoicePdfData } from "@/lib/pdf/invoice-pdf";
 
+// Vercel Hobby caps at 10s; Pro uses the 60s here. See Bloc 4 in MASTER_TODO for Edge Function migration.
+export const maxDuration = 60;
+
 // GET /api/v1/invoices/[id]/pdf — Download invoice as PDF
 export async function GET(
   _request: NextRequest,
@@ -47,7 +50,7 @@ export async function GET(
     }
 
     // Type assertion after validation
-    const pdfData: InvoicePdfData = invoice as unknown as InvoicePdfData;
+    const pdfData: InvoicePdfData = invoice as InvoicePdfData;
 
     // Validate required relationships loaded
     if (!pdfData.team || !pdfData.customer || !pdfData.currency) {

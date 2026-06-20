@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 
+type ItemInput = { description?: string; quantity?: string | number; unit_price_ht?: string | number; tax_rate_id?: string | null; product_id?: string | null; group_id?: string | null; sort_order?: number };
+
 // GET /api/v1/quotes — List quotes for a team
 export async function GET(request: NextRequest) {
   return withAuth(request, async (auth, teamId, params) => {
@@ -121,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create quote items
-    const itemRows = items.map((item: Record<string, unknown>, idx: number) => {
+    const itemRows = items.map((item: ItemInput, idx: number) => {
       const qty = parseFloat(item.quantity as string) || 1;
       const unitPrice = parseFloat(item.unit_price_ht as string) || 0;
       const lineTotal = qty * unitPrice;

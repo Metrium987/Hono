@@ -48,7 +48,7 @@ export async function PATCH(
       "status", "issue_date", "reason", "notes",
     ];
 
-    const updatePayload: Record<string, unknown> = {};
+    const updatePayload: Record<string, string | number | boolean | null> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) updatePayload[field] = body[field];
     }
@@ -86,7 +86,8 @@ export async function PATCH(
               .single();
 
             if (product && product.track_stock) {
-              const newBalance = (product.current_stock || 0) + parseFloat(item.quantity);
+              const oldStock = product.current_stock || 0;
+              const newBalance = oldStock + parseFloat(item.quantity);
 
               const { error: stockError } = await auth.supabase
                 .from("products")
@@ -99,7 +100,7 @@ export async function PATCH(
                 continue;
               }
 
-              await auth.supabase
+              const { error: ledgerError } = await auth.supabase
                 .from("inventory_ledger")
                 .insert({
                   team_id: teamId,
@@ -111,6 +112,15 @@ export async function PATCH(
                   reference_id: cn.id,
                   description: `Credit note ${cn.credit_note_number} — stock return`,
                 });
+
+              if (ledgerError) {
+                console.error("Failed to record ledger for product", product.id, ledgerError);
+                await auth.supabase
+                  .from("products")
+                  .update({ current_stock: oldStock })
+                  .eq("id", product.id)
+                  .eq("team_id", teamId);
+              }
             }
           }
         }

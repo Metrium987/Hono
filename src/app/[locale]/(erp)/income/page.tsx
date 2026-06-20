@@ -9,6 +9,16 @@ import { Badge } from "@/components/ui/badge";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
+type IncomeRow = {
+  id: string;
+  description: string;
+  amount: number;
+  income_date: string;
+  currency: { symbol?: string | null } | null;
+  category: { name: string } | null;
+  customer: { company_name?: string | null; contact_name: string } | null;
+};
+
 export default async function IncomePage(props: { searchParams: SearchParams }) {
   const sp = await props.searchParams;
   const categoryId = typeof sp.category_id === "string" ? sp.category_id : "";
@@ -56,14 +66,14 @@ export default async function IncomePage(props: { searchParams: SearchParams }) 
     .order("income_date", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  const income = (rawIncome ?? []).map((inc) => ({
+  const income: IncomeRow[] = (rawIncome ?? []).map((inc) => ({
     id: inc.id,
     description: inc.description,
     amount: inc.amount,
     income_date: inc.income_date,
-    currency: Array.isArray(inc.currency) ? (inc.currency[0] ?? null) : (inc.currency ?? null),
-    category: Array.isArray(inc.category) ? (inc.category[0] ?? null) : (inc.category ?? null),
-    customer: Array.isArray(inc.customer) ? (inc.customer[0] ?? null) : (inc.customer ?? null),
+    currency: Array.isArray(inc.currency) ? (inc.currency[0] ?? null) : inc.currency ?? null,
+    category: Array.isArray(inc.category) ? (inc.category[0] ?? null) : inc.category ?? null,
+    customer: Array.isArray(inc.customer) ? (inc.customer[0] ?? null) : inc.customer ?? null,
   }));
 
   const totalPages = Math.ceil((count ?? 0) / limit);
@@ -126,17 +136,13 @@ export default async function IncomePage(props: { searchParams: SearchParams }) 
                     <td className="p-3">{formatDate(inc.income_date)}</td>
                     <td className="p-3 font-medium">{inc.description}</td>
                     <td className="p-3">
-                      {inc.category ? (
-                        <Badge variant="secondary">{(inc.category as Record<string, unknown>).name as string}</Badge>
-                      ) : "—"}
+                      {inc.category ? <Badge variant="secondary">{inc.category.name}</Badge> : "—"}
                     </td>
                     <td className="p-3 text-muted-foreground">
-                      {inc.customer
-                        ? ((inc.customer as Record<string, unknown>).company_name as string ?? (inc.customer as Record<string, unknown>).contact_name as string)
-                        : "—"}
+                      {inc.customer ? inc.customer.company_name ?? inc.customer.contact_name : "—"}
                     </td>
                     <td className="p-3 text-right font-medium">
-                      {formatCurrency(inc.amount as number, (inc.currency as Record<string, unknown> | null)?.symbol as string ?? "F")}
+                      {formatCurrency(inc.amount, inc.currency?.symbol ?? "F")}
                     </td>
                   </tr>
                 ))

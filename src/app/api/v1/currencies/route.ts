@@ -64,7 +64,7 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
     const allowedFields = ["code", "name", "symbol", "symbol_position", "is_default", "exchange_rate_to_xpf", "is_active"];
-    const updates: Record<string, unknown> = {};
+    const updates: Record<string, string | number | boolean | null> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updates[field] = field === "code" ? body[field].toUpperCase() : body[field];

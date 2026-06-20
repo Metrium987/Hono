@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 import { sendInvoiceEmail } from "@/lib/email/send-invoice";
 
+type InvoiceItem = { description?: string; quantity?: string | number; unit_price_ht?: string | number; line_total_ht?: string | number };
+
 // POST /api/v1/invoices/[id]/send — Send invoice email via Resend
 export async function POST(
   request: NextRequest,
@@ -58,7 +60,7 @@ export async function POST(
       teamLogo: invoice.team.logo_url,
       customerName,
       customerEmail: invoice.customer.email,
-      items: invoice.items.map((item: Record<string, unknown>) => ({
+      items: invoice.items.map((item: InvoiceItem) => ({
         description: item.description as string,
         quantity: parseFloat(item.quantity as string),
         unitPrice: parseFloat(item.unit_price_ht as string),

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 
+type QuoteItem = { product_id?: string | null; description?: string; quantity?: string | number; unit_price_ht?: string | number; tax_rate_id?: string | null; line_total_ht?: string | number; sort_order?: number };
+
 // POST /api/v1/quotes/[id]/convert — Convert a quote to an invoice
 export async function POST(
   request: NextRequest,
@@ -69,7 +71,7 @@ export async function POST(
     }
 
     // Copy quote items to invoice items
-    const itemRows = quote.items.map((item: Record<string, unknown>) => ({
+    const itemRows = quote.items.map((item: QuoteItem) => ({
       invoice_id: invoice.id,
       product_id: item.product_id ?? null,
       description: item.description ?? "",

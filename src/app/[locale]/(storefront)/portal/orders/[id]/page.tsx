@@ -9,6 +9,22 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPortalSession } from "@/lib/portal/session";
 
+type PortalOrderItem = {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price_ht: number | null;
+  special_request: string | null;
+};
+
+type PortalOrder = {
+  id: string;
+  created_at: string;
+  notes: string | null;
+  status: string;
+  items: PortalOrderItem[];
+};
+
 export default async function PortalOrderDetailPage(
   props: { params: Promise<{ id: string }> }
 ) {
@@ -30,11 +46,11 @@ export default async function PortalOrderDetailPage(
     .select(`*, items:order_items(*)`)
     .eq("id", id)
     .eq("customer_id", session.customerId)
-    .single();
+    .single<PortalOrder>();
 
   if (!order) notFound();
 
-  const items: Array<Record<string, unknown>> = Array.isArray(order.items) ? order.items : [];
+  const items: PortalOrderItem[] = Array.isArray(order.items) ? order.items : [];
 
   function getStatusBadge(s: string) {
     const variants: Record<string, "default" | "success" | "warning" | "secondary"> = {
@@ -80,16 +96,16 @@ export default async function PortalOrderDetailPage(
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id as string} className="border-b last:border-0">
-                  <td className="py-3">{item.description as string}</td>
-                  <td className="text-right py-3">{item.quantity as string}</td>
+                <tr key={item.id} className="border-b last:border-0">
+                  <td className="py-3">{item.description}</td>
+                  <td className="text-right py-3">{typeof item.quantity === "number" ? item.quantity.toLocaleString("fr-FR") : item.quantity}</td>
                   <td className="text-right py-3">
-                    {item.unit_price_ht
+                    {item.unit_price_ht !== null && item.unit_price_ht !== undefined
                       ? `${(item.unit_price_ht as number).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F`
                       : "—"}
                   </td>
                   <td className="text-right py-3 text-muted-foreground">
-                    {(item.special_request as string) || "—"}
+                    {item.special_request || "—"}
                   </td>
                 </tr>
               ))}
@@ -105,7 +121,7 @@ export default async function PortalOrderDetailPage(
             <CardTitle className="text-sm font-medium">Notes</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-line">{order.notes as string}</p>
+            <p className="text-sm text-muted-foreground whitespace-pre-line">{order.notes}</p>
           </CardContent>
         </Card>
       )}

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 
+type ItemInput = { description?: string; quantity?: string | number; unit_price_ht?: string | number; product_id?: string | null; special_request?: string | null };
+
 // GET /api/v1/orders — List orders for a team
 export async function GET(request: NextRequest) {
   return withAuth(request, async (auth, teamId, params) => {
@@ -75,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create order items
-    const itemRows = items.map((item: Record<string, unknown>, idx: number) => ({
+    const itemRows = items.map((item: ItemInput, idx: number) => ({
       order_id: order.id,
       product_id: item.product_id ?? null,
       description: item.description ?? "",

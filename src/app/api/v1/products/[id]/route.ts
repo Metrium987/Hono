@@ -52,7 +52,7 @@ export async function PATCH(
     } = body;
 
     // Build update payload
-    const updatePayload: Record<string, unknown> = {};
+    const updatePayload: Record<string, string | number | boolean | null> = {};
     const updatableFields = [
       "category_id", "sku", "type", "name", "description",
       "price_ht", "currency_id", "tax_rate_id",

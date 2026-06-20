@@ -15,7 +15,7 @@ export function generateStaticParams() {
 export default async function LocaleLayout({ children, params }: Props) {
   const { locale } = await params;
 
-  if (!routing.locales.includes(locale as "fr" | "ty" | "mq")) {
+  if (!routing.locales.includes(locale as "fr")) {
     notFound();
   }
 

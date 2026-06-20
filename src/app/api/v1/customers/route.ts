@@ -28,9 +28,14 @@ export async function GET(request: NextRequest) {
       query = query.eq("source", source);
     }
     if (search) {
-      query = query.or(
-        `contact_name.ilike.%${search}%,company_name.ilike.%${search}%,email.ilike.%${search}%,n_tahiti.ilike.%${search}%`
-      );
+      // Hybrid search: trigram similarity via RPC
+      const { data: searchData, error: searchErr } = await auth.supabase
+        .rpc("hybrid_search_customers", { p_team_id: teamId, p_query: search, p_limit: limit });
+      if (searchErr) return NextResponse.json({ error: searchErr.message }, { status: 500 });
+      return NextResponse.json({
+        data: searchData ?? [],
+        pagination: { page: 1, limit, total: searchData?.length ?? 0, pages: 1 },
+      });
     }
 
     query = query

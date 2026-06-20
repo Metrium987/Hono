@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   FileText,
@@ -15,37 +16,57 @@ import {
   TrendingDown,
   TrendingUp,
   Truck,
+  ShoppingCart,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
-const mainNav = [
-  { label: "Factures", href: "/invoices", icon: FileText },
-  { label: "Devis", href: "/quotes", icon: FileSignature },
-  { label: "Avoirs", href: "/credit-notes", icon: Receipt },
-  { label: "Produits", href: "/products", icon: Package },
-  { label: "Clients", href: "/customers", icon: Users },
+const mainNavItems = [
+  { key: "invoices" as const,     href: "/invoices",     icon: FileText },
+  { key: "quotes" as const,       href: "/quotes",       icon: FileSignature },
+  { key: "credit_notes" as const, href: "/credit-notes", icon: Receipt },
+  { key: "orders" as const,       href: "/orders",       icon: ShoppingCart },
+  { key: "products" as const,     href: "/catalog",      icon: Package },
+  { key: "clients" as const,      href: "/customers",    icon: Users },
 ];
 
-const financeNav = [
-  { label: "Dépenses", href: "/expenses", icon: TrendingDown },
-  { label: "Revenus", href: "/income", icon: TrendingUp },
-  { label: "Fournisseurs", href: "/vendors", icon: Truck },
+const financeNavItems = [
+  { key: "expenses" as const,  href: "/expenses", icon: TrendingDown },
+  { key: "income" as const,    href: "/income",   icon: TrendingUp },
+  { key: "vendors" as const,   href: "/vendors",  icon: Truck },
 ];
 
-const bottomNav = [
-  { label: "Rapports", href: "/reports", icon: BarChart3 },
-  { label: "Paramètres", href: "/settings", icon: Settings },
+const bottomNavItems = [
+  { key: "reports" as const,  href: "/reports",  icon: BarChart3 },
+  { key: "settings" as const, href: "/settings", icon: Settings },
 ];
 
 export function ErpSidebar({ teamName }: { teamName: string }) {
   const pathname = usePathname();
+  const t = useTranslations("nav");
   const [collapsed, setCollapsed] = useState(false);
 
-  // Extract locale prefix from pathname (/fr/invoices → fr, for matching)
   const locale = pathname.match(/^\/([a-z]{2})\//)?.[1] ?? "fr";
   const relativePath = pathname.replace(/^\/[a-z]{2}/, "");
+
+  function NavLink({ href, icon: Icon, labelKey }: { href: string; icon: React.ElementType; labelKey: string }) {
+    const isActive = relativePath.startsWith(href);
+    return (
+      <Link
+        href={`/${locale}${href}`}
+        className={cn(
+          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+          isActive
+            ? "bg-primary/10 text-primary"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        )}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        {!collapsed && <span>{t(labelKey)}</span>}
+      </Link>
+    );
+  }
 
   return (
     <aside
@@ -66,78 +87,27 @@ export function ErpSidebar({ teamName }: { teamName: string }) {
 
       {/* Nav */}
       <nav className="flex-1 space-y-1 p-3">
-        {/* Main */}
         <div className="space-y-1">
-          {mainNav.map((item) => {
-            const Icon = item.icon;
-            const isActive = relativePath.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={`/${locale}${item.href}`}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
+          {mainNavItems.map((item) => (
+            <NavLink key={item.href} href={item.href} icon={item.icon} labelKey={item.key} />
+          ))}
         </div>
 
         {!collapsed && <Separator className="my-2" />}
 
-        {/* Finance */}
-        {!collapsed && <p className="px-3 text-xs font-medium text-muted-foreground">Finance</p>}
+        {!collapsed && <p className="px-3 text-xs font-medium text-muted-foreground">{t("finance_section")}</p>}
         <div className="space-y-1">
-          {financeNav.map((item) => {
-            const Icon = item.icon;
-            const isActive = relativePath.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={`/${locale}${item.href}`}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
+          {financeNavItems.map((item) => (
+            <NavLink key={item.href} href={item.href} icon={item.icon} labelKey={item.key} />
+          ))}
         </div>
 
         {!collapsed && <Separator className="my-2" />}
 
-        {/* Bottom */}
         <div className="space-y-1">
-          {bottomNav.map((item) => {
-            const Icon = item.icon;
-            const isActive = relativePath.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={`/${locale}${item.href}`}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
+          {bottomNavItems.map((item) => (
+            <NavLink key={item.href} href={item.href} icon={item.icon} labelKey={item.key} />
+          ))}
         </div>
       </nav>
 

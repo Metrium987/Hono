@@ -42,7 +42,7 @@ export async function PATCH(request: NextRequest) {
       "timezone", "is_educational_mode",
     ];
 
-    const updates: Record<string, unknown> = {};
+    const updates: Record<string, string | number | boolean | null> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) updates[field] = body[field];
     }

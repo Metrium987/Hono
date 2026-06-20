@@ -3,13 +3,22 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getPortalSession } from "@/lib/portal/session";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
+
+type PortalQuoteRow = {
+  id: string;
+  quote_number: string;
+  status: string;
+  issue_date: string;
+  validity_date: string | null;
+  total_ttc: number;
+  currency: { symbol?: string | null } | Array<{ symbol?: string | null }> | null;
+};
 
 export default async function PortalQuotesPage(props: { searchParams: SearchParams }) {
   const session = await getPortalSession();
@@ -34,12 +43,18 @@ export default async function PortalQuotesPage(props: { searchParams: SearchPara
   if (status) query = query.eq("status", status);
 
   const { data: quotes } = await query.order("created_at", { ascending: false });
+  const quoteRows: PortalQuoteRow[] = Array.isArray(quotes) ? quotes : [];
+
+  function unwrapCurrency(value: PortalQuoteRow["currency"]): { symbol?: string | null } | null {
+    if (Array.isArray(value)) return value[0] ?? null;
+    return value ?? null;
+  }
 
   function getStatusBadge(s: string) {
-    const variants: Record<string, "default" | "success" | "warning" | "destructive" | "secondary" | "info"> = {
+    const variants: Record<string, "default" | "success" | "warning" | "destructive" | "secondary"> = {
       draft: "secondary",
-      sent: "info",
-      viewed: "info",
+      sent: "default",
+      viewed: "default",
       accepted: "success",
       rejected: "destructive",
       expired: "secondary",
@@ -53,19 +68,16 @@ export default async function PortalQuotesPage(props: { searchParams: SearchPara
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{pt("my_quotes")}</h1>
-          <p className="text-sm text-muted-foreground">{pt("quote_count", { count: quotes?.length ?? 0 })}</p>
+          <p className="text-sm text-muted-foreground">{pt("quote_count", { count: quoteRows.length })}</p>
         </div>
       </div>
 
-      {/* Status filter tabs */}
       <div className="flex flex-wrap gap-2 mb-6">
         {["", "draft", "sent", "accepted", "converted", "expired"].map((s) => {
           const label = s === "" ? pt("filter_all") : qt(s + "_plural");
           return (
             <Link key={s} href={s ? `?status=${s}` : "."}>
-              <Button variant={status === s ? "default" : "outline"} size="sm">
-                {label}
-              </Button>
+              <Button variant={status === s ? "default" : "outline"} size="sm">{label}</Button>
             </Link>
           );
         })}
@@ -83,31 +95,23 @@ export default async function PortalQuotesPage(props: { searchParams: SearchPara
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(quotes ?? []).length === 0 ? (
+            {quoteRows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
-                  {pt("no_quotes")}
-                </TableCell>
+                <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">{pt("no_quotes")}</TableCell>
               </TableRow>
             ) : (
-              (quotes ?? []).map((q: Record<string, unknown>) => {
-                const currency = Array.isArray(q.currency) ? q.currency[0] : q.currency;
+              quoteRows.map((q) => {
+                const currency = unwrapCurrency(q.currency);
                 return (
-                  <TableRow key={q.id as string}>
+                  <TableRow key={q.id}>
                     <TableCell className="font-medium">
-                      <Link href={`./quotes/${q.id}`} className="hover:text-primary transition-colors">
-                        {q.quote_number as string}
-                      </Link>
+                      <Link href={`./quotes/${q.id}`} className="hover:text-primary transition-colors">{q.quote_number}</Link>
                     </TableCell>
-                    <TableCell>
-                      {new Date(q.issue_date as string).toLocaleDateString("fr-FR")}
-                    </TableCell>
-                    <TableCell>
-                      {q.validity_date ? new Date(q.validity_date as string).toLocaleDateString("fr-FR") : "—"}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(q.status as string)}</TableCell>
+                    <TableCell>{new Date(q.issue_date).toLocaleDateString("fr-FR")}</TableCell>
+                    <TableCell>{q.validity_date ? new Date(q.validity_date).toLocaleDateString("fr-FR") : "—"}</TableCell>
+                    <TableCell>{getStatusBadge(q.status)}</TableCell>
                     <TableCell className="text-right font-medium">
-                      {(q.total_ttc as number).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {(currency as Record<string, unknown>)?.symbol as string ?? "F"}
+                      {q.total_ttc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? "F"}
                     </TableCell>
                   </TableRow>
                 );

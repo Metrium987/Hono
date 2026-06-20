@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@/lib/auth/api-auth";
+import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+
+type InvoiceWithRelations = {
+  id: string;
+  invoice_number: string;
+  total_ttc: number;
+  paid_amount: number;
+  status: string;
+  team_id: string;
+  customer: { email?: string; contact_name: string } | Array<{ email?: string; contact_name: string }> | null;
+};
 
 // POST /api/v1/stripe/create-checkout-session — Create Stripe Checkout Session for an invoice
 export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
+    requirePermission(auth, "invoices", "write");
     const body = await request.json();
     const { invoice_id, success_url, cancel_url } = body;
 
@@ -42,7 +53,7 @@ export async function POST(request: NextRequest) {
 
       const customerEmail = Array.isArray(invoice.customer)
         ? invoice.customer[0]?.email
-        : (invoice.customer as Record<string, unknown>)?.email;
+        : (invoice.customer as { email: string; contact_name: string })?.email;
 
       const session = await stripeClient.checkout.sessions.create({
         mode: "payment",

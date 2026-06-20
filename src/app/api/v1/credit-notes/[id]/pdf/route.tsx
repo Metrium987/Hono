@@ -3,6 +3,8 @@ import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 import { pdf } from "@react-pdf/renderer";
 import { CreditNotePdfDocument, type CreditNotePdfData } from "@/lib/pdf/credit-note-pdf";
 
+export const maxDuration = 60;
+
 // GET /api/v1/credit-notes/[id]/pdf — Download credit note as PDF
 export async function GET(
   _request: NextRequest,
@@ -41,7 +43,7 @@ export async function GET(
       return NextResponse.json({ error: "Credit note not found" }, { status: 404 });
     }
 
-    const pdfData: CreditNotePdfData = cn as unknown as CreditNotePdfData;
+    const pdfData: CreditNotePdfData = cn as CreditNotePdfData;
 
     if (!pdfData.team || !pdfData.customer || !pdfData.currency) {
       return NextResponse.json(

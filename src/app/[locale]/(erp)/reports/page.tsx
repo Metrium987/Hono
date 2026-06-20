@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Loader2, Search } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +41,7 @@ function fmt(amount: number) {
 }
 
 export default function ReportsPage() {
+  const t = useTranslations("reports_page");
   const [teamId, setTeamId] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +115,7 @@ export default function ReportsPage() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Rapports</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
       </div>
 
       {/* Controls */}
@@ -167,49 +169,49 @@ export default function ReportsPage() {
       {!fetching && reportType === "pnl" && pnl && (
         <>
           <p className="text-sm text-muted-foreground">
-            Période : {formatDate(pnl.period.from)} — {formatDate(pnl.period.to)}
+            {t("period", { from: formatDate(pnl.period.from), to: formatDate(pnl.period.to) })}
           </p>
           <Card>
-            <CardHeader><CardTitle>Compte de résultat</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{t("pnl_title")}</CardTitle></CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-medium text-sm text-green-700 mb-2">Revenus</h3>
+                  <h3 className="font-medium text-sm text-green-700 mb-2">{t("revenue_section")}</h3>
                   <div className="space-y-1 text-sm">
-                    <div className="flex justify-between"><span>Facturé</span><span>{fmt(pnl.revenue.total_invoiced)}</span></div>
-                    <div className="flex justify-between"><span>Autres revenus</span><span>{fmt(pnl.revenue.other_income)}</span></div>
+                    <div className="flex justify-between"><span>{t("invoiced")}</span><span>{fmt(pnl.revenue.total_invoiced)}</span></div>
+                    <div className="flex justify-between"><span>{t("other_income")}</span><span>{fmt(pnl.revenue.other_income)}</span></div>
                     <div className="flex justify-between font-medium border-t pt-1">
-                      <span>Total revenus</span>
+                      <span>{t("total_revenue")}</span>
                       <span className="text-green-700">{fmt(pnl.revenue.total_revenue)}</span>
                     </div>
                   </div>
                 </div>
                 <div className="border-t" />
                 <div>
-                  <h3 className="font-medium text-sm text-red-700 mb-2">Dépenses</h3>
+                  <h3 className="font-medium text-sm text-red-700 mb-2">{t("expense_section")}</h3>
                   <div className="space-y-1 text-sm">
                     {Object.entries(pnl.expenses.by_category).map(([cat, amt]) => (
-                      <div key={cat} className="flex justify-between"><span>{cat}</span><span>{fmt(amt)}</span></div>
+                      <div key={cat} className="flex justify-between"><span>{cat || t("no_category")}</span><span>{fmt(amt)}</span></div>
                     ))}
                     <div className="flex justify-between font-medium border-t pt-1">
-                      <span>Total dépenses</span>
+                      <span>{t("total_expenses")}</span>
                       <span className="text-red-700">{fmt(pnl.expenses.total)}</span>
                     </div>
                   </div>
                 </div>
                 <div className="border-t" />
                 <div className="flex justify-between text-lg font-bold">
-                  <span>Résultat net</span>
+                  <span>{t("net_income")}</span>
                   <span className={pnl.net_income >= 0 ? "text-green-700" : "text-red-700"}>{fmt(pnl.net_income)}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4 pt-2">
                   <div className="bg-muted rounded-lg p-3 text-center">
                     <p className="text-2xl font-bold">{pnl.metrics.profit_margin_percent}%</p>
-                    <p className="text-xs text-muted-foreground">Marge nette</p>
+                    <p className="text-xs text-muted-foreground">{t("profit_margin")}</p>
                   </div>
                   <div className="bg-muted rounded-lg p-3 text-center">
                     <p className="text-2xl font-bold">{pnl.metrics.expense_ratio_percent}%</p>
-                    <p className="text-xs text-muted-foreground">Ratio dépenses</p>
+                    <p className="text-xs text-muted-foreground">{t("expense_ratio")}</p>
                   </div>
                 </div>
               </div>
@@ -222,21 +224,21 @@ export default function ReportsPage() {
       {!fetching && reportType === "vat" && vat && (
         <>
           <p className="text-sm text-muted-foreground">
-            Période : {formatDate(vat.period.from)} — {formatDate(vat.period.to)}
+            {t("period", { from: formatDate(vat.period.from), to: formatDate(vat.period.to) })}
           </p>
           <Card>
-            <CardHeader><CardTitle>TVA par taux</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{t("vat_title")}</CardTitle></CardHeader>
             <CardContent>
               {vat.rates.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Aucune TVA pour cette période</p>
+                <p className="text-sm text-muted-foreground">{t("no_vat")}</p>
               ) : (
                 <div className="space-y-3">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b text-muted-foreground">
-                        <th className="text-left pb-2 font-medium">Taux</th>
-                        <th className="text-right pb-2 font-medium">Base HT</th>
-                        <th className="text-right pb-2 font-medium">TVA</th>
+                        <th className="text-left pb-2 font-medium">{t("th_rate")}</th>
+                        <th className="text-right pb-2 font-medium">{t("th_base_ht")}</th>
+                        <th className="text-right pb-2 font-medium">{t("th_vat")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -250,7 +252,7 @@ export default function ReportsPage() {
                     </tbody>
                   </table>
                   <div className="flex justify-between font-bold text-sm border-t pt-2">
-                    <span>Total TVA</span>
+                    <span>{t("total_vat")}</span>
                     <span className="text-primary">{fmt(vat.total_vat)}</span>
                   </div>
                 </div>

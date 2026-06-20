@@ -44,7 +44,7 @@ export async function PATCH(
     const body = await request.json();
 
     const allowedFields = ["status", "notes"];
-    const updatePayload: Record<string, unknown> = {};
+    const updatePayload: Record<string, string | number | boolean | null> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) updatePayload[field] = body[field];
     }

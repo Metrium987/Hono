@@ -1,6 +1,7 @@
 "use client";
 
 import { Download } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 type Payment = {
@@ -14,16 +15,17 @@ type Payment = {
 };
 
 type PaymentsListProps = {
-  payments: Record<string, unknown>[];
+  payments: Payment[];
   currencySymbol: string;
   invoiceId: string;
 };
 
 export function PaymentsList({ payments, currencySymbol, invoiceId }: PaymentsListProps) {
+  const t = useTranslations("invoice_detail");
   if (payments.length === 0) {
     return (
       <p className="text-sm text-muted-foreground text-center py-6">
-        Aucun paiement enregistré
+        {t("no_payments")}
       </p>
     );
   }
@@ -47,7 +49,7 @@ export function PaymentsList({ payments, currencySymbol, invoiceId }: PaymentsLi
               </div>
               <p className="text-xs text-muted-foreground">
                 {new Date(p.payment_date as string).toLocaleDateString("fr-FR")}
-                {p.reference ? <> — Réf: {p.reference as string}</> : null}
+                {p.reference ? <> — {p.reference as string}</> : null}
               </p>
               {p.notes ? <p className="text-xs text-muted-foreground">{p.notes as string}</p> : null}
             </div>

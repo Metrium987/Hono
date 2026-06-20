@@ -56,6 +56,9 @@ export type QuotePdfData = {
   tax_amount: number;
   total_ttc: number;
   notes: string | null;
+  discount_amount: number;
+  discount_type: string;
+  discount_value: number;
   team: QuotePdfTeam;
   customer: QuotePdfCustomer;
   items: QuotePdfItem[];
@@ -191,7 +194,7 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
         {/* Header */}
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
-            <Text style={styles.companyName}>{team.name}</Text>
+            <Text style={styles.companyName}>{team.name ?? "Mon entreprise"}</Text>
             {team.address_line1 && <Text style={styles.companyDetail}>{team.address_line1}</Text>}
             {team.address_line2 && <Text style={styles.companyDetail}>{team.address_line2}</Text>}
             <Text style={styles.companyDetail}>
@@ -251,15 +254,25 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
             <Text style={[styles.tableHeaderCell, styles.colTax]}>TVA</Text>
             <Text style={[styles.tableHeaderCell, styles.colTotal]}>Total HT</Text>
           </View>
-          {items.map((item, index) => (
-            <View key={item.id} style={[styles.tableRow, ...(index % 2 === 1 ? [styles.tableRowAlt] : [])]} wrap={false}>
-              <Text style={[styles.cellText, styles.colDescription]}>{item.description}</Text>
-              <Text style={[styles.cellText, styles.colQuantity]}>{item.quantity}</Text>
-              <Text style={[styles.cellText, styles.colPrice]}>{formatCurrency(item.unit_price_ht, currency)}</Text>
-              <Text style={[styles.cellText, styles.colTax]}>{item.tax_rates ? `${item.tax_rates.rate}%` : "—"}</Text>
-              <Text style={[styles.cellText, styles.colTotal]}>{formatCurrency(item.line_total_ht, currency)}</Text>
+          {items.length === 0 ? (
+            <View style={styles.tableRow}>
+              <Text style={[styles.cellText, styles.colDescription]}>Aucun article</Text>
+              <Text style={[styles.cellText, styles.colQuantity]}>0</Text>
+              <Text style={[styles.cellText, styles.colPrice]}>0</Text>
+              <Text style={[styles.cellText, styles.colTax]}>—</Text>
+              <Text style={[styles.cellText, styles.colTotal]}>0</Text>
             </View>
-          ))}
+          ) : (
+            items.map((item, index) => (
+              <View key={item.id} style={[styles.tableRow, ...(index % 2 === 1 ? [styles.tableRowAlt] : [])]} wrap={false}>
+                <Text style={[styles.cellText, styles.colDescription]}>{item.description}</Text>
+                <Text style={[styles.cellText, styles.colQuantity]}>{item.quantity}</Text>
+                <Text style={[styles.cellText, styles.colPrice]}>{formatCurrency(item.unit_price_ht, currency)}</Text>
+                <Text style={[styles.cellText, styles.colTax]}>{item.tax_rates ? `${item.tax_rates.rate}%` : "—"}</Text>
+                <Text style={[styles.cellText, styles.colTotal]}>{formatCurrency(item.line_total_ht, currency)}</Text>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Totals */}
@@ -275,6 +288,14 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
                 <Text style={styles.totalValue}>{formatCurrency(g.amount, currency)}</Text>
               </View>
             ))}
+            {data.discount_amount > 0 && (
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Remise</Text>
+                <Text style={styles.totalValue}>
+                  -{formatCurrency(data.discount_amount, currency)}
+                </Text>
+              </View>
+            )}
             <View style={styles.grandTotalRow}>
               <Text style={styles.grandTotalLabel}>Total TTC</Text>
               <Text style={styles.grandTotalValue}>{formatCurrency(data.total_ttc, currency)}</Text>
@@ -303,7 +324,7 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            {team.name}{team.n_tahiti ? ` — N° TAHITI ${team.n_tahiti}` : ""}{team.city ? ` | ${team.city}` : ""}
+            {(team.name ?? "Mon entreprise")}{team.n_tahiti ? ` — N° TAHITI ${team.n_tahiti}` : ""}{team.city ? ` | ${team.city}` : ""}
             {" — "}Document généré le {formatDate(new Date().toISOString())}
           </Text>
         </View>

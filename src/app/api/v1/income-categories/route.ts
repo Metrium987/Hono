@@ -43,25 +43,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data }, { status: 201 });
   });
 }
-
-// DELETE /api/v1/income-categories?id=xxx — Delete an income category
-export async function DELETE(request: NextRequest) {
-  return withAuth(request, async (auth, teamId, params) => {
-    requirePermission(auth, "income", "write");
-    const id = params.get("id");
-    if (!id) {
-      return NextResponse.json({ error: "id query param is required" }, { status: 400 });
-    }
-
-    const { error } = await auth.supabase
-      .from("income_categories")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
-
-    return NextResponse.json({ success: true });
-  });
-}

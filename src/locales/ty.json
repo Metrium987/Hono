@@ -7,5 +7,12 @@
   "product": {},
   "customer": {},
   "settings": {},
-  "errors": {}
+  "errors": {},
+  "credit_notes": {},
+  "legal": {
+    "disclaimer_pdf": "",
+    "disclaimer_sidebar": "",
+    "disclaimer_title": "",
+    "disclaimer_body": ""
+  }
 }

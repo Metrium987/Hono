@@ -9,7 +9,6 @@ enabled = true
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-enable_autoconfirm = false
 
 [api]
 enabled = true

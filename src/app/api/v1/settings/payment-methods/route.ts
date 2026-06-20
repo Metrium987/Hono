@@ -61,7 +61,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "id is required" }, { status: 400 });
     }
 
-    const updatePayload: Record<string, unknown> = {};
+    const updatePayload: Record<string, string | number | boolean | null> = {};
     if (name !== undefined) updatePayload.name = name;
     if (display_name !== undefined) updatePayload.display_name = display_name;
     if (is_active !== undefined) updatePayload.is_active = is_active;

@@ -3,6 +3,8 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { rateLimit, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
 
+type ItemInput = { description?: string; quantity?: string | number; unit_price_ht?: string | number; product_id?: string | null };
+
 /**
  * POST /api/v1/portal/quote-request
  *
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
       ?? request.headers.get("x-real-ip")
       ?? "unknown";
     const rateKey = `public_quote:${ip}`;
-    const rateResult = rateLimit(rateKey, RATE_LIMIT_CONFIGS.PUBLIC_QUOTE);
+    const rateResult = await rateLimit(rateKey, RATE_LIMIT_CONFIGS.PUBLIC_QUOTE);
     if (!rateResult.allowed) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }
@@ -119,7 +121,12 @@ export async function POST(request: NextRequest) {
 
       if (puError) {
         console.error("Failed to create portal user:", puError);
-        // Non-fatal — quote still created
+        // Roll back the customer we just created. Note: no quote exists yet at
+        // this point (the quote is created later at line ~178), so only the
+        // customer row needs cleanup. The earlier code referenced an undefined
+        // `quote.id` here, which threw ReferenceError and was silently swallowed.
+        await supabase.from("customers").delete().eq("id", customerId);
+        return NextResponse.json({ error: "Failed to create portal account" }, { status: 500 });
       }
     }
 
@@ -145,7 +152,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate totals
     let subtotalHt = 0;
-    const itemRows = items.map((item: Record<string, unknown>) => {
+    const itemRows = items.map((item: ItemInput) => {
       const qty = parseFloat(item.quantity as string) || 1;
       const unitPrice = parseFloat(item.unit_price_ht as string) || 0;
       const lineTotal = qty * unitPrice;
@@ -195,7 +202,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create quote items
-    const itemsWithQuoteId = itemRows.map((item: Record<string, unknown>) => ({
+    const itemsWithQuoteId = itemRows.map((item: { product_id: string | null; description: string; quantity: number; unit_price_ht: number; line_total_ht: number; sort_order: number }) => ({
       ...item,
       quote_id: quote.id,
     }));

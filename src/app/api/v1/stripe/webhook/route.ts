@@ -6,7 +6,7 @@ import { rateLimit, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
 // POST /api/v1/stripe/webhook — Handle Stripe webhook events
 export async function POST(request: NextRequest) {
   const rateKey = `stripe_webhook:global`;
-  const rateResult = rateLimit(rateKey, RATE_LIMIT_CONFIGS.STRIPE_WEBHOOK);
+  const rateResult = await rateLimit(rateKey, RATE_LIMIT_CONFIGS.STRIPE_WEBHOOK);
   if (!rateResult.allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
 
     // Handle checkout.session.completed
     if (event.type === "checkout.session.completed") {
-      const session = event.data.object as unknown as Record<string, unknown>;
+      const session = event.data.object;
       const metadata = session.metadata as Record<string, string> | undefined;
       const invoiceId = metadata?.invoice_id;
       const teamId = metadata?.team_id;

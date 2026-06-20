@@ -68,7 +68,11 @@ export async function POST(request: NextRequest) {
 
     if (ledgerError) {
       console.error("Failed to record ledger entry:", ledgerError);
-      // Don't rollback stock update — ledger failure is logged but the stock was already updated
+      await auth.supabase
+        .from("products")
+        .update({ current_stock: currentStock })
+        .eq("id", product_id);
+      return NextResponse.json({ error: "Failed to record ledger entry" }, { status: 500 });
     }
 
     return NextResponse.json({

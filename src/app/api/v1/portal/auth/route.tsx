@@ -3,6 +3,9 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { cookies } from "next/headers";
 import { rateLimit, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
+import { Resend } from "resend";
+import { render } from "@react-email/components";
+import { PortalMagicLinkEmail } from "@/lib/email/portal-magic-link-email";
 
 // POST /api/v1/portal/auth — Send a Supabase Auth magic link
 export async function POST(request: NextRequest) {
@@ -17,7 +20,7 @@ export async function POST(request: NextRequest) {
     const normalizedEmail = (email as string).toLowerCase().trim();
 
     const rateKey = `magic_link:${normalizedEmail}`;
-    const rateResult = rateLimit(rateKey, RATE_LIMIT_CONFIGS.MAGIC_LINK);
+    const rateResult = await rateLimit(rateKey, RATE_LIMIT_CONFIGS.MAGIC_LINK);
     if (!rateResult.allowed) {
       return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
     }
@@ -42,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     const teamId = team_id ?? (Array.isArray(portalUser.customer)
       ? portalUser.customer[0]?.team_id
-      : (portalUser.customer as Record<string, unknown>)?.team_id as string);
+      : (portalUser.customer as { team_id: string })?.team_id);
 
     if (!teamId) {
       return NextResponse.json({
@@ -89,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     const magicLink = linkData.properties?.action_link ?? "";
 
-    // Send email via Resend
+    // Send email via Resend (SDK + React Email component)
     const resendApiKey = process.env.RESEND_API_KEY;
     if (resendApiKey) {
       try {
@@ -101,39 +104,26 @@ export async function POST(request: NextRequest) {
           ? "Votre lien de connexion Hono"
           : "Your Hono login link";
 
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${resendApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: normalizedEmail,
-            subject,
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
-                <h2>${locale === "fr" ? "Connexion à votre espace client" : "Log in to your client area"}</h2>
-                <p>${locale === "fr" ? "Bonjour" : "Hello"} ${portalUser.name ?? ""},</p>
-                <p>${locale === "fr" ? "Cliquez sur le lien ci-dessous pour vous connecter :" : "Click the link below to log in:"}</p>
-                <a href="${magicLink}"
-                   style="display: inline-block; background: #2563eb; color: white;
-                          padding: 12px 24px; border-radius: 6px; text-decoration: none;
-                          font-weight: bold; margin: 16px 0;">
-                  ${locale === "fr" ? "Se connecter" : "Log in"}
-                </a>
-                <p style="color: #666; font-size: 14px;">
-                  ${locale === "fr" ? "Ce lien expire dans 15 minutes." : "This link expires in 15 minutes."}
-                </p>
-                <p style="color: #666; font-size: 12px;">
-                  ${locale === "fr"
-                    ? "Si vous n'avez pas demandé cette connexion, ignorez cet email."
-                    : "If you did not request this login, ignore this email."}
-                </p>
-              </div>
-            `,
-          }),
+        const resend = new Resend(resendApiKey);
+        const html = await render(
+          <PortalMagicLinkEmail
+            data={{
+              customerName: portalUser.name ?? null,
+              magicLink,
+              locale,
+            }}
+          />
+        );
+
+        const { error: sendError } = await resend.emails.send({
+          from: fromEmail,
+          to: normalizedEmail,
+          subject,
+          html,
         });
+        if (sendError) {
+          console.error("Resend rejected portal magic link email:", sendError);
+        }
       } catch (emailError) {
         console.error("Failed to send portal magic link email:", emailError);
       }

@@ -10,6 +10,22 @@ import { getPortalSession } from "@/lib/portal/session";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
+type PortalOrder = {
+  id: string;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  items: OrderItem[];
+};
+
+type OrderItem = {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price_ht: number | null;
+  special_request: string | null;
+};
+
 export default async function PortalOrdersPage(props: { searchParams: SearchParams }) {
   const session = await getPortalSession();
   if (!session) redirect("./auth");
@@ -25,14 +41,20 @@ export default async function PortalOrdersPage(props: { searchParams: SearchPara
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  let query = supabase
+  const { data: orders } = await supabase
     .from("orders")
     .select("id, status, notes, created_at, items:order_items(id, description, quantity)")
     .eq("customer_id", session.customerId);
 
-  if (status) query = query.eq("status", status);
+  type PortalOrderRow = {
+    id: string;
+    status: string;
+    notes: string | null;
+    created_at: string;
+    items: Array<{ id: string; description: string; quantity: number }>;
+  };
 
-  const { data: orders } = await query.order("created_at", { ascending: false });
+  type OrderItemLite = { id: string; description: string; quantity: number };
 
   function getStatusBadge(s: string) {
     const variants: Record<string, "default" | "success" | "warning" | "secondary"> = {
@@ -44,12 +66,14 @@ export default async function PortalOrdersPage(props: { searchParams: SearchPara
     return <Badge variant={variants[s] ?? "default"}>{ot(s)}</Badge>;
   }
 
+  const orderRows: PortalOrderRow[] = Array.isArray(orders) ? orders : [];
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{pt("my_orders")}</h1>
-          <p className="text-sm text-muted-foreground">{pt("order_count", { count: orders?.length ?? 0 })}</p>
+          <p className="text-sm text-muted-foreground">{pt("order_count", { count: orderRows.length })}</p>
         </div>
       </div>
 
@@ -78,26 +102,26 @@ export default async function PortalOrdersPage(props: { searchParams: SearchPara
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(orders ?? []).length === 0 ? (
+            {orderRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={4} className="text-center py-12 text-muted-foreground">
                   {pt("no_orders")}
                 </TableCell>
               </TableRow>
             ) : (
-              (orders ?? []).map((order: Record<string, unknown>) => {
-                const items = Array.isArray(order.items) ? order.items : [];
+              orderRows.map((order) => {
+                const items: OrderItemLite[] = Array.isArray(order.items) ? order.items : [];
                 return (
-                  <TableRow key={order.id as string}>
+                  <TableRow key={order.id}>
                     <TableCell className="font-medium">
                       <Link href={`./orders/${order.id}`} className="hover:text-primary transition-colors">
-                        {new Date(order.created_at as string).toLocaleDateString("fr-FR")}
+                        {new Date(order.created_at).toLocaleDateString("fr-FR")}
                       </Link>
                     </TableCell>
-                    <TableCell>                    {pt("items_count", { count: items.length })}</TableCell>
-                    <TableCell>{getStatusBadge(order.status as string)}</TableCell>
+                    <TableCell>{pt("items_count", { count: items.length })}</TableCell>
+                    <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell className="text-muted-foreground max-w-xs truncate">
-                      {(order.notes as string) || "—"}
+                      {order.notes || "—"}
                     </TableCell>
                   </TableRow>
                 );

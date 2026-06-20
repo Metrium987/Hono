@@ -40,7 +40,7 @@ async function handlePnl(supabase: ReturnType<typeof createClient>, teamId: stri
     .gte("issue_date", dateFrom)
     .lte("issue_date", dateTo);
 
-  const totalInvoiced = (invoiceRevenue ?? []).reduce((sum: number, inv: Record<string, unknown>) => sum + parseFloat(inv.total_ttc as string || "0"), 0);
+  const totalInvoiced = (invoiceRevenue ?? []).reduce((sum: number, inv: { total_ttc: string }) => sum + parseFloat(inv.total_ttc || "0"), 0);
 
   const { data: otherIncome } = await supabase
     .from("income")
@@ -49,7 +49,7 @@ async function handlePnl(supabase: ReturnType<typeof createClient>, teamId: stri
     .gte("income_date", dateFrom)
     .lte("income_date", dateTo);
 
-  const totalOtherIncome = (otherIncome ?? []).reduce((sum: number, inc: Record<string, unknown>) => sum + parseFloat(inc.amount as string || "0"), 0);
+  const totalOtherIncome = (otherIncome ?? []).reduce((sum: number, inc: { amount: string }) => sum + parseFloat(inc.amount || "0"), 0);
 
   // Get invoice IDs for this team in period, then get payments
   const { data: teamInvoices } = await supabase
@@ -68,7 +68,7 @@ async function handlePnl(supabase: ReturnType<typeof createClient>, teamId: stri
       .select("amount")
       .in("invoice_id", invoiceIds);
 
-    totalCollected = (payments ?? []).reduce((sum: number, p: Record<string, unknown>) => sum + parseFloat(p.amount as string || "0"), 0);
+    totalCollected = (payments ?? []).reduce((sum: number, p: { amount: string }) => sum + parseFloat(p.amount || "0"), 0);
   }
 
   const { data: expenses } = await supabase
@@ -78,11 +78,11 @@ async function handlePnl(supabase: ReturnType<typeof createClient>, teamId: stri
     .gte("expense_date", dateFrom)
     .lte("expense_date", dateTo);
 
-  const totalExpenses = (expenses ?? []).reduce((sum: number, exp: Record<string, unknown>) => sum + parseFloat(exp.amount as string || "0"), 0);
+  const totalExpenses = (expenses ?? []).reduce((sum: number, exp: { amount: string; category: { name: string }[] | null }) => sum + parseFloat(exp.amount || "0"), 0);
 
   const categoryMap = new Map<string, number>();
-  for (const exp of (expenses ?? []) as Array<Record<string, unknown>>) {
-    const cat = exp.category as Array<Record<string, unknown>> | null;
+  for (const exp of (expenses ?? []) as Array<{ amount: string; category: { name: string }[] | null }>) {
+    const cat = exp.category as { name: string }[] | null;
     const catName = cat?.[0]?.name as string ?? "Sans catégorie";
     categoryMap.set(catName, (categoryMap.get(catName) ?? 0) + parseFloat(exp.amount as string || "0"));
   }
@@ -135,7 +135,7 @@ async function handleVatByRate(supabase: ReturnType<typeof createClient>, teamId
         .eq("tax_rate_id", tr.id)
         .in("invoice_id", vatInvoiceIds);
 
-      const taxableBase = (items ?? []).reduce((sum: number, item: Record<string, unknown>) => sum + parseFloat(item.line_total_ht as string || "0"), 0);
+      const taxableBase = (items ?? []).reduce((sum: number, item: { line_total_ht: string }) => sum + parseFloat(item.line_total_ht || "0"), 0);
       const vatAmount = taxableBase * (parseFloat(tr.rate) / 100);
 
       if (taxableBase > 0) {
@@ -185,7 +185,7 @@ async function handleClientStatement(supabase: ReturnType<typeof createClient>, 
       .eq("customer_id", customerId);
 
     const custInvoiceIds = (customerInvoices ?? []).map((inv) => inv.id);
-    let payments: Array<Record<string, unknown>> = [];
+    let payments: Array<{ amount: string; payment_date: string; reference: string | null; payment_method: { display_name: string; name: string }[] | null }> = [];
 
     if (custInvoiceIds.length > 0) {
       const { data: payData } = await supabase
@@ -193,10 +193,10 @@ async function handleClientStatement(supabase: ReturnType<typeof createClient>, 
         .select("amount, payment_date, reference, payment_method:payment_method_id(display_name, name)")
         .in("invoice_id", custInvoiceIds);
 
-      payments = (payData ?? []) as Array<Record<string, unknown>>;
+      payments = (payData ?? []) as Array<{ amount: string; payment_date: string; reference: string | null; payment_method: { display_name: string; name: string }[] | null }>;
     }
 
-  const formattedInvoices = (invoices ?? []).map((inv: Record<string, unknown>) => ({
+  const formattedInvoices = (invoices ?? []).map((inv: { id: string; invoice_number: string; status: string; total_ttc: string; paid_amount: string; issue_date: string; due_date: string; currency: { symbol: string }[] | null }) => ({
     id: inv.id,
     number: inv.invoice_number,
     status: inv.status,
@@ -205,7 +205,7 @@ async function handleClientStatement(supabase: ReturnType<typeof createClient>, 
     remaining: parseFloat(inv.total_ttc as string || "0") - parseFloat(inv.paid_amount as string || "0"),
     issue_date: inv.issue_date,
     due_date: inv.due_date,
-    currency: (inv.currency as Array<Record<string, unknown>>)?.[0]?.symbol ?? "F",
+    currency: (inv.currency as { symbol: string }[])?.[0]?.symbol ?? "F",
   }));
 
   const totalBilled = formattedInvoices.reduce((sum, inv) => sum + inv.total_ttc, 0);

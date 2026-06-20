@@ -37,7 +37,7 @@ export async function PATCH(request: NextRequest, props: { params: Params }) {
     const body = await request.json();
 
     const allowedFields = ["category_id", "description", "amount", "currency_id", "income_date", "customer_id", "receipt_url", "notes"];
-    const updates: Record<string, unknown> = {};
+    const updates: Record<string, string | number | boolean | null> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) updates[field] = body[field];
     }

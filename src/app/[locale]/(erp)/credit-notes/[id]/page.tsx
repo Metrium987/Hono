@@ -9,13 +9,51 @@ import { Badge } from "@/components/ui/badge";
 
 type Params = Promise<{ id: string }>;
 
-function formatCurrency(amount: number, symbol?: string) {
-  const formatted = amount.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+type CreditNoteItem = {
+  id: string;
+  description: string;
+  quantity: string | number;
+  unit_price_ht: string | number | null;
+  line_total_ht: string | number | null;
+  tax_rates: { rate: number } | Array<{ rate: number }> | null;
+};
+
+type CreditNote = {
+  id: string;
+  credit_note_number: string;
+  status: string;
+  issue_date: string;
+  reason: string | null;
+  total_ttc: number | string | null;
+  customer: { company_name: string | null; contact_name: string; email: string | null; phone: string | null } | Array<{ company_name: string | null; contact_name: string; email: string | null; phone: string | null }> | null;
+  currency: { symbol: string | null } | Array<{ symbol: string | null }> | null;
+  items: CreditNoteItem[];
+  invoice: { id: string; invoice_number: string } | Array<{ id: string; invoice_number: string }> | null;
+};
+
+function formatCurrency(amount: number | string | null, symbol?: string) {
+  const n = typeof amount === "number" ? amount : parseFloat(String(amount ?? 0));
+  const formatted = n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   return symbol ? `${formatted} ${symbol}` : `${formatted} F`;
 }
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+function unwrap<T>(value: T | Array<T> | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+function unwrapItems(items: CreditNoteItem[] | null | undefined): CreditNoteItem[] {
+  return Array.isArray(items) ? items : [];
+}
+
+function getTaxRate(item: CreditNoteItem): number | null {
+  const tr = item.tax_rates;
+  if (Array.isArray(tr)) return tr[0]?.rate ?? null;
+  return tr?.rate ?? null;
 }
 
 export default async function CreditNoteDetailPage(props: { params: Params }) {
@@ -47,11 +85,11 @@ export default async function CreditNoteDetailPage(props: { params: Params }) {
 
   if (!cn) return <div className="text-center py-12 text-muted-foreground">{common("not_found")}</div>;
 
-  const customerArr = Array.isArray(cn.customer) ? cn.customer : [cn.customer];
-  const customer = customerArr[0] ?? null;
-  const currency = Array.isArray(cn.currency) ? cn.currency[0] : cn.currency;
-  const invoiceLink = Array.isArray(cn.invoice) ? cn.invoice[0] : cn.invoice;
-  const items = (cn as unknown as { items: Array<Record<string, unknown>> }).items ?? [];
+  const note = cn as CreditNote;
+  const customer = unwrap(note.customer);
+  const currency = unwrap(note.currency);
+  const invoiceLink = unwrap(note.invoice);
+  const items = unwrapItems(note.items);
 
   const statusVariant: Record<string, "secondary" | "success" | "destructive" | "default"> = {
     draft: "secondary",
@@ -68,13 +106,13 @@ export default async function CreditNoteDetailPage(props: { params: Params }) {
             <Link href=".."><ArrowLeft className="h-4 w-4" /></Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{cn.credit_note_number}</h1>
-            <p className="text-sm text-muted-foreground">{t("issued_on", { date: formatDate(cn.issue_date) })}</p>
+            <h1 className="text-2xl font-bold tracking-tight">{note.credit_note_number}</h1>
+            <p className="text-sm text-muted-foreground">{t("issued_on", { date: formatDate(note.issue_date) })}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant={statusVariant[cn.status as keyof typeof statusVariant] ?? "secondary"}>
-            {st(cn.status as keyof typeof st)}
+          <Badge variant={statusVariant[note.status as keyof typeof statusVariant] ?? "secondary"}>
+            {st(note.status as keyof typeof st)}
           </Badge>
           <Button variant="outline" size="sm" asChild>
             <Link href={`/api/v1/credit-notes/${id}/pdf`} target="_blank">
@@ -103,7 +141,7 @@ export default async function CreditNoteDetailPage(props: { params: Params }) {
         <Card>
           <CardHeader><CardTitle className="text-sm font-medium">{t("reason")}</CardTitle></CardHeader>
           <CardContent>
-            <p className="text-sm">{cn.reason ?? "-"}</p>
+            <p className="text-sm">{note.reason ?? "-"}</p>
           </CardContent>
         </Card>
       </div>
@@ -125,15 +163,15 @@ export default async function CreditNoteDetailPage(props: { params: Params }) {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item: Record<string, unknown>) => {
-                  const taxRates = Array.isArray(item.tax_rates) ? item.tax_rates[0] as Record<string, unknown> : null;
+                {items.map((item) => {
+                  const taxRate = getTaxRate(item);
                   return (
-                    <tr key={item.id as string} className="border-b last:border-0">
-                      <td className="py-2">{item.description as string}</td>
-                      <td className="text-right py-2">{item.quantity as string}</td>
-                      <td className="text-right py-2">{formatCurrency(parseFloat(String(item.unit_price_ht ?? "0")))}</td>
-                      <td className="text-right py-2">{taxRates ? `${taxRates.rate}%` : "-"}</td>
-                      <td className="text-right py-2 font-medium">{formatCurrency(parseFloat(String(item.line_total_ht ?? "0")))}</td>
+                    <tr key={item.id} className="border-b last:border-0">
+                      <td className="py-2">{item.description}</td>
+                      <td className="text-right py-2">{typeof item.quantity === "number" ? item.quantity.toLocaleString("fr-FR") : item.quantity}</td>
+                      <td className="text-right py-2">{formatCurrency(item.unit_price_ht as number | string | null)}</td>
+                      <td className="text-right py-2">{taxRate !== null ? `${taxRate}%` : "-"}</td>
+                      <td className="text-right py-2 font-medium">{formatCurrency(item.line_total_ht)}</td>
                     </tr>
                   );
                 })}
@@ -144,7 +182,7 @@ export default async function CreditNoteDetailPage(props: { params: Params }) {
           <div className="border-t mt-4 pt-4 space-y-1 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total TTC</span>
-              <span className="font-bold text-lg">{formatCurrency(parseFloat(String(cn.total_ttc ?? "0")), currency?.symbol)}</span>
+              <span className="font-bold text-lg">{formatCurrency(note.total_ttc, currency?.symbol ?? undefined)}</span>
             </div>
           </div>
         </CardContent>

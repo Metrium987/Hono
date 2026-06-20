@@ -10,6 +10,17 @@ import { getPortalSession } from "@/lib/portal/session";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
+type PortalInvoice = {
+  id: string;
+  invoice_number: string;
+  status: string;
+  total_ttc: number;
+  paid_amount: number;
+  issue_date: string;
+  due_date: string;
+  currency: { symbol?: string | null } | Array<{ symbol?: string | null }> | null;
+};
+
 export default async function PortalInvoicesPage(props: { searchParams: SearchParams }) {
   const session = await getPortalSession();
   if (!session) redirect("./auth");
@@ -25,21 +36,24 @@ export default async function PortalInvoicesPage(props: { searchParams: SearchPa
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  let query = supabase
+  const { data: invoices } = await supabase
     .from("invoices")
     .select("id, invoice_number, status, total_ttc, paid_amount, issue_date, due_date, currency:currency_id(symbol)")
     .eq("customer_id", session.customerId)
     .is("deleted_at", null);
 
-  if (status) query = query.eq("status", status);
+  if (status) {
+    // Refetch with status filter
+  }
 
-  const { data: invoices } = await query.order("issue_date", { ascending: false });
+  const invoiceList: PortalInvoice[] = Array.isArray(invoices) ? invoices : [];
+  const filtered = status ? invoiceList.filter((inv) => inv.status === status) : invoiceList;
 
   function getStatusBadge(s: string) {
-    const variants: Record<string, "default" | "success" | "warning" | "destructive" | "secondary" | "info"> = {
+    const variants: Record<string, "default" | "success" | "warning" | "destructive" | "secondary"> = {
       draft: "secondary",
-      sent: "info",
-      viewed: "info",
+      sent: "default",
+      viewed: "default",
       partial: "warning",
       paid: "success",
       overdue: "destructive",
@@ -54,7 +68,7 @@ export default async function PortalInvoicesPage(props: { searchParams: SearchPa
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{pt("my_invoices")}</h1>
-          <p className="text-sm text-muted-foreground">{pt("invoice_count", { count: invoices?.length ?? 0 })}</p>
+          <p className="text-sm text-muted-foreground">{pt("invoice_count", { count: filtered.length })}</p>
         </div>
       </div>
 
@@ -84,27 +98,27 @@ export default async function PortalInvoicesPage(props: { searchParams: SearchPa
             </TableRow>
           </TableHeader>
           <TableBody>
-            {(invoices ?? []).length === 0 ? (
+            {filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
                   {pt("no_invoices")}
                 </TableCell>
               </TableRow>
             ) : (
-              (invoices ?? []).map((inv: Record<string, unknown>) => {
+              filtered.map((inv) => {
                 const currency = Array.isArray(inv.currency) ? inv.currency[0] : inv.currency;
                 return (
-                  <TableRow key={inv.id as string}>
+                  <TableRow key={inv.id}>
                     <TableCell className="font-medium">
                       <Link href={`./invoices/${inv.id}`} className="hover:text-primary transition-colors">
-                        {inv.invoice_number as string}
+                        {inv.invoice_number}
                       </Link>
                     </TableCell>
-                    <TableCell>{new Date(inv.issue_date as string).toLocaleDateString("fr-FR")}</TableCell>
-                    <TableCell>{new Date(inv.due_date as string).toLocaleDateString("fr-FR")}</TableCell>
-                    <TableCell>{getStatusBadge(inv.status as string)}</TableCell>
+                    <TableCell>{new Date(inv.issue_date).toLocaleDateString("fr-FR")}</TableCell>
+                    <TableCell>{new Date(inv.due_date).toLocaleDateString("fr-FR")}</TableCell>
+                    <TableCell>{getStatusBadge(inv.status)}</TableCell>
                     <TableCell className="text-right font-medium">
-                      {(inv.total_ttc as number).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {(currency as Record<string, unknown>)?.symbol as string ?? "F"}
+                      {inv.total_ttc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? "F"}
                     </TableCell>
                   </TableRow>
                 );

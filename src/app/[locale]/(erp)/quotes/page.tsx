@@ -58,7 +58,7 @@ export default async function QuotesPage(props: { searchParams: SearchParams }) 
     id: q.id,
     quote_number: q.quote_number,
     status: q.status,
-    total_ttc: q.total_ttc as unknown as number,
+    total_ttc: q.total_ttc,
     issue_date: q.issue_date,
     validity_date: q.validity_date,
     customer: Array.isArray(q.customer) ? (q.customer[0] ?? null) : (q.customer ?? null),

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 
+type ItemInput = { description?: string; quantity?: string | number; unit_price_ht?: string | number; tax_rate_id?: string | null; product_id?: string | null; group_id?: string | null; sort_order?: number };
+
 // GET /api/v1/invoices/[id] — Get single invoice with items
 export async function GET(
   request: NextRequest,
@@ -75,7 +77,7 @@ export async function PATCH(
       "discount_type", "discount_value", "notes", "message", "status",
     ];
 
-    const updatePayload: Record<string, unknown> = {};
+    const updatePayload: Record<string, string | number | boolean | null> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) updatePayload[field] = body[field];
     }
@@ -110,7 +112,7 @@ export async function PATCH(
     if (body.items && Array.isArray(body.items) && body.items.length > 0) {
       await auth.supabase.from("invoice_items").delete().eq("invoice_id", id);
 
-      const itemRows = body.items.map((item: Record<string, unknown>, idx: number) => {
+      const itemRows = body.items.map((item: ItemInput, idx: number) => {
         const qty = parseFloat(item.quantity as string) || 1;
         const unitPrice = parseFloat(item.unit_price_ht as string) || 0;
         return {

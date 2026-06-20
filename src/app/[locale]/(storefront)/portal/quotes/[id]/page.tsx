@@ -11,6 +11,54 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getPortalSession } from "@/lib/portal/session";
 
+type QuoteItem = {
+  id: string;
+  description: string;
+  quantity: number;
+  unit_price_ht: number;
+  line_total_ht: number;
+  tax_rate: { rate: number } | Array<{ rate: number }> | null;
+};
+
+type QuoteCurrency = { symbol?: string | null; code?: string | null } | Array<{ symbol?: string | null; code?: string | null }> | null;
+
+type PortalQuote = {
+  id: string;
+  quote_number: string;
+  status: string;
+  issue_date: string;
+  validity_date: string | null;
+  subtotal_ht: number;
+  tax_amount: number;
+  total_ttc: number;
+  notes: string | null;
+  currency: QuoteCurrency;
+  items: QuoteItem[];
+};
+
+function unwrapCurrency(value: QuoteCurrency): { symbol?: string | null; code?: string | null } | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
+
+function unwrapRate(item: QuoteItem["tax_rate"]): number | null {
+  if (Array.isArray(item)) return item[0]?.rate ?? null;
+  return item?.rate ?? null;
+}
+
+function getStatusBadge(s: string, qt: (key: string) => string) {
+  const variants: Record<string, "default" | "success" | "warning" | "destructive" | "secondary"> = {
+    draft: "secondary",
+    sent: "default",
+    viewed: "default",
+    accepted: "success",
+    rejected: "destructive",
+    expired: "secondary",
+    converted: "default",
+  };
+  return <Badge variant={variants[s] ?? "default"}>{qt(s)}</Badge>;
+}
+
 export default async function PortalQuoteDetailPage(
   props: { params: Promise<{ id: string }> }
 ) {
@@ -30,30 +78,19 @@ export default async function PortalQuoteDetailPage(
   const { data: quote } = await supabase
     .from("quotes")
     .select(`
-      *, 
+      id, quote_number, status, issue_date, validity_date,
+      subtotal_ht, tax_amount, total_ttc, notes,
       currency:currency_id(symbol, code),
       items:quote_items(*, tax_rate:tax_rate_id(name, rate))
     `)
     .eq("id", id)
     .eq("customer_id", session.customerId)
-    .single();
+    .single<PortalQuote>();
 
   if (!quote) notFound();
 
-  const currency = Array.isArray(quote.currency) ? quote.currency[0] : quote.currency;
-  const items: Array<Record<string, unknown>> = Array.isArray(quote.items) ? quote.items : [];
-
-  function getStatusBadge(s: string) {
-    const variants: Record<string, "default" | "success" | "warning" | "destructive" | "secondary" | "info"> = {
-      draft: "secondary",
-      sent: "info",
-      accepted: "success",
-      rejected: "destructive",
-      expired: "secondary",
-      converted: "default",
-    };
-    return <Badge variant={variants[s] ?? "default"}>{qt(s)}</Badge>;
-  }
+  const currency = unwrapCurrency(quote.currency);
+  const items: QuoteItem[] = Array.isArray(quote.items) ? quote.items : [];
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
@@ -69,7 +106,7 @@ export default async function PortalQuoteDetailPage(
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight">{quote.quote_number}</h1>
-            {getStatusBadge(quote.status)}
+            {getStatusBadge(quote.status, qt)}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
             Émis le {new Date(quote.issue_date).toLocaleDateString("fr-FR")}
@@ -95,21 +132,21 @@ export default async function PortalQuoteDetailPage(
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id as string} className="border-b last:border-0">
+                <tr key={item.id} className="border-b last:border-0">
                   <td className="py-3">
-                    <p>{item.description as string}</p>
+                    <p>{item.description}</p>
                     {item.tax_rate ? (
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        TVA {((Array.isArray(item.tax_rate) ? item.tax_rate[0] : item.tax_rate) as Record<string, unknown>)?.rate as number ?? 0}%
+                        TVA {unwrapRate(item.tax_rate)}%
                       </p>
                     ) : null}
                   </td>
-                  <td className="text-right py-3">{item.quantity as string}</td>
+                  <td className="text-right py-3">{typeof item.quantity === "number" ? item.quantity.toLocaleString("fr-FR") : item.quantity}</td>
                   <td className="text-right py-3">
-                    {(item.unit_price_ht as number).toLocaleString("fr-FR", { minimumFractionDigits: 2 })}
+                    {typeof item.unit_price_ht === "number" ? item.unit_price_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) : "—"}
                   </td>
                   <td className="text-right py-3 font-medium">
-                    {(item.line_total_ht as number).toLocaleString("fr-FR", { minimumFractionDigits: 2 })}
+                    {typeof item.line_total_ht === "number" ? item.line_total_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) : "—"}
                   </td>
                 </tr>
               ))}
@@ -123,16 +160,16 @@ export default async function PortalQuoteDetailPage(
         <CardContent className="p-6 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Sous-total HT</span>
-            <span>{(quote.subtotal_ht as number).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? "F"}</span>
+            <span>{quote.subtotal_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? "F"}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">TVA</span>
-            <span>+ {(quote.tax_amount as number).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? "F"}</span>
+            <span>+ {quote.tax_amount.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? "F"}</span>
           </div>
           <Separator />
           <div className="flex justify-between text-lg font-bold">
             <span>Total TTC</span>
-            <span className="text-primary">{(quote.total_ttc as number).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? "F"}</span>
+            <span className="text-primary">{quote.total_ttc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? "F"}</span>
           </div>
         </CardContent>
       </Card>
@@ -144,7 +181,7 @@ export default async function PortalQuoteDetailPage(
             <CardTitle className="text-sm font-medium">Notes</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground whitespace-pre-line">{quote.notes as string}</p>
+            <p className="text-sm text-muted-foreground whitespace-pre-line">{quote.notes}</p>
           </CardContent>
         </Card>
       )}

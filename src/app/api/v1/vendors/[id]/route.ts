@@ -32,7 +32,7 @@ export async function PATCH(request: NextRequest, props: { params: Params }) {
     const body = await request.json();
 
     const allowedFields = ["name", "contact_name", "email", "phone", "address", "n_tahiti", "notes"];
-    const updates: Record<string, unknown> = {};
+    const updates: Record<string, string | number | boolean | null> = {};
     for (const field of allowedFields) {
       if (body[field] !== undefined) updates[field] = body[field];
     }

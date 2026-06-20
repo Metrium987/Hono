@@ -412,6 +412,7 @@ function groupTaxes(items: InvoicePdfItem[]): { name: string; rate: number; amou
 // Component
 // ──────────────────────────────────────────────────────────
 
+// Empty items table fallback added in Phase 6.4 to avoid blank table bodies while preserving column structure.
 export function InvoicePdfDocument({ data }: { data: InvoicePdfData }) {
   const { team, customer, currency, items } = data;
   const taxGroups = groupTaxes(items);
@@ -424,7 +425,7 @@ export function InvoicePdfDocument({ data }: { data: InvoicePdfData }) {
         {/* ── Header: Company + Invoice Title ── */}
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
-            <Text style={styles.companyName}>{team.name}</Text>
+            <Text style={styles.companyName}>{team.name ?? "Mon entreprise"}</Text>
             {team.address_line1 && (
               <Text style={styles.companyDetail}>{team.address_line1}</Text>
             )}
@@ -536,29 +537,39 @@ export function InvoicePdfDocument({ data }: { data: InvoicePdfData }) {
             </Text>
           </View>
 
-          {items.map((item, index) => (
-            <View
-              key={item.id}
-              style={[styles.tableRow, ...(index % 2 === 1 ? [styles.tableRowAlt] : [])]}
-              wrap={false}
-            >
-              <Text style={[styles.cellText, styles.colDescription]}>
-                {item.description}
-              </Text>
-              <Text style={[styles.cellText, styles.colQuantity]}>
-                {item.quantity}
-              </Text>
-              <Text style={[styles.cellText, styles.colPrice]}>
-                {formatCurrency(item.unit_price_ht, currency)}
-              </Text>
-              <Text style={[styles.cellText, styles.colTax]}>
-                {item.tax_rates ? `${item.tax_rates.rate}%` : "—"}
-              </Text>
-              <Text style={[styles.cellText, styles.colTotal]}>
-                {formatCurrency(item.line_total_ht, currency)}
-              </Text>
-            </View>
-          ))}
+            {items.length === 0 ? (
+              <View style={styles.tableRow}>
+                <Text style={[styles.cellText, styles.colDescription]}>—</Text>
+                <Text style={[styles.cellText, styles.colQuantity]}>0</Text>
+                <Text style={[styles.cellText, styles.colPrice]}>0</Text>
+                <Text style={[styles.cellText, styles.colTax]}>—</Text>
+                <Text style={[styles.cellText, styles.colTotal]}>0</Text>
+              </View>
+            ) : (
+              items.map((item, index) => (
+                <View
+                  key={item.id}
+                  style={[styles.tableRow, ...(index % 2 === 1 ? [styles.tableRowAlt] : [])]}
+                  wrap={false}
+                >
+                  <Text style={[styles.cellText, styles.colDescription]}>
+                    {item.description}
+                  </Text>
+                  <Text style={[styles.cellText, styles.colQuantity]}>
+                    {item.quantity}
+                  </Text>
+                  <Text style={[styles.cellText, styles.colPrice]}>
+                    {formatCurrency(item.unit_price_ht, currency)}
+                  </Text>
+                  <Text style={[styles.cellText, styles.colTax]}>
+                    {item.tax_rates ? `${item.tax_rates.rate}%` : "—"}
+                  </Text>
+                  <Text style={[styles.cellText, styles.colTotal]}>
+                    {formatCurrency(item.line_total_ht, currency)}
+                  </Text>
+                </View>
+              ))
+            )}
         </View>
 
         {/* ── Totals ── */}

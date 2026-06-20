@@ -9,6 +9,18 @@ import { Badge } from "@/components/ui/badge";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
+type ExpenseCurrency = { symbol?: string | null } | null;
+
+type ExpenseRow = {
+  id: string;
+  description: string;
+  amount: number;
+  expense_date: string;
+  vendor_name: string;
+  currency: ExpenseCurrency;
+  category: { name: string } | null;
+};
+
 export default async function ExpensesPage(props: { searchParams: SearchParams }) {
   const sp = await props.searchParams;
   const categoryId = typeof sp.category_id === "string" ? sp.category_id : "";
@@ -57,14 +69,14 @@ export default async function ExpensesPage(props: { searchParams: SearchParams }
     .order("expense_date", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  const expenses = (rawExpenses ?? []).map((exp) => ({
+  const expenses: ExpenseRow[] = (rawExpenses ?? []).map((exp) => ({
     id: exp.id,
     description: exp.description,
     amount: exp.amount,
     expense_date: exp.expense_date,
     vendor_name: exp.vendor_name ?? "",
-    currency: Array.isArray(exp.currency) ? (exp.currency[0] ?? null) : (exp.currency ?? null),
-    category: Array.isArray(exp.category) ? (exp.category[0] ?? null) : (exp.category ?? null),
+    currency: Array.isArray(exp.currency) ? (exp.currency[0] ?? null) : exp.currency ?? null,
+    category: Array.isArray(exp.category) ? (exp.category[0] ?? null) : exp.category ?? null,
   }));
 
   const totalPages = Math.ceil((count ?? 0) / limit);
@@ -130,12 +142,10 @@ export default async function ExpensesPage(props: { searchParams: SearchParams }
                     <td className="p-3 font-medium">{exp.description}</td>
                     <td className="p-3 text-muted-foreground">{exp.vendor_name || "—"}</td>
                     <td className="p-3">
-                      {exp.category ? (
-                        <Badge variant="secondary">{exp.category.name as string}</Badge>
-                      ) : "—"}
+                      {exp.category ? <Badge variant="secondary">{exp.category.name}</Badge> : "—"}
                     </td>
                     <td className="p-3 text-right font-medium">
-                      {formatCurrency(exp.amount as number, (exp.currency as Record<string, unknown> | null)?.symbol as string ?? "F")}
+                      {formatCurrency(exp.amount, exp.currency?.symbol ?? "F")}
                     </td>
                   </tr>
                 ))
