@@ -64,7 +64,7 @@ export async function POST(
     // Verify invoice exists and belongs to team
     const { data: invoice, error: invError } = await auth.supabase
       .from("invoices")
-      .select("id, total_ttc, paid_amount, status, team_id")
+      .select("id, total_ttc, paid_amount, status, team_id, assigned_to")
       .eq("id", id)
       .eq("team_id", teamId)
       .single();
@@ -107,6 +107,36 @@ export async function POST(
       payload: { payment_id: payment.id, amount: payment.amount },
       created_by: auth.userId,
     });
+
+    // Auto-create commission if payment completes the invoice and a commercial is assigned
+    const newPaidTotal = parseFloat(String(invoice.paid_amount || 0)) + parseFloat(String(amount));
+    const wasAlreadyPaid = ["paid"].includes(invoice.status);
+    const isNowPaid = newPaidTotal >= parseFloat(String(invoice.total_ttc));
+    if (!wasAlreadyPaid && isNowPaid && invoice.assigned_to) {
+      const now = new Date().toISOString();
+      const { data: rule } = await auth.supabase
+        .from("commission_rules")
+        .select("rate")
+        .eq("team_id", teamId)
+        .eq("user_id", invoice.assigned_to)
+        .lte("applies_from", now)
+        .or(`applies_to.is.null,applies_to.gte.${now}`)
+        .order("applies_from", { ascending: false })
+        .limit(1)
+        .single();
+      if (rule) {
+        const commAmount = Math.round(parseFloat(String(invoice.total_ttc)) * rule.rate / 100 * 100) / 100;
+        await auth.supabase.from("invoice_commissions").upsert({
+          team_id: teamId,
+          invoice_id: id,
+          user_id: invoice.assigned_to,
+          amount: commAmount,
+          rate: rule.rate,
+          status: "pending",
+          created_at: now,
+        }, { onConflict: "invoice_id" });
+      }
+    }
 
     return NextResponse.json({ data: payment }, { status: 201 });
   });

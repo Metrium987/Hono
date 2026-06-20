@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -13,6 +14,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+type TeamMember = { id: string; name: string; email: string | null };
 
 const schema = z
   .object({
@@ -30,6 +34,8 @@ const schema = z
     portal_enabled: z.boolean(),
     payment_terms: z.number().int().min(0).max(365),
     notes: z.string().optional(),
+    customer_type: z.enum(["prospect", "client", "vip"]),
+    assigned_to: z.string().optional(),
   })
   .refine((d) => !d.is_b2b || (d.n_tahiti?.trim().length ?? 0) > 0, {
     message: "Le N° Tahiti est obligatoire pour un client B2B",
@@ -49,8 +55,15 @@ export function CustomerForm({ teamId, customerId, initialData, backHref }: Cust
   const router = useRouter();
   const t = useTranslations("customer_form");
   const common = useTranslations("common");
-
   const isEdit = !!customerId;
+  const [members, setMembers] = useState<TeamMember[]>([]);
+
+  useEffect(() => {
+    fetch(`/api/v1/team/members?team_id=${teamId}`)
+      .then((r) => r.json())
+      .then((j) => setMembers(j.data ?? []))
+      .catch(() => {});
+  }, [teamId]);
 
   const {
     register,
@@ -76,6 +89,8 @@ export function CustomerForm({ teamId, customerId, initialData, backHref }: Cust
       portal_enabled: false,
       payment_terms: 30,
       notes: "",
+      customer_type: "client",
+      assigned_to: "",
       ...initialData,
     },
   });
@@ -103,6 +118,8 @@ export function CustomerForm({ teamId, customerId, initialData, backHref }: Cust
       portal_enabled: values.portal_enabled,
       payment_terms: values.payment_terms,
       notes: values.notes?.trim() || null,
+      customer_type: values.customer_type,
+      assigned_to: values.assigned_to || null,
       ...(isEdit ? {} : { source: "erp" }),
     };
 
@@ -204,6 +221,40 @@ export function CustomerForm({ teamId, customerId, initialData, backHref }: Cust
               <div className="space-y-2">
                 <Label htmlFor="island">{t("island_label")}</Label>
                 <Input id="island" {...register("island")} placeholder="Tahiti" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* CRM section */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">CRM</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Type de client</Label>
+                <Controller name="customer_type" control={control} render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="prospect">Prospect</SelectItem>
+                      <SelectItem value="client">Client</SelectItem>
+                      <SelectItem value="vip">VIP</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )} />
+              </div>
+              <div className="space-y-2">
+                <Label>Commercial responsable</Label>
+                <Controller name="assigned_to" control={control} render={({ field }) => (
+                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                    <SelectTrigger><SelectValue placeholder="Non attribué" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Non attribué</SelectItem>
+                      {members.map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                )} />
               </div>
             </div>
           </CardContent>

@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       company_name, contact_name, is_b2b,
       n_tahiti, email, phone, address_line1, address_line2,
       city, island, postal_code, portal_enabled, payment_terms,
-      notes, consent_recorded, source,
+      notes, consent_recorded, source, assigned_to, customer_type,
     } = body;
 
     if (!contact_name) {
@@ -98,6 +98,8 @@ export async function POST(request: NextRequest) {
         consent_recorded: consent_recorded ?? false,
         consent_recorded_at: consent_recorded ? new Date().toISOString() : null,
         source: source ?? "erp",
+        assigned_to: assigned_to ?? null,
+        customer_type: customer_type ?? "client",
       })
       .select()
       .single();

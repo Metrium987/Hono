@@ -54,7 +54,7 @@ export async function PATCH(
       "company_name", "contact_name", "is_b2b", "n_tahiti",
       "email", "phone", "address_line1", "address_line2",
       "city", "island", "postal_code", "portal_enabled",
-      "payment_terms", "notes",
+      "payment_terms", "notes", "assigned_to", "customer_type",
     ] as const;
 
     for (const field of updatableFields) {

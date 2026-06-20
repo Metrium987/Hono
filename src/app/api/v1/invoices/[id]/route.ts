@@ -64,17 +64,20 @@ export async function PATCH(
     }
 
     const isFinalized = ["sent", "paid", "overdue", "cancelled"].includes(current.status);
-    if (isFinalized) {
+
+    const body = await request.json();
+
+    // assigned_to can be updated on any invoice (attribution can change)
+    if (isFinalized && Object.keys(body).some((k) => k !== "assigned_to")) {
       return NextResponse.json({
         error: `Cannot modify a ${current.status} invoice. Create a credit note instead.`,
       }, { status: 409 });
     }
 
-    const body = await request.json();
     const allowedFields = [
       "customer_id", "issue_date", "service_date", "due_date",
       "currency_id", "late_fee_fixed", "legal_vat_mention", "legal_mentions",
-      "discount_type", "discount_value", "notes", "message", "status",
+      "discount_type", "discount_value", "notes", "message", "status", "assigned_to",
     ];
 
     const updatePayload: Record<string, string | number | boolean | null> = {};
