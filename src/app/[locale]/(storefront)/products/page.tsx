@@ -5,7 +5,10 @@ import Link from "next/link";
 import { Search, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+
+const STORAGE_BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images`;
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -15,12 +18,17 @@ type ProductRow = {
   id: string;
   name: string;
   description: string | null;
+  short_description: string | null;
   price_ht: number;
   sku: string | null;
-  category: { slug: string } | Array<{ slug: string }> | null;
+  track_stock: boolean;
+  current_stock: number;
+  category: { slug: string; name: string | null } | Array<{ slug: string; name: string | null }> | null;
   currency: { symbol?: string | null; code?: string | null } | Array<{ symbol?: string | null; code?: string | null }> | null;
   images: ProductImage[] | null;
 };
+
+type CategoryItem = { id: string; slug: string; name: string | null };
 
 export default async function ProductsPage(props: { searchParams: SearchParams }) {
   const sp = await props.searchParams;
@@ -39,8 +47,9 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
     supabase
       .from("products")
       .select(`
-        id, name, description, price_ht, sku, type,
-        category:category_id(id, slug),
+        id, name, description, short_description, price_ht, sku, type,
+        track_stock, current_stock,
+        category:category_id(id, slug, name),
         currency:currency_id(symbol, code),
         images:product_images(storage_path, position)
       `)
@@ -49,12 +58,12 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
       .order("created_at", { ascending: false }),
     supabase
       .from("product_categories")
-      .select("id, slug")
+      .select("id, slug, name")
       .eq("is_active", true)
       .order("sort_order"),
   ]);
 
-  const categories = categoriesRes.data ?? [];
+  const categories = (categoriesRes.data ?? []) as CategoryItem[];
   const allProducts = (productsRes.data ?? []) as ProductRow[];
 
   const getSlug = (p: ProductRow): string | undefined => {
@@ -91,7 +100,6 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
       <div className="grid gap-8 lg:grid-cols-4">
         {/* Sidebar — categories & search */}
         <aside className="space-y-6 lg:col-span-1">
-          {/* Search */}
           <form method="GET" className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -102,7 +110,6 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
             />
           </form>
 
-          {/* Categories */}
           <div>
             <h3 className="text-sm font-semibold mb-3">{t("categories")}</h3>
             <nav className="space-y-1">
@@ -122,7 +129,7 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
                     categorySlug === cat.slug ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-accent"
                   }`}
                 >
-                  {cat.slug}
+                  {cat.name ?? cat.slug}
                 </Link>
               ))}
             </nav>
@@ -151,34 +158,50 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
                   : [];
                 const firstImage = sortedImages[0];
                 const imgSrc = firstImage
-                  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images/${firstImage.storage_path}`
+                  ? `${STORAGE_BASE}/${firstImage.storage_path}`
                   : null;
+                const inStock = !p.track_stock || p.current_stock > 0;
+
                 return (
                   <Link key={p.id} href={`./products/${p.id}`}>
                     <Card className="h-full hover:shadow-lg transition-all hover:-translate-y-0.5 overflow-hidden">
-                      {imgSrc && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={imgSrc}
-                          alt={p.name}
-                          className="w-full h-40 object-cover"
-                        />
-                      )}
-                      <CardHeader>
-                        <CardTitle className="text-base">{p.name}</CardTitle>
-                        {p.sku ? (
+                      <div className="relative">
+                        {imgSrc ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={imgSrc}
+                            alt={p.name}
+                            className="w-full h-40 object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-40 bg-muted flex items-center justify-center">
+                            <Package className="h-8 w-8 text-muted-foreground/40" />
+                          </div>
+                        )}
+                        {/* Stock badge overlay */}
+                        <div className="absolute top-2 right-2">
+                          {inStock ? (
+                            <Badge className="bg-green-500/90 text-white text-xs">En stock</Badge>
+                          ) : (
+                            <Badge className="bg-red-500/90 text-white text-xs">Rupture</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-base line-clamp-2">{p.name}</CardTitle>
+                        {p.sku && (
                           <p className="text-xs text-muted-foreground">{t("ref_label")} {p.sku}</p>
-                        ) : null}
+                        )}
                       </CardHeader>
                       <CardContent>
                         <p className="text-2xl font-bold text-primary">
                           {p.price_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency?.symbol ?? currency?.code ?? "F"}
                         </p>
-                        {p.description ? (
+                        {(p.short_description || p.description) && (
                           <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-                            {p.description}
+                            {p.short_description ?? p.description}
                           </p>
-                        ) : null}
+                        )}
                       </CardContent>
                     </Card>
                   </Link>

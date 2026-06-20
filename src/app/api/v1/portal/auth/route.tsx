@@ -32,16 +32,51 @@ export async function POST(request: NextRequest) {
       .eq("email", normalizedEmail)
       .single();
 
-    if (!portalUser) {
-      return NextResponse.json({
-        success: true,
-        message: "If this email is registered, a magic link has been sent.",
-      });
+    const resolvedTeamId = team_id ?? process.env.NEXT_PUBLIC_DEFAULT_TEAM_ID ?? "";
+
+    let effectivePortalUser = portalUser;
+
+    if (!effectivePortalUser) {
+      // Nouveau client : créer customer + portal_user
+      if (!resolvedTeamId) {
+        return NextResponse.json({ error: "Team not configured" }, { status: 500 });
+      }
+
+      const name = normalizedEmail.split("@")[0];
+
+      const { data: newCustomer, error: customerErr } = await adminSupabase
+        .from("customers")
+        .insert({ team_id: resolvedTeamId, contact_name: name, email: normalizedEmail })
+        .select("id")
+        .single();
+
+      if (customerErr || !newCustomer) {
+        return NextResponse.json({
+          success: true,
+          message: "If this email is registered, a magic link has been sent.",
+        });
+      }
+
+      const { data: newPortalUser } = await adminSupabase
+        .from("portal_users")
+        .insert({ customer_id: newCustomer.id, email: normalizedEmail, name })
+        .select("id, customer_id, name, email, auth_user_id, customer:customer_id!inner(team_id)")
+        .single();
+
+      if (!newPortalUser) {
+        return NextResponse.json({
+          success: true,
+          message: "If this email is registered, a magic link has been sent.",
+        });
+      }
+
+      effectivePortalUser = newPortalUser as typeof portalUser;
     }
 
-    const teamId = team_id ?? (Array.isArray(portalUser.customer)
-      ? portalUser.customer[0]?.team_id
-      : (portalUser.customer as { team_id: string })?.team_id);
+    const pu = effectivePortalUser!;
+    const teamId = resolvedTeamId || (Array.isArray(pu.customer)
+      ? pu.customer[0]?.team_id
+      : (pu.customer as { team_id: string } | null)?.team_id);
 
     if (!teamId) {
       return NextResponse.json({
@@ -51,19 +86,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Supabase Auth user if not linked yet
-    let authUserId = portalUser.auth_user_id;
+    let authUserId = pu.auth_user_id;
     if (!authUserId) {
       const { data: newUser, error: createError } = await adminSupabase.auth.admin.createUser({
         email: normalizedEmail,
         email_confirm: true,
-        user_metadata: { portal_user_id: portalUser.id, is_portal: true },
+        user_metadata: { portal_user_id: pu.id, is_portal: true },
       });
       if (!createError && newUser?.user) {
         authUserId = newUser.user.id;
         await adminSupabase
           .from("portal_users")
           .update({ auth_user_id: authUserId })
-          .eq("id", portalUser.id);
+          .eq("id", pu.id);
       }
     }
 
@@ -104,7 +139,7 @@ export async function POST(request: NextRequest) {
         const html = await render(
           <PortalMagicLinkEmail
             data={{
-              customerName: portalUser.name ?? null,
+              customerName: pu.name ?? null,
               magicLink,
               locale,
             }}

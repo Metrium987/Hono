@@ -89,7 +89,8 @@ export async function POST(request: NextRequest) {
       category_id, sku, type, name, description,
       price_ht, currency_id, tax_rate_id,
       track_stock, current_stock, low_stock_alert, unit,
-      is_active, is_published, translations, images,
+      is_active, is_published, featured, slug, meta_title, meta_description,
+      translations, images,
     } = body;
 
     if (!name || price_ht === undefined || !currency_id) {
@@ -117,6 +118,10 @@ export async function POST(request: NextRequest) {
         unit: unit ?? "pcs",
         is_active: is_active ?? true,
         is_published: is_published ?? false,
+        featured: featured ?? false,
+        slug: slug ?? null,
+        meta_title: meta_title ?? null,
+        meta_description: meta_description ?? null,
       })
       .select()
       .single();

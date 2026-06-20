@@ -15,6 +15,15 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+function slugify(str: string) {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 const schema = z.object({
   name: z.string().min(1, "Nom obligatoire"),
   sku: z.string().optional(),
@@ -27,6 +36,11 @@ const schema = z.object({
   track_stock: z.boolean(),
   current_stock: z.number().min(0),
   description: z.string().optional(),
+  short_description: z.string().optional(),
+  featured: z.boolean(),
+  slug: z.string().optional(),
+  meta_title: z.string().optional(),
+  meta_description: z.string().optional(),
   is_published: z.boolean(),
   is_active: z.boolean(),
 });
@@ -61,6 +75,7 @@ export function ProductForm({
     control,
     handleSubmit,
     watch,
+    setValue,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
@@ -77,6 +92,11 @@ export function ProductForm({
       track_stock: false,
       current_stock: 0,
       description: "",
+      short_description: "",
+      featured: false,
+      slug: "",
+      meta_title: "",
+      meta_description: "",
       is_published: false,
       is_active: true,
       ...initialData,
@@ -84,6 +104,14 @@ export function ProductForm({
   });
 
   const trackStock = watch("track_stock");
+  const watchedName = watch("name");
+
+  function handleNameBlur() {
+    const currentSlug = watch("slug");
+    if (!currentSlug && watchedName) {
+      setValue("slug", slugify(watchedName));
+    }
+  }
 
   async function onSubmit(values: FormValues) {
     const url = isEdit
@@ -103,9 +131,18 @@ export function ProductForm({
       track_stock: values.track_stock,
       current_stock: values.track_stock ? values.current_stock : 0,
       description: values.description?.trim() || undefined,
+      featured: values.featured,
+      slug: values.slug?.trim() || undefined,
+      meta_title: values.meta_title?.trim() || undefined,
+      meta_description: values.meta_description?.trim() || undefined,
       is_published: values.is_published,
       is_active: values.is_active,
-      translations: [{ locale: "fr", name: values.name.trim(), description: values.description?.trim() || undefined }],
+      translations: [{
+        locale: "fr",
+        name: values.name.trim(),
+        description: values.description?.trim() || undefined,
+        short_description: values.short_description?.trim() || undefined,
+      }],
     };
 
     const res = await fetch(url, {
@@ -136,13 +173,29 @@ export function ProductForm({
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* ── Informations générales ── */}
         <Card>
           <CardHeader><CardTitle className="text-base">Informations générales</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">{t("name_label")} *</Label>
-              <Input id="name" {...register("name")} placeholder="Ex: Eau Royale 1.5L" />
+              <Input
+                id="name"
+                {...register("name")}
+                placeholder="Ex: Eau Royale 1.5L"
+                onBlur={handleNameBlur}
+              />
               {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="short_description">Description courte</Label>
+              <Input
+                id="short_description"
+                {...register("short_description")}
+                placeholder="Résumé en une ligne pour la vitrine"
+              />
+              <p className="text-xs text-muted-foreground">Affichée sur les cartes produit dans le catalogue.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -187,11 +240,12 @@ export function ProductForm({
 
             <div className="space-y-2">
               <Label htmlFor="description">{t("description_label")}</Label>
-              <Textarea id="description" {...register("description")} rows={3} />
+              <Textarea id="description" {...register("description")} rows={4} placeholder="Description détaillée du produit..." />
             </div>
           </CardContent>
         </Card>
 
+        {/* ── Prix & TVA ── */}
         <Card>
           <CardHeader><CardTitle className="text-base">Prix & TVA</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -243,9 +297,24 @@ export function ProductForm({
           </CardContent>
         </Card>
 
+        {/* ── Stock & Publication ── */}
         <Card>
           <CardHeader><CardTitle className="text-base">Stock & Publication</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Controller
+                name="featured"
+                control={control}
+                render={({ field }) => (
+                  <Switch id="featured" checked={field.value} onCheckedChange={field.onChange} />
+                )}
+              />
+              <div>
+                <Label htmlFor="featured">Produit mis en avant</Label>
+                <p className="text-xs text-muted-foreground">Affiché en priorité sur la page d'accueil de la vitrine.</p>
+              </div>
+            </div>
+
             <div className="flex items-center gap-3">
               <Controller
                 name="track_stock"
@@ -284,6 +353,42 @@ export function ProductForm({
                 )}
               />
               <Label htmlFor="is_active">{t("is_active_label")}</Label>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── SEO ── */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">SEO & Référencement</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="slug">Slug (URL)</Label>
+              <Input
+                id="slug"
+                {...register("slug")}
+                placeholder="eau-royale-1-5l"
+              />
+              <p className="text-xs text-muted-foreground">Généré automatiquement depuis le nom. Modifiable librement.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="meta_title">Titre SEO</Label>
+              <Input
+                id="meta_title"
+                {...register("meta_title")}
+                placeholder="Eau Royale 1.5L – Hono"
+                maxLength={70}
+              />
+              <p className="text-xs text-muted-foreground">Laissez vide pour utiliser le nom du produit.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="meta_description">Description SEO</Label>
+              <Textarea
+                id="meta_description"
+                {...register("meta_description")}
+                rows={2}
+                placeholder="Description pour les moteurs de recherche (150-160 caractères)."
+                maxLength={160}
+              />
             </div>
           </CardContent>
         </Card>

@@ -50,6 +50,12 @@ export async function PATCH(
     if (parent_id !== undefined) updatePayload.parent_id = parent_id;
     if (is_active !== undefined) updatePayload.is_active = is_active;
     if (sort_order !== undefined) updatePayload.sort_order = sort_order;
+
+    // Sync name column from fr translation
+    if (translations && Array.isArray(translations)) {
+      const frTr = (translations as { locale: string; name: string }[]).find((t) => t.locale === "fr");
+      if (frTr?.name !== undefined) updatePayload.name = frTr.name;
+    }
     updatePayload.updated_at = new Date().toISOString();
 
     if (Object.keys(updatePayload).length > 1) {

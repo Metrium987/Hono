@@ -56,7 +56,7 @@ export function StorefrontHeader() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          <Link href={`/${locale}/portal/auth`}>
+          <Link href={`/${locale}/login`}>
             <Button variant="ghost" size="icon" className="hidden md:flex">
               <User className="h-5 w-5" />
             </Button>
@@ -98,7 +98,7 @@ export function StorefrontHeader() {
                 </Link>
               );
             })}
-            <Link href={`/${locale}/portal/auth`} onClick={() => setMobileOpen(false)}>
+            <Link href={`/${locale}/login`} onClick={() => setMobileOpen(false)}>
               <Button variant="outline" className="w-full mt-2">
                 <User className="mr-2 h-4 w-4" />
                 {t("client_portal")}

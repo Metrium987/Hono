@@ -62,6 +62,11 @@ export default async function EditProductPage(props: { params: Params }) {
         track_stock: product.track_stock ?? false,
         current_stock: product.current_stock ?? 0,
         description: frTrans?.description ?? product.description ?? "",
+        short_description: frTrans?.short_description ?? "",
+        featured: product.featured ?? false,
+        slug: product.slug ?? "",
+        meta_title: product.meta_title ?? "",
+        meta_description: product.meta_description ?? "",
         is_published: product.is_published ?? false,
         is_active: product.is_active ?? true,
       }}

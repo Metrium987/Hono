@@ -11,6 +11,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AddToCartButton } from "@/lib/cart/add-to-cart-button";
 
+const STORAGE_BASE = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/product-images`;
+
+function imageUrl(storagePath: string) {
+  return `${STORAGE_BASE}/${storagePath}`;
+}
+
 type Props = { params: Promise<{ id: string; locale: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -18,7 +24,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const admin = createAdminClient();
   const { data: product } = await admin
     .from("products")
-    .select("name, description, price_ht, currency:currency_id(symbol, code)")
+    .select("name, description, meta_title, meta_description, price_ht, currency:currency_id(symbol, code)")
     .eq("id", id)
     .eq("is_active", true)
     .eq("is_published", true)
@@ -28,8 +34,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://hono.pf").replace(/\/$/, "");
   const currency = Array.isArray(product.currency) ? product.currency[0] : product.currency;
-  const title = `${product.name} — Hono`;
-  const description = product.description ?? `${product.name} disponible sur Hono PF`;
+  const title = product.meta_title ?? `${product.name} — Hono`;
+  const description = product.meta_description ?? product.description ?? `${product.name} disponible sur Hono PF`;
 
   return {
     title,
@@ -62,7 +68,7 @@ export default async function ProductDetailPage(
     .from("products")
     .select(`
       *,
-      category:category_id(slug),
+      category:category_id(slug, name),
       currency:currency_id(symbol, code, symbol_position),
       tax_rate:tax_rate_id(name, rate),
       images:product_images(storage_path, alt_text, position)
@@ -86,6 +92,12 @@ export default async function ProductDetailPage(
   const priceHt = parseFloat(product.price_ht) || 0;
   const priceTtc = taxRate?.rate ? priceHt * (1 + taxRate.rate / 100) : priceHt;
 
+  const catRaw = Array.isArray(product.category) ? product.category[0] : product.category;
+  const catLabel = catRaw?.name ?? catRaw?.slug ?? null;
+
+  const images: { storage_path: string; alt_text?: string; position?: number }[] =
+    Array.isArray(product.images) ? product.images : [];
+
   const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://hono.pf").replace(/\/$/, "");
   const jsonLd = {
     "@context": "https://schema.org",
@@ -93,14 +105,20 @@ export default async function ProductDetailPage(
     name: product.name,
     description: product.description ?? undefined,
     sku: product.sku ?? undefined,
+    image: images.length > 0 ? imageUrl(images[0].storage_path) : undefined,
     offers: {
       "@type": "Offer",
       price: priceTtc.toFixed(2),
-      priceCurrency: (Array.isArray(product.currency) ? product.currency[0] : product.currency)?.code ?? "XPF",
-      availability: "https://schema.org/InStock",
+      priceCurrency: currency?.code ?? "XPF",
+      availability:
+        product.track_stock && product.current_stock <= 0
+          ? "https://schema.org/OutOfStock"
+          : "https://schema.org/InStock",
       url: `${base}/fr/products/${id}`,
     },
   };
+
+  const inStock = !product.track_stock || product.current_stock > 0;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -108,7 +126,6 @@ export default async function ProductDetailPage(
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      {/* Back link */}
       <Link
         href="./.."
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-6"
@@ -120,11 +137,12 @@ export default async function ProductDetailPage(
       <div className="grid gap-10 lg:grid-cols-2">
         {/* Image gallery */}
         <div>
-          {product.images && Array.isArray(product.images) && product.images.length > 0 ? (
+          {images.length > 0 ? (
             <div className="rounded-xl border bg-card overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={product.images[0].storage_path}
-                alt={product.images[0].alt_text ?? product.name}
+                src={imageUrl(images[0].storage_path)}
+                alt={images[0].alt_text ?? product.name}
                 className="w-full h-80 object-cover"
               />
             </div>
@@ -133,12 +151,13 @@ export default async function ProductDetailPage(
               <p className="text-muted-foreground">{t("no_image")}</p>
             </div>
           )}
-          {product.images && Array.isArray(product.images) && product.images.length > 1 && (
+          {images.length > 1 && (
             <div className="flex gap-2 mt-4">
-              {product.images.map((img: { storage_path: string; alt_text?: string; position?: number }) => (
+              {images.slice(1).map((img) => (
                 <div key={img.position ?? 0} className="w-20 h-20 rounded-lg border overflow-hidden">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={img.storage_path}
+                    src={imageUrl(img.storage_path)}
                     alt={img.alt_text ?? ""}
                     className="w-full h-full object-cover"
                   />
@@ -151,15 +170,25 @@ export default async function ProductDetailPage(
         {/* Product info */}
         <div className="space-y-6">
           <div>
-            {product.category && (
-              <Badge variant="secondary" className="mb-2">
-                {(Array.isArray(product.category) ? product.category[0]?.slug : product.category?.slug) ?? ""}
-              </Badge>
+            {catLabel && (
+              <Badge variant="secondary" className="mb-2">{catLabel}</Badge>
             )}
             <h1 className="text-3xl font-bold tracking-tight">{product.name}</h1>
             {product.sku && (
               <p className="text-sm text-muted-foreground mt-1">{t("ref_label")} {product.sku}</p>
             )}
+            {/* Stock badge */}
+            <div className="mt-2">
+              {inStock ? (
+                <Badge className="bg-green-500/15 text-green-700 border-green-200 hover:bg-green-500/20">
+                  En stock
+                </Badge>
+              ) : (
+                <Badge variant="destructive" className="bg-red-500/15 text-red-700 border-red-200 hover:bg-red-500/20">
+                  Rupture de stock
+                </Badge>
+              )}
+            </div>
           </div>
 
           {/* Pricing */}
@@ -205,11 +234,8 @@ export default async function ProductDetailPage(
               name={product.name}
               priceHt={priceHt}
               sku={product.sku ?? undefined}
-              imageUrl={
-                Array.isArray(product.images) && product.images.length > 0
-                  ? product.images[0].storage_path
-                  : undefined
-              }
+              imageUrl={images.length > 0 ? imageUrl(images[0].storage_path) : undefined}
+              disabled={!inStock}
             />
             <Button variant="outline" asChild>
               <Link href="./..">

@@ -47,12 +47,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "At least one translation is required (fr)" }, { status: 400 });
     }
 
+    const frName = (translations as { locale: string; name: string }[]).find((t) => t.locale === "fr")?.name ?? null;
+
     // Create category
     const { data: category, error: catError } = await auth.supabase
       .from("product_categories")
       .insert({
         team_id: teamId,
         slug,
+        name: frName,
         parent_id: parent_id ?? null,
         is_active: is_active ?? true,
         sort_order: sort_order ?? 0,

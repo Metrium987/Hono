@@ -48,7 +48,8 @@ export async function PATCH(
       category_id, sku, type, name, description,
       price_ht, currency_id, tax_rate_id,
       track_stock, current_stock, low_stock_alert, unit,
-      is_active, is_published, translations, images,
+      is_active, is_published, featured, slug, meta_title, meta_description,
+      translations, images,
     } = body;
 
     // Build update payload
@@ -57,7 +58,7 @@ export async function PATCH(
       "category_id", "sku", "type", "name", "description",
       "price_ht", "currency_id", "tax_rate_id",
       "track_stock", "current_stock", "low_stock_alert", "unit",
-      "is_active", "is_published",
+      "is_active", "is_published", "featured", "slug", "meta_title", "meta_description",
     ] as const;
 
     for (const field of updatableFields) {

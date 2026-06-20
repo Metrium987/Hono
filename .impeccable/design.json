@@ -1,0 +1,251 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-20T00:00:00Z",
+  "title": "Design System: Hono ERP",
+  "extensions": {
+    "colorMeta": {
+      "institution-blue": {
+        "role": "primary",
+        "displayName": "Bleu Institution",
+        "canonical": "oklch(0.546 0.245 262.881)",
+        "tonalRamp": [
+          "oklch(0.15 0.245 262.881)",
+          "oklch(0.25 0.245 262.881)",
+          "oklch(0.35 0.245 262.881)",
+          "oklch(0.45 0.245 262.881)",
+          "oklch(0.546 0.245 262.881)",
+          "oklch(0.65 0.220 262.881)",
+          "oklch(0.75 0.180 262.881)",
+          "oklch(0.85 0.120 262.881)"
+        ]
+      },
+      "deep-void": {
+        "role": "neutral",
+        "displayName": "Vide Profond",
+        "canonical": "oklch(0.145 0 0)",
+        "tonalRamp": [
+          "oklch(0.10 0 0)",
+          "oklch(0.145 0 0)",
+          "oklch(0.20 0 0)",
+          "oklch(0.30 0 0)",
+          "oklch(0.45 0 0)",
+          "oklch(0.60 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.90 0 0)"
+        ]
+      },
+      "ink-white": {
+        "role": "neutral",
+        "displayName": "Blanc Encre",
+        "canonical": "oklch(0.985 0 0)",
+        "tonalRamp": [
+          "oklch(0.20 0 0)",
+          "oklch(0.35 0 0)",
+          "oklch(0.50 0 0)",
+          "oklch(0.65 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.85 0 0)",
+          "oklch(0.93 0 0)",
+          "oklch(0.985 0 0)"
+        ]
+      },
+      "surface-raised": {
+        "role": "neutral",
+        "displayName": "Surface Élevée",
+        "canonical": "oklch(0.205 0.042 265.755)",
+        "tonalRamp": [
+          "oklch(0.12 0.042 265.755)",
+          "oklch(0.165 0.042 265.755)",
+          "oklch(0.205 0.042 265.755)",
+          "oklch(0.269 0.021 257.438)",
+          "oklch(0.38 0.025 262)",
+          "oklch(0.52 0.020 262)",
+          "oklch(0.67 0.015 262)",
+          "oklch(0.82 0.010 262)"
+        ]
+      },
+      "surface-elevated": {
+        "role": "neutral",
+        "displayName": "Surface Surélevée",
+        "canonical": "oklch(0.269 0.021 257.438)",
+        "tonalRamp": [
+          "oklch(0.145 0 0)",
+          "oklch(0.205 0.042 265.755)",
+          "oklch(0.269 0.021 257.438)",
+          "oklch(0.35 0.018 257)",
+          "oklch(0.45 0.015 257)",
+          "oklch(0.58 0.012 257)",
+          "oklch(0.72 0.009 257)",
+          "oklch(0.88 0.006 257)"
+        ]
+      },
+      "steel-fog": {
+        "role": "neutral",
+        "displayName": "Brume Acier",
+        "canonical": "oklch(0.708 0.047 252.682)",
+        "tonalRamp": [
+          "oklch(0.25 0.047 252.682)",
+          "oklch(0.35 0.047 252.682)",
+          "oklch(0.45 0.047 252.682)",
+          "oklch(0.55 0.047 252.682)",
+          "oklch(0.65 0.047 252.682)",
+          "oklch(0.708 0.047 252.682)",
+          "oklch(0.80 0.035 252.682)",
+          "oklch(0.90 0.020 252.682)"
+        ]
+      },
+      "signal-red": {
+        "role": "destructive",
+        "displayName": "Rouge Signal",
+        "canonical": "oklch(0.577 0.245 27.325)",
+        "tonalRamp": [
+          "oklch(0.20 0.245 27.325)",
+          "oklch(0.30 0.245 27.325)",
+          "oklch(0.40 0.245 27.325)",
+          "oklch(0.50 0.245 27.325)",
+          "oklch(0.577 0.245 27.325)",
+          "oklch(0.65 0.220 27.325)",
+          "oklch(0.75 0.180 27.325)",
+          "oklch(0.85 0.120 27.325)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Titres de page et en-têtes principaux. Maximum 2 par vue." },
+      "title": { "displayName": "Title", "purpose": "En-têtes de section, titres de cartes, colonnes de tableau." },
+      "body": { "displayName": "Body", "purpose": "Contenu textuel courant. Lignes de tableau, descriptions, labels. Max 65ch." },
+      "label": { "displayName": "Label", "purpose": "Métadonnées, horodatages, statuts textuels. Uniquement en steel-fog ou couleur sémantique." },
+      "mono": { "displayName": "Mono", "purpose": "Numéros de documents (FA-2026-0042), montants (1 250 000 F CFP), N° TAHITI, clés API." }
+    },
+    "shadows": [
+      {
+        "name": "floating",
+        "value": "0 4px 24px oklch(0 0 0 / 0.4)",
+        "purpose": "Dropdowns, tooltips, menus contextuels. Signale le détachement de la surface."
+      },
+      {
+        "name": "dialog",
+        "value": "0 8px 40px oklch(0 0 0 / 0.6)",
+        "purpose": "Modales et dialogs uniquement. Marque l'interruption intentionnelle du flux."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Transitions d'état standard (hover, focus). 150ms."
+      },
+      {
+        "name": "ease-out-fast",
+        "value": "cubic-bezier(0, 0, 0.2, 1)",
+        "purpose": "Entrée de composants flottants (dropdown, toast). 120ms."
+      },
+      {
+        "name": "ease-in-fast",
+        "value": "cubic-bezier(0.4, 0, 1, 1)",
+        "purpose": "Sortie de composants flottants. 100ms."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bouton Primaire",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Action principale de la vue. Une seule par écran.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M12 5v14M5 12l7 7 7-7\"/></svg> Nouvelle facture</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 6px; background: oklch(0.546 0.245 262.881); color: oklch(0.985 0 0); border: none; border-radius: 0.625rem; padding: 8px 12px; font-size: 0.875rem; font-weight: 500; font-family: 'Geist Sans', system-ui, sans-serif; cursor: pointer; transition: background 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary:hover { background: oklch(0.46 0.245 262.881); } .ds-btn-primary:focus-visible { outline: 2px solid oklch(0.546 0.245 262.881); outline-offset: 2px; } .ds-btn-primary:active { background: oklch(0.40 0.245 262.881); }"
+    },
+    {
+      "name": "Bouton Secondaire",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Action secondaire couplée à une primaire (ex: Nouveau devis à côté de Nouvelle facture).",
+      "html": "<button class=\"ds-btn-secondary\">Nouveau devis</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; gap: 6px; background: oklch(0.269 0.021 257.438); color: oklch(0.985 0 0); border: none; border-radius: 0.625rem; padding: 8px 12px; font-size: 0.875rem; font-weight: 500; font-family: 'Geist Sans', system-ui, sans-serif; cursor: pointer; transition: background 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-secondary:hover { background: oklch(0.32 0.021 257.438); } .ds-btn-secondary:focus-visible { outline: 2px solid oklch(0.546 0.245 262.881); outline-offset: 2px; }"
+    },
+    {
+      "name": "Bouton Ghost",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Actions de navigation et icônes (panier, profil, collapse sidebar).",
+      "html": "<button class=\"ds-btn-ghost\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"9\" cy=\"21\" r=\"1\"/><circle cx=\"20\" cy=\"21\" r=\"1\"/><path d=\"M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6\"/></svg></button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; background: transparent; color: oklch(0.708 0.047 252.682); border: none; border-radius: 0.625rem; padding: 8px; font-family: 'Geist Sans', system-ui, sans-serif; cursor: pointer; transition: background 150ms cubic-bezier(0.4,0,0.2,1), color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-ghost:hover { background: oklch(0.269 0.021 257.438); color: oklch(0.985 0 0); } .ds-btn-ghost:focus-visible { outline: 2px solid oklch(0.546 0.245 262.881); outline-offset: 2px; }"
+    },
+    {
+      "name": "Carte Métier",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Surface de présentation des données métier (KPI dashboard, résumés de document).",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-header\"><h3 class=\"ds-card-title\">Factures</h3><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"oklch(0.708 0.047 252.682)\" stroke-width=\"2\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"/><polyline points=\"14 2 14 8 20 8\"/></svg></div><div class=\"ds-card-content\"><span class=\"ds-metric\">24</span><div class=\"ds-card-meta\"><span class=\"ds-badge ds-badge--draft\">3 brouillons</span><span class=\"ds-badge ds-badge--sent\">8 envoyées</span><span class=\"ds-badge ds-badge--paid\">12 payées</span></div></div></div>",
+      "css": ".ds-card { background: oklch(0.205 0.042 265.755); border: 1px solid oklch(0.269 0.021 257.438); border-radius: 0.625rem; padding: 24px; color: oklch(0.985 0 0); font-family: 'Geist Sans', system-ui, sans-serif; } .ds-card-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; } .ds-card-title { font-size: 0.875rem; font-weight: 500; color: oklch(0.985 0 0); margin: 0; } .ds-card-content { } .ds-metric { display: block; font-size: 1.5rem; font-weight: 700; line-height: 1.2; margin-bottom: 8px; } .ds-card-meta { display: flex; gap: 8px; flex-wrap: wrap; } .ds-badge { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 500; } .ds-badge--draft { background: #fef9c3; color: #a16207; } .ds-badge--sent { background: #dbeafe; color: #1d4ed8; } .ds-badge--paid { background: #dcfce7; color: #15803d; } .ds-badge--overdue { background: #fee2e2; color: #b91c1c; } .ds-badge--converted { background: #f3e8ff; color: #7e22ce; }"
+    },
+    {
+      "name": "Champ de Saisie",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Champ de formulaire standard pour les formulaires métier (facture, devis, client).",
+      "html": "<div class=\"ds-field\"><label class=\"ds-label\" for=\"ds-amount\">Montant HT</label><input class=\"ds-input\" id=\"ds-amount\" type=\"text\" placeholder=\"0 F CFP\" /></div>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 6px; font-family: 'Geist Sans', system-ui, sans-serif; } .ds-label { font-size: 0.875rem; font-weight: 500; color: oklch(0.985 0 0); } .ds-input { background: oklch(0.269 0.021 257.438); border: 1px solid oklch(0.269 0.021 257.438); border-radius: 0.625rem; padding: 8px 12px; font-size: 0.875rem; color: oklch(0.985 0 0); font-family: 'Geist Mono', ui-monospace, monospace; outline: none; transition: border-color 150ms cubic-bezier(0.4,0,0.2,1), box-shadow 150ms cubic-bezier(0.4,0,0.2,1); } .ds-input::placeholder { color: oklch(0.708 0.047 252.682); } .ds-input:focus { border-color: oklch(0.546 0.245 262.881); box-shadow: 0 0 0 3px oklch(0.546 0.245 262.881 / 0.2); }"
+    },
+    {
+      "name": "Navigation Sidebar",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Items de navigation de la sidebar ERP. Actif vs inactif vs hover.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item ds-nav-item--active\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"/></svg> Factures</a><a class=\"ds-nav-item\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M9 11l3 3L22 4\"/><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11\"/></svg> Devis</a><a class=\"ds-nav-item\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"1\" y=\"3\" width=\"15\" height=\"13\"/><polygon points=\"16 8 20 8 23 11 23 16 16 16 16 8\"/></svg> Clients</a></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 2px; padding: 12px; background: oklch(0.145 0 0); font-family: 'Geist Sans', system-ui, sans-serif; } .ds-nav-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 0.625rem; font-size: 0.875rem; font-weight: 500; color: oklch(0.708 0.047 252.682); text-decoration: none; transition: background 150ms cubic-bezier(0.4,0,0.2,1), color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-nav-item:hover { background: oklch(0.269 0.021 257.438); color: oklch(0.985 0 0); } .ds-nav-item--active { background: oklch(0.546 0.245 262.881 / 0.1); color: oklch(0.546 0.245 262.881); }"
+    },
+    {
+      "name": "Badge Statut Document",
+      "kind": "chip",
+      "refersTo": null,
+      "description": "Affichage du statut d'un document (facture, devis, commande). Données critiques — ne jamais ommettre.",
+      "html": "<div class=\"ds-badge-demo\"><span class=\"ds-badge ds-badge--paid\">Payée</span><span class=\"ds-badge ds-badge--sent\">Envoyée</span><span class=\"ds-badge ds-badge--draft\">Brouillon</span><span class=\"ds-badge ds-badge--overdue\">En retard</span><span class=\"ds-badge ds-badge--converted\">Converti</span></div>",
+      "css": ".ds-badge-demo { display: flex; gap: 8px; flex-wrap: wrap; background: oklch(0.205 0.042 265.755); padding: 16px; border-radius: 0.625rem; } .ds-badge { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 0.375rem; font-size: 0.75rem; font-weight: 500; font-family: 'Geist Sans', system-ui, sans-serif; } .ds-badge--paid { background: #dcfce7; color: #15803d; } .ds-badge--sent { background: #dbeafe; color: #1d4ed8; } .ds-badge--draft { background: #fef9c3; color: #a16207; } .ds-badge--overdue { background: #fee2e2; color: #b91c1c; } .ds-badge--converted { background: #f3e8ff; color: #7e22ce; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "La Tour de Contrôle Locale",
+    "overview": "Hono est construit pour des professionnels qui passent des heures dans l'interface. Le thème sombre (oklch(0.145 0 0)) n'est pas un choix stylistique — c'est un choix ergonomique : sessions longues, workflows documentaires lourds, luminosité variable des environnements de bureau en Polynésie. Le système refuse d'être décoratif. Chaque élément gagne sa place en portant de l'information.\n\nLa palette est une étude contrôlée en tonalité bleu-gris, avec un seul accent institutionnel qui n'apparaît que là où une autorité visuelle est nécessaire. Les statuts communicent via des teintes sémantiques appliquées avec parcimonie sur le fond sombre. La typographie est une famille unique — Geist Sans — utilisée à travers les graisses et les tailles pour construire la hiérarchie sans changer de police.\n\nCe n'est pas un dashboard startup. Ce n'est pas un outil fintech qui prétend être approachable. C'est un ERP professionnel pour des gens qui maîtrisent leur métier.",
+    "keyCharacteristics": [
+      "Fond noir absolu (oklch(0.145 0 0)) — pas de nuance chaude, pas de teinte artificielle",
+      "Un seul accent : Bleu Institution, jamais utilisé à plus de 15% d'une surface",
+      "Élévation tonale : profondeur par la luminosité OKLCH, sans ombres au repos",
+      "Densité maîtrisée : données compactes avec un espacement micro cohérent",
+      "Statut sémantique : la couleur sert exclusivement à signaler un état, jamais à décorer"
+    ],
+    "rules": [
+      { "name": "La Règle du Monochromatisme Discipliné", "body": "Un seul accent coloré dans l'interface. Tout ajout d'une deuxième couleur d'accent — même subtile — rompt la hiérarchie visuelle.", "section": "colors" },
+      { "name": "La Règle des Surfaces Sans Ombre", "body": "La profondeur est communiquée par la luminosité OKLCH (fond → surface élevée → surface surélevée), jamais par des box-shadow. Les ombres portées sont réservées aux composants flottants.", "section": "elevation" },
+      { "name": "La Règle Zéro Ombre au Repos", "body": "Aucune carte, aucun bouton, aucune section ne porte d'ombre au repos. Les ombres sont réservées aux états flottants et aux composants qui se détachent physiquement du plan.", "section": "elevation" },
+      { "name": "La Règle Mono pour les Données Critiques", "body": "Tout identifiant séquentiel (numéro de facture, numéro de devis, N° TAHITI) et tout montant financier s'affiche en Geist Mono, jamais en Geist Sans.", "section": "typography" },
+      { "name": "La Règle Zéro Carte Imbriquée", "body": "Jamais de carte dans une carte. Si un contenu a besoin d'être visuellement groupé à l'intérieur d'une carte, utiliser un fond Surface Surélevée, un séparateur, ou un simple espacement.", "section": "components" }
+    ],
+    "dos": [
+      "Do utiliser Geist Mono pour tous les numéros de facture, montants en XPF, N° TAHITI, et clés API",
+      "Do réserver le Bleu Institution à une seule action primaire par vue",
+      "Do communiquer la profondeur par l'élévation OKLCH, jamais par des ombres sur les surfaces au repos",
+      "Do utiliser prefers-reduced-motion: reduce sur toutes les transitions et animations sans exception",
+      "Do garantir un contraste ≥4.5:1 pour tout texte sur toute surface, y compris les placeholders",
+      "Do nommer les composants avec la terminologie PF correcte : N° TAHITI, F CFP, Franchise en base"
+    ],
+    "donts": [
+      "Don't utiliser des interfaces dans l'esprit Quickbooks / Sage : tableaux oppressants, chrome grisâtre omniprésent",
+      "Don't verser dans le minimalisme de Notion / Linear : espace blanc excessif qui gaspille de la surface sur des données métier denses",
+      "Don't copier le look SaaS générique (Stripe / Vercel clone) : bleu foncé sur blanc, gradient sur le hero",
+      "Don't traiter le storefront comme Shopify / WooCommerce : pas de mise en page marchande générique",
+      "Don't utiliser border-left ou border-right de plus de 1px comme accent de couleur sur les cartes",
+      "Don't utiliser du gradient text (background-clip: text). La couleur du texte est un token, pas un dégradé",
+      "Don't imbriquer des cartes. Fond Surface Surélevée, séparateur, ou espacement suffisent",
+      "Don't animer des propriétés CSS de layout. Uniquement transform et opacity pour les animations de performance",
+      "Don't inventer des couleurs hors palette pour 'égayer' une section"
+    ]
+  }
+}

@@ -22,11 +22,15 @@ export const SECURITY_HEADERS: Record<string, string> = {
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    process.env.NODE_ENV === "development"
+      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:8400"
+      : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://*.supabase.co https://api.resend.com https://api.stripe.com",
+    process.env.NODE_ENV === "development"
+      ? "connect-src 'self' https://*.supabase.co https://api.resend.com https://api.stripe.com http://localhost:8400 ws://localhost:8400"
+      : "connect-src 'self' https://*.supabase.co https://api.resend.com https://api.stripe.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",

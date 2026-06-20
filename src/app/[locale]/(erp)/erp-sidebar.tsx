@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Truck,
   ShoppingCart,
+  Tag,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -27,8 +28,9 @@ const mainNavItems = [
   { key: "quotes" as const,       href: "/quotes",       icon: FileSignature },
   { key: "credit_notes" as const, href: "/credit-notes", icon: Receipt },
   { key: "orders" as const,       href: "/orders",       icon: ShoppingCart },
-  { key: "products" as const,     href: "/catalog",      icon: Package },
-  { key: "clients" as const,      href: "/customers",    icon: Users },
+  { key: "products" as const,     href: "/catalog",             icon: Package },
+  { key: "categories" as const,  href: "/catalog/categories",  icon: Tag },
+  { key: "clients" as const,     href: "/customers",           icon: Users },
 ];
 
 const financeNavItems = [
