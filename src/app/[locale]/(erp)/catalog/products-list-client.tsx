@@ -12,6 +12,7 @@ export type ProductRow = {
   name: string;
   type: string;
   price_ht: number;
+  cost_price: number | null;
   current_stock: number;
   track_stock: boolean;
   is_active: boolean;
@@ -46,6 +47,7 @@ export function ProductsListClient({ products, currentPage, totalPages, baseUrl 
             <TableHead>{t("th_category")}</TableHead>
             <TableHead>Type</TableHead>
             <TableHead className="text-right">{t("th_price")}</TableHead>
+            <TableHead className="text-right">Marge</TableHead>
             <TableHead className="text-right">{t("th_stock")}</TableHead>
             <TableHead>{t("th_status")}</TableHead>
             <TableHead>Vitrine</TableHead>
@@ -64,6 +66,16 @@ export function ProductsListClient({ products, currentPage, totalPages, baseUrl 
               <TableCell className="text-sm text-muted-foreground">{p.category ?? "-"}</TableCell>
               <TableCell className="text-sm">{p.type === "service" ? "Service" : "Produit"}</TableCell>
               <TableCell className="text-right">{formatCurrency(p.price_ht)}</TableCell>
+              <TableCell className="text-right">
+                {p.cost_price !== null && p.price_ht > 0 ? (() => {
+                  const m = Math.round(((p.price_ht - p.cost_price) / p.price_ht) * 100);
+                  return (
+                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${m >= 40 ? "bg-green-100 text-green-700" : m >= 20 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                      {m}%
+                    </span>
+                  );
+                })() : <span className="text-muted-foreground text-xs">—</span>}
+              </TableCell>
               <TableCell className="text-right">
                 {p.track_stock ? (
                   <span className={p.current_stock <= 5 ? "text-red-600 font-medium" : ""}>{p.current_stock}</span>

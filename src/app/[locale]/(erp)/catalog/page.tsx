@@ -34,14 +34,14 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
 
   const { data: products, count } = await supabase
     .from("products")
-    .select("id, type, price_ht, current_stock, track_stock, is_active, is_published, category:category_id(name), translation:product_translations(name)", { count: "exact" })
+    .select("id, type, price_ht, cost_price, current_stock, track_stock, is_active, is_published, category:category_id(name), translation:product_translations(name)", { count: "exact" })
     .eq("team_id", teamId)
     .eq("product_translations.locale", "fr")
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
 
   type RawProduct = {
-    id: string; type: string; price_ht: number;
+    id: string; type: string; price_ht: number; cost_price: number | null;
     current_stock: number; track_stock: boolean; is_active: boolean; is_published: boolean;
     category: { name: string }[] | null;
     translation: { name: string }[] | null;
@@ -52,6 +52,7 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
     name: Array.isArray(p.translation) ? p.translation[0]?.name ?? "-" : "-",
     type: p.type,
     price_ht: p.price_ht,
+    cost_price: p.cost_price ?? null,
     current_stock: p.current_stock,
     track_stock: p.track_stock,
     is_active: p.is_active,

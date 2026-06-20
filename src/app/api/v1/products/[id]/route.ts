@@ -46,7 +46,7 @@ export async function PATCH(
     const body = await request.json();
     const {
       category_id, sku, type, name, description,
-      price_ht, currency_id, tax_rate_id,
+      price_ht, cost_price, supplier_ref, currency_id, tax_rate_id,
       track_stock, current_stock, low_stock_alert, unit,
       is_active, is_published, featured, slug, meta_title, meta_description,
       translations, images,
@@ -56,7 +56,7 @@ export async function PATCH(
     const updatePayload: Record<string, string | number | boolean | null> = {};
     const updatableFields = [
       "category_id", "sku", "type", "name", "description",
-      "price_ht", "currency_id", "tax_rate_id",
+      "price_ht", "cost_price", "supplier_ref", "currency_id", "tax_rate_id",
       "track_stock", "current_stock", "low_stock_alert", "unit",
       "is_active", "is_published", "featured", "slug", "meta_title", "meta_description",
     ] as const;

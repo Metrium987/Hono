@@ -168,6 +168,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: invError.message }, { status: 400 });
     }
 
+    // Fetch cost prices for products to snapshot on each line (audit-proof)
+    const productIds = [...new Set(items.filter((i: ItemInput) => i.product_id).map((i: ItemInput) => i.product_id as string))];
+    const costMap = new Map<string, number>();
+    if (productIds.length > 0) {
+      const { data: prods } = await auth.supabase
+        .from("products").select("id, cost_price").in("id", productIds).eq("team_id", teamId);
+      for (const p of prods ?? []) {
+        if (p.cost_price !== null && p.cost_price !== undefined) costMap.set(p.id, parseFloat(String(p.cost_price)));
+      }
+    }
+
     // Create invoice items
     const itemRows = items.map((item: ItemInput, idx: number) => {
       const qty = parseFloat(item.quantity as string) || 1;
@@ -183,6 +194,7 @@ export async function POST(request: NextRequest) {
         tax_rate_id: item.tax_rate_id ?? null,
         line_total_ht: Math.round(lineTotal * 100) / 100,
         sort_order: item.sort_order ?? idx,
+        cost_price_snapshot: item.product_id ? (costMap.get(item.product_id) ?? null) : null,
       };
     });
 

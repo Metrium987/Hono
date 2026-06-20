@@ -67,6 +67,8 @@ export default async function EditProductPage(props: { params: Params }) {
         slug: product.slug ?? "",
         meta_title: product.meta_title ?? "",
         meta_description: product.meta_description ?? "",
+        cost_price: product.cost_price ?? undefined,
+        supplier_ref: product.supplier_ref ?? "",
         is_published: product.is_published ?? false,
         is_active: product.is_active ?? true,
       }}

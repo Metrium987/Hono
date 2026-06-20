@@ -29,6 +29,8 @@ const schema = z.object({
   sku: z.string().optional(),
   type: z.enum(["product", "service"]),
   price_ht: z.number().min(0),
+  cost_price: z.number().min(0).optional(),
+  supplier_ref: z.string().optional(),
   currency_id: z.string().min(1, "Devise obligatoire"),
   tax_rate_id: z.string().optional(),
   category_id: z.string().optional(),
@@ -105,6 +107,11 @@ export function ProductForm({
 
   const trackStock = watch("track_stock");
   const watchedName = watch("name");
+  const watchedPrice = watch("price_ht");
+  const watchedCost = watch("cost_price");
+  const marginPct = watchedPrice && watchedCost && watchedPrice > 0
+    ? Math.round(((watchedPrice - watchedCost) / watchedPrice) * 100)
+    : null;
 
   function handleNameBlur() {
     const currentSlug = watch("slug");
@@ -124,6 +131,8 @@ export function ProductForm({
       sku: values.sku?.trim() || undefined,
       type: values.type,
       price_ht: values.price_ht,
+      cost_price: values.cost_price ?? null,
+      supplier_ref: values.supplier_ref?.trim() || null,
       currency_id: values.currency_id,
       tax_rate_id: values.tax_rate_id || undefined,
       category_id: values.category_id || undefined,
@@ -293,6 +302,41 @@ export function ProductForm({
             <div className="space-y-2">
               <Label htmlFor="unit">{t("unit_label")}</Label>
               <Input id="unit" {...register("unit")} placeholder="pcs" className="w-32" />
+            </div>
+
+            {/* ── Pricing confidentiel ── */}
+            <div className="rounded-lg border border-dashed border-amber-300 bg-amber-50/40 dark:bg-amber-950/20 p-4 space-y-3">
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide">
+                🔒 Données confidentielles — non visibles sur la vitrine
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cost_price">Prix de revient (F CFP)</Label>
+                  <Input
+                    id="cost_price"
+                    type="number"
+                    min="0"
+                    step="1"
+                    {...register("cost_price", { valueAsNumber: true })}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="supplier_ref">Réf. fournisseur</Label>
+                  <Input id="supplier_ref" {...register("supplier_ref")} placeholder="Ex: REF-2024-001" />
+                </div>
+              </div>
+              {marginPct !== null && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Marge :</span>
+                  <span className={`text-sm font-bold ${marginPct >= 40 ? "text-green-600" : marginPct >= 20 ? "text-amber-600" : "text-red-600"}`}>
+                    {marginPct}%
+                  </span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${marginPct >= 40 ? "bg-green-100 text-green-700" : marginPct >= 20 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
+                    {marginPct >= 40 ? "Bonne marge" : marginPct >= 20 ? "Marge correcte" : marginPct >= 0 ? "Marge faible" : "Vendu à perte !"}
+                  </span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

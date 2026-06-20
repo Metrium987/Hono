@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       category_id, sku, type, name, description,
-      price_ht, currency_id, tax_rate_id,
+      price_ht, cost_price, supplier_ref, currency_id, tax_rate_id,
       track_stock, current_stock, low_stock_alert, unit,
       is_active, is_published, featured, slug, meta_title, meta_description,
       translations, images,
@@ -122,6 +122,8 @@ export async function POST(request: NextRequest) {
         slug: slug ?? null,
         meta_title: meta_title ?? null,
         meta_description: meta_description ?? null,
+        cost_price: cost_price ?? null,
+        supplier_ref: supplier_ref ?? null,
       })
       .select()
       .single();
