@@ -11,7 +11,7 @@
  *   manager@test.com    → Manager role
  *   salesman@test.com   → Salesperson role
  *   accountant@test.com → Accountant role
- *   customer@test.com   → ⚠️ incorrectly set as owner (should be portal-only)
+ *   customer@test.com   → portal_users only (no ERP access — own invoices/orders via portal)
  */
 
 import { createHash, randomBytes } from "node:crypto";
@@ -256,15 +256,14 @@ async function main() {
 
   // ── 4. User sign-in verification ───────────────────────────────────────────
   console.log(`${C.bold}── User sign-in verification ──────────────────────────────${C.reset}`);
-  const TEST_USERS = [
+  const ERP_USERS = [
     { email: "admin@test.com",      password: "test123", expectedOwner: true  },
     { email: "manager@test.com",    password: "test123", expectedOwner: false },
     { email: "salesman@test.com",   password: "test123", expectedOwner: false },
     { email: "accountant@test.com", password: "test123", expectedOwner: false },
-    { email: "customer@test.com",   password: "test123", expectedOwner: false },
   ];
 
-  for (const { email, password, expectedOwner } of TEST_USERS) {
+  for (const { email, password, expectedOwner } of ERP_USERS) {
     const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: ANON_KEY },
@@ -281,25 +280,19 @@ async function main() {
     const session = await r.json();
     const userId = session.user.id.slice(0, 8);
 
-    // Verify team membership
     const [member] = await sbGet(
       `/team_members?user_id=eq.${session.user.id}&team_id=eq.${TEAM_ID}&select=is_owner,role_id`
     );
 
     if (!member) {
-      console.log(`  ${FAIL} ${email} — not in team!`);
+      console.log(`  ${FAIL} ${email} — not in team_members!`);
       failed++;
       failures.push(`${email} not in team`);
       continue;
     }
 
     const actualOwner = member.is_owner;
-    const ownerOk = actualOwner === expectedOwner;
-
-    if (!ownerOk && email === "customer@test.com") {
-      // Known issue: customer set as owner
-      console.log(`  ${WARN} ${email} (uid:${userId}…) — is_owner=${actualOwner} ${C.yellow}(ANOMALIE: customer ne devrait pas être owner)${C.reset}`);
-    } else if (!ownerOk) {
+    if (actualOwner !== expectedOwner) {
       console.log(`  ${FAIL} ${email} (uid:${userId}…) — is_owner=${actualOwner}, attendu=${expectedOwner}`);
       failed++;
       failures.push(`${email} is_owner mismatch`);
@@ -309,6 +302,49 @@ async function main() {
         : "owner (no role)";
       console.log(`  ${PASS} ${email} (uid:${userId}…) — is_owner=${actualOwner}, rôle=${roleLabel}`);
       passed++;
+    }
+  }
+
+  // customer@test.com — vérification portail (portal_users, pas team_members)
+  {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: ANON_KEY },
+      body: JSON.stringify({ email: "customer@test.com", password: "test123" }),
+    });
+
+    if (!r.ok) {
+      console.log(`  ${FAIL} customer@test.com — sign-in failed (${r.status})`);
+      failed++;
+      failures.push("customer@test.com sign-in failed");
+    } else {
+      const session = await r.json();
+      const userId = session.user.id.slice(0, 8);
+
+      // Must NOT be in team_members
+      const teamRows = await sbGet(
+        `/team_members?user_id=eq.${session.user.id}&team_id=eq.${TEAM_ID}&select=is_owner`
+      );
+      // Must be in portal_users
+      const portalRows = await sbGet(
+        `/portal_users?auth_user_id=eq.${session.user.id}&select=id,customer_id`
+      );
+
+      const noERP   = teamRows.length === 0;
+      const hasPortal = portalRows.length > 0;
+
+      if (!noERP) {
+        console.log(`  ${FAIL} customer@test.com (uid:${userId}…) — ERREUR: présent dans team_members (accès ERP non voulu)`);
+        failed++;
+        failures.push("customer@test.com has ERP access (should be portal only)");
+      } else if (!hasPortal) {
+        console.log(`  ${FAIL} customer@test.com (uid:${userId}…) — ERREUR: absent de portal_users`);
+        failed++;
+        failures.push("customer@test.com not in portal_users");
+      } else {
+        console.log(`  ${PASS} customer@test.com (uid:${userId}…) — portail uniquement, customer_id=${portalRows[0].customer_id.slice(0,8)}…`);
+        passed++;
+      }
     }
   }
   console.log();
@@ -331,8 +367,6 @@ async function main() {
     failures.forEach(f => console.log(`  ${FAIL} ${C.red}${f}${C.reset}`));
   }
 
-  console.log(`\n${WARN}  ${C.yellow}customer@test.com est owner de l'équipe dans team_members.${C.reset}`);
-  console.log(`    ${C.dim}Un client portail ne devrait pas avoir accès ERP. À corriger en production.${C.reset}`);
   console.log();
 
   process.exit(failed > 0 ? 1 : 0);
