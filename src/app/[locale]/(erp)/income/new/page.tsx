@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 
 type Category = { id: string; name: string };
 type Currency = { id: string; code: string; symbol: string };
@@ -17,6 +19,7 @@ type Customer = { id: string; company_name: string | null; contact_name: string 
 
 export default function NewIncomePage() {
   const router = useRouter();
+  const perm = useClientPermission("income", "write");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const t = useTranslations("income_form");
@@ -90,6 +93,13 @@ export default function NewIncomePage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (perm.loading) {
+    return <div className="flex justify-center py-24"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+  if (!perm.allowed) {
+    return <ClientForbiddenPage module="income" action="write" />;
   }
 
   return (

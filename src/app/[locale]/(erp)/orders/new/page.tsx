@@ -12,6 +12,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTeamId } from "@/hooks/use-team-id";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 
 type Customer = { id: string; company_name: string | null; contact_name: string };
 type Item = { description: string; quantity: string; unit_price_ht: string };
@@ -23,7 +25,12 @@ export default function NewOrderPage() {
   const t = useTranslations("order_form");
   const common = useTranslations("common");
 
+  const perm = useClientPermission("orders", "write");
   const teamId = useTeamId();
+
+  if (!perm.allowed && !perm.loading) {
+    return <ClientForbiddenPage module="orders" action="write" />;
+  }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);

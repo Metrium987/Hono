@@ -12,6 +12,8 @@ import Link from "next/link";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 
 type TaxRate = {
   id: string;
@@ -22,11 +24,11 @@ type TaxRate = {
 };
 
 export default function TaxRatesPage() {
+  const perm = useClientPermission("settings", "write");
   const t = useTranslations("tax_rates_page");
   const common = useTranslations("common");
   const [taxes, setTaxes] = useState<TaxRate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [teamId, setTeamId] = useState("");
 
   const [newName, setNewName] = useState("");
   const [newRate, setNewRate] = useState("");
@@ -38,29 +40,16 @@ export default function TaxRatesPage() {
   useEffect(() => {
     async function load() {
       try {
-        const { createClient } = await import("@/utils/supabase/client");
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!perm.teamId) return;
 
-        const { data: memberships } = await supabase
-          .from("team_members")
-          .select("team_id")
-          .eq("user_id", user.id)
-          .limit(1);
-        const tid = memberships?.[0]?.team_id ?? "";
-        setTeamId(tid);
-
-        if (tid) {
-          const res = await fetch(`/api/v1/settings/tax-rates?team_id=${tid}`);
-          const body = await res.json();
-          setTaxes(body.data ?? []);
-        }
+        const res = await fetch(`/api/v1/settings/tax-rates?team_id=${perm.teamId}`);
+        const body = await res.json();
+        setTaxes(body.data ?? []);
       } catch { /* ignore */ }
       setLoading(false);
     }
     load();
-  }, []);
+  }, [perm.teamId]);
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -69,7 +58,7 @@ export default function TaxRatesPage() {
     setError("");
 
     try {
-      const res = await fetch(`/api/v1/settings/tax-rates?team_id=${teamId}`, {
+      const res = await fetch(`/api/v1/settings/tax-rates?team_id=${perm.teamId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -101,7 +90,7 @@ export default function TaxRatesPage() {
 
   async function toggleActive(tax: TaxRate) {
     try {
-      const res = await fetch(`/api/v1/settings/tax-rates?team_id=${teamId}`, {
+      const res = await fetch(`/api/v1/settings/tax-rates?team_id=${perm.teamId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: tax.id, is_active: !tax.is_active }),
@@ -114,13 +103,20 @@ export default function TaxRatesPage() {
 
   async function deleteTax(id: string) {
     try {
-      const res = await fetch(`/api/v1/settings/tax-rates?id=${id}&team_id=${teamId}`, {
+      const res = await fetch(`/api/v1/settings/tax-rates?id=${id}&team_id=${perm.teamId}`, {
         method: "DELETE",
       });
       if (res.ok) {
         setTaxes(taxes.filter((t) => t.id !== id));
       }
     } catch { /* ignore */ }
+  }
+
+  if (perm.loading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+  }
+  if (!perm.allowed) {
+    return <ClientForbiddenPage module="settings" action="write" />;
   }
 
   if (loading) {

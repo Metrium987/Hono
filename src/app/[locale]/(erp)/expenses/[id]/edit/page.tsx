@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 
 type Category = { id: string; name: string };
 type Currency = { id: string; code: string; symbol: string };
@@ -20,6 +22,11 @@ export default function EditExpensePage(props: { params: Promise<{ id: string }>
   const router = useRouter();
   const t = useTranslations("expense_form");
   const common = useTranslations("common");
+
+  const perm = useClientPermission("expenses", "write");
+  if (!perm.allowed && !perm.loading) {
+    return <ClientForbiddenPage module="expenses" action="write" />;
+  }
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);

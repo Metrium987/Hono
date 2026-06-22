@@ -4,6 +4,8 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +18,11 @@ export default function NewVendorPage() {
   const [error, setError] = useState("");
   const t = useTranslations("vendor_form");
   const common = useTranslations("common");
+
+  const perm = useClientPermission("clients", "write");
+  if (!perm.allowed && !perm.loading) {
+    return <ClientForbiddenPage module="vendors" action="write" />;
+  }
 
   const [name, setName] = useState("");
   const [contactName, setContactName] = useState("");

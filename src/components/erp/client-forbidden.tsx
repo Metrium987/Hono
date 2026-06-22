@@ -1,14 +1,16 @@
-import { ShieldAlert } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { getTranslations } from "next-intl/server";
+"use client";
 
-type ForbiddenPageProps = {
+import { ShieldAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+
+type ClientForbiddenProps = {
   module: string;
   action?: "read" | "write";
 };
 
-export async function ForbiddenPage({ module, action = "read" }: ForbiddenPageProps) {
-  const t = await getTranslations("forbidden_page");
+export function ClientForbiddenPage({ module, action = "read" }: ClientForbiddenProps) {
+  const t = useTranslations("forbidden_page");
 
   const moduleKey = `module_${module}`;
   const moduleLabel = t.has(moduleKey) ? t(moduleKey) : t("module_fallback", { module });

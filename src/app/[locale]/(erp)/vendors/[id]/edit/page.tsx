@@ -9,12 +9,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 
 export default function EditVendorPage(props: { params: Promise<{ id: string }> }) {
   const { id } = use(props.params);
   const router = useRouter();
   const t = useTranslations("vendor_form");
   const common = useTranslations("common");
+
+  const perm = useClientPermission("clients", "write");
+  if (!perm.allowed && !perm.loading) {
+    return <ClientForbiddenPage module="vendors" action="write" />;
+  }
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);

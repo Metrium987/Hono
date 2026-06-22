@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useTeamId } from "@/hooks/use-team-id";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 
 type Customer = { id: string; company_name: string | null; contact_name: string };
 type Currency = { id: string; code: string; symbol: string };
@@ -26,7 +28,13 @@ export default function NewCreditNotePage() {
   const searchParams = useSearchParams();
   const t = useTranslations("credit_note_form");
   const common = useTranslations("common");
+
+  const perm = useClientPermission("credit_notes", "write");
   const teamId = useTeamId();
+
+  if (!perm.allowed && !perm.loading) {
+    return <ClientForbiddenPage module="credit_notes" action="write" />;
+  }
 
   const invoiceId = searchParams.get("invoice_id");
 

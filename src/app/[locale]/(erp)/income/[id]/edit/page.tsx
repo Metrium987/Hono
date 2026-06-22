@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 
 type Category = { id: string; name: string };
 type Currency = { id: string; code: string; symbol: string };
@@ -18,13 +20,13 @@ type Customer = { id: string; company_name: string | null; contact_name: string 
 export default function EditIncomePage(props: { params: Promise<{ id: string }> }) {
   const { id } = use(props.params);
   const router = useRouter();
+  const perm = useClientPermission("income", "write");
   const t = useTranslations("income_form");
   const common = useTranslations("common");
 
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [teamId, setTeamId] = useState("");
 
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -41,52 +43,39 @@ export default function EditIncomePage(props: { params: Promise<{ id: string }> 
   useEffect(() => {
     async function load() {
       try {
-        const { createClient } = await import("@/utils/supabase/client");
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!perm.teamId) return;
 
-        const { data: memberships } = await supabase
-          .from("team_members")
-          .select("team_id")
-          .eq("user_id", user.id)
-          .limit(1);
-        const tid = memberships?.[0]?.team_id ?? "";
-        setTeamId(tid);
+        const [incRes, catRes, curRes, cusRes] = await Promise.all([
+          fetch(`/api/v1/income/${id}?team_id=${perm.teamId}`),
+          fetch(`/api/v1/income-categories?team_id=${perm.teamId}`),
+          fetch(`/api/v1/currencies?team_id=${perm.teamId}`),
+          fetch(`/api/v1/customers?limit=200&team_id=${perm.teamId}`),
+        ]);
 
-        if (tid) {
-          const [incRes, catRes, curRes, cusRes] = await Promise.all([
-            fetch(`/api/v1/income/${id}?team_id=${tid}`),
-            fetch(`/api/v1/income-categories?team_id=${tid}`),
-            fetch(`/api/v1/currencies?team_id=${tid}`),
-            fetch(`/api/v1/customers?limit=200&team_id=${tid}`),
-          ]);
-
-          const incData = await incRes.json();
-          const inc = incData.data;
-          if (inc) {
-            setDescription(inc.description ?? "");
-            setAmount(String(inc.amount ?? ""));
-            setIncomeDate(inc.income_date?.split("T")[0] ?? new Date().toISOString().split("T")[0]);
-            setCategoryId(inc.category_id ?? "");
-            setCurrencyId(inc.currency_id ?? "");
-            setCustomerId(inc.customer_id ?? "");
-            setNotes(inc.notes ?? "");
-          }
-
-          const [catData, curData, cusData] = await Promise.all([
-            catRes.json(), curRes.json(), cusRes.json(),
-          ]);
-          setCategories(catData.data ?? []);
-          setCurrencies(curData.data ?? []);
-          setCustomers(cusData.data ?? []);
-          if (!inc?.currency_id && curData.data?.[0]) setCurrencyId(curData.data[0].id);
+        const incData = await incRes.json();
+        const inc = incData.data;
+        if (inc) {
+          setDescription(inc.description ?? "");
+          setAmount(String(inc.amount ?? ""));
+          setIncomeDate(inc.income_date?.split("T")[0] ?? new Date().toISOString().split("T")[0]);
+          setCategoryId(inc.category_id ?? "");
+          setCurrencyId(inc.currency_id ?? "");
+          setCustomerId(inc.customer_id ?? "");
+          setNotes(inc.notes ?? "");
         }
+
+        const [catData, curData, cusData] = await Promise.all([
+          catRes.json(), curRes.json(), cusRes.json(),
+        ]);
+        setCategories(catData.data ?? []);
+        setCurrencies(curData.data ?? []);
+        setCustomers(cusData.data ?? []);
+        if (!inc?.currency_id && curData.data?.[0]) setCurrencyId(curData.data[0].id);
       } catch { /* ignore */ }
       setInitialLoading(false);
     }
     load();
-  }, [id]);
+  }, [id, perm.teamId]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -95,7 +84,7 @@ export default function EditIncomePage(props: { params: Promise<{ id: string }> 
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/v1/income/${id}?team_id=${teamId}`, {
+      const res = await fetch(`/api/v1/income/${id}?team_id=${perm.teamId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -120,6 +109,13 @@ export default function EditIncomePage(props: { params: Promise<{ id: string }> 
     } finally {
       setLoading(false);
     }
+  }
+
+  if (perm.loading) {
+    return <div className="flex justify-center py-24"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+  if (!perm.allowed) {
+    return <ClientForbiddenPage module="income" action="write" />;
   }
 
   if (initialLoading) {

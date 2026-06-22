@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 
 type Currency = {
   id: string;
@@ -19,6 +21,7 @@ type Currency = {
 };
 
 export default function CurrenciesPage() {
+  const perm = useClientPermission("settings", "read");
   const t = useTranslations("currencies_page");
   const common = useTranslations("common");
   const [currencies, setCurrencies] = useState<Currency[]>([]);
@@ -27,28 +30,23 @@ export default function CurrenciesPage() {
   useEffect(() => {
     async function load() {
       try {
-        const { createClient } = await import("@/utils/supabase/client");
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!perm.teamId) return;
 
-        const { data: memberships } = await supabase
-          .from("team_members")
-          .select("team_id")
-          .eq("user_id", user.id)
-          .limit(1);
-        const tid = memberships?.[0]?.team_id ?? "";
-
-        if (tid) {
-          const res = await fetch(`/api/v1/currencies?team_id=${tid}`);
-          const body = await res.json();
-          setCurrencies(body.data ?? []);
-        }
+        const res = await fetch(`/api/v1/currencies?team_id=${perm.teamId}`);
+        const body = await res.json();
+        setCurrencies(body.data ?? []);
       } catch { /* ignore */ }
       setLoading(false);
     }
     load();
-  }, []);
+  }, [perm.teamId]);
+
+  if (perm.loading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+  }
+  if (!perm.allowed) {
+    return <ClientForbiddenPage module="settings" />;
+  }
 
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;

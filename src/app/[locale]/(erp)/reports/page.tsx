@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 
 type PnlData = {
   period: { from: string; to: string };
@@ -41,8 +43,8 @@ function fmt(amount: number) {
 }
 
 export default function ReportsPage() {
+  const perm = useClientPermission("reports", "read");
   const t = useTranslations("reports_page");
-  const [teamId, setTeamId] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [reportType, setReportType] = useState("pnl");
@@ -58,37 +60,26 @@ export default function ReportsPage() {
   useEffect(() => {
     async function init() {
       try {
+        if (!perm.teamId) return;
+
         const { createClient } = await import("@/utils/supabase/client");
         const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: memberships } = await supabase
-          .from("team_members")
-          .select("team_id")
-          .eq("user_id", user.id)
-          .limit(1);
-        const tid = memberships?.[0]?.team_id ?? "";
-        setTeamId(tid);
-
-        if (tid) {
-          const [custRes] = await Promise.all([
-            supabase.from("customers").select("id, company_name, contact_name, n_tahiti").eq("team_id", tid).order("contact_name"),
-          ]);
-          setCustomers(custRes.data ?? []);
-        }
+        const [custRes] = await Promise.all([
+          supabase.from("customers").select("id, company_name, contact_name, n_tahiti").eq("team_id", perm.teamId).order("contact_name"),
+        ]);
+        setCustomers(custRes.data ?? []);
       } catch { /* ignore */ }
       setLoading(false);
     }
     init();
-  }, []);
+  }, [perm.teamId]);
 
   useEffect(() => {
     async function fetchReport() {
-      if (!teamId) return;
+      if (!perm.teamId) return;
       setFetching(true);
       try {
-        const params = new URLSearchParams({ type: reportType, date_from: dateFrom, date_to: dateTo, team_id: teamId });
+        const params = new URLSearchParams({ type: reportType, date_from: dateFrom, date_to: dateTo, team_id: perm.teamId ?? "" });
         if (reportType === "client-statement" && customerId) params.set("customer_id", customerId);
 
         const res = await fetch(`/api/v1/reports?${params}`);
@@ -102,10 +93,17 @@ export default function ReportsPage() {
       setFetching(false);
     }
     fetchReport();
-  }, [teamId, reportType, dateFrom, dateTo, customerId]);
+  }, [perm.teamId, reportType, dateFrom, dateTo, customerId]);
 
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString("fr-FR");
+  }
+
+  if (perm.loading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+  }
+  if (!perm.allowed) {
+    return <ClientForbiddenPage module="reports" />;
   }
 
   if (loading) {

@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 
 type Category = { id: string; name: string };
 type Vendor = { id: string; name: string };
@@ -21,6 +23,11 @@ export default function NewExpensePage() {
   const [error, setError] = useState("");
   const t = useTranslations("expense_form");
   const common = useTranslations("common");
+
+  const perm = useClientPermission("expenses", "write");
+  if (!perm.allowed && !perm.loading) {
+    return <ClientForbiddenPage module="expenses" action="write" />;
+  }
 
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");

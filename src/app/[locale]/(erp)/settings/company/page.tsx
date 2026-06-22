@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 
 type CompanyData = {
   id: string;
@@ -42,42 +44,29 @@ type CompanyData = {
 type ApiResponse = { data: CompanyData };
 
 export default function CompanyPage() {
+  const perm = useClientPermission("settings", "write");
   const t = useTranslations("company_page");
   const [data, setData] = useState<CompanyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
-  const [teamId, setTeamId] = useState("");
 
   useEffect(() => {
     async function load() {
       try {
-        const { createClient } = await import("@/utils/supabase/client");
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!perm.teamId) return;
 
-        const { data: memberships } = await supabase
-          .from("team_members")
-          .select("team_id")
-          .eq("user_id", user.id)
-          .limit(1);
-        const tid = memberships?.[0]?.team_id ?? "";
-        setTeamId(tid);
-
-        if (tid) {
-          const res = await fetch(`/api/v1/settings/company?team_id=${tid}`);
-          if (res.ok) {
-            const body: ApiResponse = await res.json();
-            setData(body.data);
-          }
+        const res = await fetch(`/api/v1/settings/company?team_id=${perm.teamId}`);
+        if (res.ok) {
+          const body: ApiResponse = await res.json();
+          setData(body.data);
         }
       } catch { /* ignore */ }
       setLoading(false);
     }
     load();
-  }, []);
+  }, [perm.teamId]);
 
   function update(field: keyof CompanyData, value: unknown) {
     if (!data) return;
@@ -92,7 +81,7 @@ export default function CompanyPage() {
     setSaved(false);
 
     try {
-      const res = await fetch(`/api/v1/settings/company?team_id=${teamId}`, {
+      const res = await fetch(`/api/v1/settings/company?team_id=${perm.teamId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -111,6 +100,13 @@ export default function CompanyPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  if (perm.loading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+  }
+  if (!perm.allowed) {
+    return <ClientForbiddenPage module="settings" action="write" />;
   }
 
   if (loading) {

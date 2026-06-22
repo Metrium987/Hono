@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
+import { useClientPermission } from "@/hooks/use-client-permission";
+import { ClientForbiddenPage } from "@/components/erp/client-forbidden";
 
 type ApiKey = {
   id: string;
@@ -24,11 +26,11 @@ type ApiKey = {
 };
 
 export default function ApiKeysPage() {
+  const perm = useClientPermission("settings", "write");
   const t = useTranslations("api_keys_page");
   const common = useTranslations("common");
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
-  const [teamId, setTeamId] = useState("");
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -41,29 +43,16 @@ export default function ApiKeysPage() {
   useEffect(() => {
     async function load() {
       try {
-        const { createClient } = await import("@/utils/supabase/client");
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!perm.teamId) return;
 
-        const { data: memberships } = await supabase
-          .from("team_members")
-          .select("team_id, is_owner")
-          .eq("user_id", user.id)
-          .limit(1);
-        const tid = memberships?.[0]?.team_id ?? "";
-        setTeamId(tid);
-
-        if (tid) {
-          const res = await fetch(`/api/v1/settings/api-keys?team_id=${tid}`);
-          const data = await res.json();
-          setKeys(data.data ?? []);
-        }
+        const res = await fetch(`/api/v1/settings/api-keys?team_id=${perm.teamId}`);
+        const data = await res.json();
+        setKeys(data.data ?? []);
       } catch { /* ignore */ }
       setLoading(false);
     }
     load();
-  }, []);
+  }, [perm.teamId]);
 
   async function handleCreate(e: FormEvent) {
     e.preventDefault();
@@ -73,7 +62,7 @@ export default function ApiKeysPage() {
     setNewKey(null);
 
     try {
-      const res = await fetch(`/api/v1/settings/api-keys?team_id=${teamId}`, {
+      const res = await fetch(`/api/v1/settings/api-keys?team_id=${perm.teamId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -104,7 +93,7 @@ export default function ApiKeysPage() {
   async function revokeKey(id: string) {
     if (!confirm(t("revoke_confirm"))) return;
     try {
-      const res = await fetch(`/api/v1/settings/api-keys?id=${id}&team_id=${teamId}`, {
+      const res = await fetch(`/api/v1/settings/api-keys?id=${id}&team_id=${perm.teamId}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -117,6 +106,13 @@ export default function ApiKeysPage() {
     try {
       await navigator.clipboard.writeText(text);
     } catch { /* ignore */ }
+  }
+
+  if (perm.loading) {
+    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
+  }
+  if (!perm.allowed) {
+    return <ClientForbiddenPage module="settings" action="write" />;
   }
 
   if (loading) {
