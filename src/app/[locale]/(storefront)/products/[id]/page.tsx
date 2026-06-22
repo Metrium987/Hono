@@ -243,23 +243,25 @@ export default async function ProductDetailPage(
                   <span className="text-xs text-muted-foreground">Promotion en cours</span>
                 </div>
               )}
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm text-muted-foreground">{t("price_ht")}</span>
-                {discountedPriceHt !== null ? (
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-semibold text-red-600">
-                      {discountedPriceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
+              {taxRate && (
+                <div className="text-sm text-muted-foreground flex justify-between">
+                  <span>Base imposable</span>
+                  {discountedPriceHt !== null ? (
+                    <span className="flex items-baseline gap-2">
+                      <span className="text-red-600 font-medium">
+                        {discountedPriceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
+                      </span>
+                      <span className="line-through">
+                        {priceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
+                      </span>
                     </span>
-                    <span className="text-sm text-muted-foreground line-through">
+                  ) : (
+                    <span>
                       {priceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
                     </span>
-                  </div>
-                ) : (
-                  <span className="text-lg font-semibold">
-                    {priceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
-                  </span>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
               {taxRate && (
                 <div className="flex justify-between items-baseline text-sm">
                   <span className="text-muted-foreground">

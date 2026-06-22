@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
     requirePermission(auth, "settings", "read");
     const { data, error } = await auth.supabase
       .from("commission_rules")
-      .select("*")
+      .select("id, user_id, rate, applies_from, applies_to, created_at")
       .eq("team_id", teamId)
       .order("applies_from", { ascending: false });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+
+const createVendorSchema = z.object({
+  name: z.string().min(1).max(200),
+  contact_name: z.string().max(200).optional().nullable(),
+  email: z.string().email().max(200).optional().nullable(),
+  phone: z.string().max(50).optional().nullable(),
+  address: z.string().max(500).optional().nullable(),
+  n_tahiti: z.string().max(50).optional().nullable(),
+  notes: z.string().max(2000).optional().nullable(),
+});
 
 // GET /api/v1/vendors — List vendors for a team
 export async function GET(request: NextRequest) {
@@ -13,8 +24,9 @@ export async function GET(request: NextRequest) {
 
     let query = auth.supabase
       .from("vendors")
-      .select("*", { count: "exact" })
-      .eq("team_id", teamId);
+      .select("id, name, contact_name, email, phone, address, n_tahiti, notes, created_at", { count: "exact" })
+      .eq("team_id", teamId)
+      .is("deleted_at", null);
 
     if (search) {
       query = query.or(`name.ilike.%${search}%,contact_name.ilike.%${search}%,email.ilike.%${search}%`);
@@ -40,11 +52,11 @@ export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "clients", "write");
     const body = await request.json();
-    const { name, contact_name, email, phone, address, n_tahiti, notes } = body;
-
-    if (!name) {
-      return NextResponse.json({ error: "name is required" }, { status: 400 });
+    const parsed = createVendorSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
+    const { name, contact_name, email, phone, address, n_tahiti, notes } = parsed.data;
 
     const { data, error } = await auth.supabase
       .from("vendors")

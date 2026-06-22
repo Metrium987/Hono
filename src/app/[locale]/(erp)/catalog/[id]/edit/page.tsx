@@ -19,7 +19,7 @@ export default async function EditProductPage(props: { params: Params }) {
 
   const teamId = perm.teamId;
 
-  const [{ data: product, error }, { data: currencies }, { data: taxRates }, { data: categories }] = await Promise.all([
+  const [{ data: product, error }, { data: currencies }, { data: taxRates }, { data: categories }, { data: brands }] = await Promise.all([
     supabase
       .from("products")
       .select("*, translations:product_translations(*)")
@@ -29,6 +29,7 @@ export default async function EditProductPage(props: { params: Params }) {
     supabase.from("currencies").select("id, code, symbol").eq("team_id", teamId).order("code"),
     supabase.from("tax_rates").select("id, name, rate").eq("team_id", teamId).eq("is_active", true),
     supabase.from("product_categories").select("id, name").eq("team_id", teamId).order("name"),
+    supabase.from("brands").select("id, name").eq("team_id", teamId).order("name"),
   ]);
 
   if (error || !product) notFound();
@@ -44,6 +45,7 @@ export default async function EditProductPage(props: { params: Params }) {
       currencies={currencies ?? []}
       taxRates={taxRates ?? []}
       categories={categories ?? []}
+      brands={brands ?? []}
       backHref={`../../catalog/${id}`}
       initialData={{
         name: frTrans?.name ?? product.name ?? "",
@@ -53,6 +55,7 @@ export default async function EditProductPage(props: { params: Params }) {
         currency_id: product.currency_id ?? "",
         tax_rate_id: product.tax_rate_id ?? "",
         category_id: product.category_id ?? "",
+        brand_id: product.brand_id ?? "",
         unit: product.unit ?? "pcs",
         track_stock: product.track_stock ?? false,
         current_stock: product.current_stock ?? 0,
@@ -66,6 +69,10 @@ export default async function EditProductPage(props: { params: Params }) {
         supplier_ref: product.supplier_ref ?? "",
         is_published: product.is_published ?? false,
         is_active: product.is_active ?? true,
+        barcode: product.barcode ?? "",
+        weight: product.weight ?? undefined,
+        volume: product.volume ?? undefined,
+        units_per_box: product.units_per_box ?? 1,
       }}
     />
   );

@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     requirePermission(auth, "taxes", "read");
     const { data, error } = await auth.supabase
       .from("tax_rates")
-      .select("*")
+      .select("id, name, rate, description, is_active, created_at")
       .eq("team_id", teamId)
       .order("rate", { ascending: true });
 

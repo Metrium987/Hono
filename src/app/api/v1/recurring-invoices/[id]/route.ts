@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+
+const patchSchema = z.object({
+  is_active: z.boolean().optional(),
+  end_date: z.string().datetime().nullable().optional(),
+  payment_terms: z.string().max(100).optional(),
+  notes: z.string().max(1000).nullable().optional(),
+  next_generation_date: z.string().datetime().nullable().optional(),
+});
 
 type Params = Promise<{ id: string }>;
 
@@ -9,10 +18,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Params }
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "invoices", "write");
     const body = await request.json();
+    const parsed = patchSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
     const allowed = ["is_active", "end_date", "payment_terms", "notes", "next_generation_date"];
     const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of allowed) {
-      if (key in body) update[key] = body[key];
+      if (key in parsed.data) update[key] = (parsed.data as Record<string, unknown>)[key];
     }
     const { data, error } = await auth.supabase
       .from("recurring_invoices")

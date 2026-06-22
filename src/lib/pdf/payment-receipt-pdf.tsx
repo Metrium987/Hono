@@ -21,6 +21,8 @@ export type PaymentReceiptData = {
     company_name: string | null;
     contact_name: string;
     email: string | null;
+    n_tahiti: string | null;
+    is_b2b: boolean;
   };
   team: {
     name: string;
@@ -117,6 +119,7 @@ export function PaymentReceiptPdfDocument({ data }: { data: PaymentReceiptData }
             <Text style={styles.infoTitle}>Client</Text>
             <Text style={styles.infoHighlight}>{data.customer.company_name || data.customer.contact_name}</Text>
             {data.customer.email && <Text style={styles.infoText}>{data.customer.email}</Text>}
+            {data.customer.is_b2b && data.customer.n_tahiti && <Text style={styles.infoText}>N° TAHITI : {data.customer.n_tahiti}</Text>}
           </View>
         </View>
 

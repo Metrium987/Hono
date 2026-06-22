@@ -17,7 +17,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Params }
 
     const { data: req, error: fetchErr } = await auth.supabase
       .from("delete_requests")
-      .select("*")
+      .select("id, team_id, table_name, record_id, requested_by, reason, status, review_notes, reviewed_by, reviewed_at, created_at, updated_at")
       .eq("id", id)
       .eq("team_id", teamId)
       .single();

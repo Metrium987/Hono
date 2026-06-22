@@ -60,7 +60,7 @@ Owners (`is_owner = true` in `team_members`) bypass all permission checks.
 
 ### Database
 
-26 Supabase migrations in `supabase/migrations/` with sequential naming (`00001_` → `00026_`). The DB timezone is `Pacific/Tahiti`. Extensions in use: `uuid-ossp`, `vector` (pgvector), `pg_trgm`, `pgcrypto`.
+18 migration files in `supabase/migrations/`. Numbering: `00001_schema_complet.sql` contains the full initial schema (migrations 00004-00026 were squashed into it). Feature migrations resume at `00027_` → `00041_`. The DB timezone is `Pacific/Tahiti`. Extensions in use: `uuid-ossp`, `vector` (pgvector), `pg_trgm`, `pgcrypto`.
 
 All business tables have `team_id` and RLS policies scoped to it via `get_teams_for_authenticated_user()`. A custom JWT hook (`custom_access_token_hook`) injects `team_id`, `role_name`, `is_owner`, and `permissions` into the access token.
 
@@ -104,7 +104,6 @@ Brand name: **Hono**. Tone: professional, minimalist, legible.
 
 See `.env.example`. Critical ones not obvious from the name:
 - `SUPABASE_SERVICE_ROLE_KEY` — server-only, used only for API key auth in `src/lib/auth/api-auth.ts`. Never prefix with `NEXT_PUBLIC_`
-- `PORTAL_COOKIE_SECRET` — 64-char hex for portal session encryption (generate: `openssl rand -hex 32`)
 - `NEXT_PUBLIC_DEFAULT_TEAM_ID` — the team UUID that receives storefront quote requests
 
 ## `ressource/` folder

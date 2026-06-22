@@ -11,7 +11,7 @@ export async function GET(request: NextRequest, props: { params: Params }) {
 
     const { data, error } = await auth.supabase
       .from("vendors")
-      .select("*")
+      .select("id, name, contact_name, email, phone, address, n_tahiti, notes, created_at")
       .eq("id", id)
       .eq("team_id", teamId)
       .single();
@@ -65,7 +65,7 @@ export async function DELETE(request: NextRequest, props: { params: Params }) {
 
     const { error } = await auth.supabase
       .from("vendors")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq("id", id)
       .eq("team_id", teamId);
 

@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     let query = auth.supabase
       .from("invoices")
       .select(`
-        *,
+        id, invoice_number, status, issue_date, due_date, subtotal_ht, tax_amount, total_ttc, paid_amount, discount_type, discount_value, created_at,
         customer:customer_id(id, company_name, contact_name, n_tahiti),
         currency:currency_id(code, symbol, symbol_position)
       `, { count: "exact" })

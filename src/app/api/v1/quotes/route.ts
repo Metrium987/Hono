@@ -38,7 +38,8 @@ export async function GET(request: NextRequest) {
         customer:customer_id(id, company_name, contact_name, n_tahiti),
         currency:currency_id(code, symbol, symbol_position)
       `, { count: "exact" })
-      .eq("team_id", teamId);
+      .eq("team_id", teamId)
+      .is("deleted_at", null);
 
     if (status) query = query.eq("status", status);
     if (customerId) query = query.eq("customer_id", customerId);

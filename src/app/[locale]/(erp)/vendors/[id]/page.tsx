@@ -26,7 +26,7 @@ export default async function VendorDetailPage(props: { params: Params }) {
 
   const { data: vendor, error } = await supabase
     .from("vendors")
-    .select("*")
+    .select("id, name, contact_name, email, phone, address, n_tahiti, notes, created_at")
     .eq("id", id)
     .eq("team_id", teamId)
     .single();

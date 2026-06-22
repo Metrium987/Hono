@@ -26,7 +26,7 @@ export default async function DeleteRequestsPage() {
 
   const { data: requests } = await supabase
     .from("delete_requests")
-    .select("*")
+    .select("id, table_name, record_id, reason, status, review_notes, reviewed_at, created_at")
     .eq("team_id", teamId)
     .order("created_at", { ascending: false });
 

@@ -1,7 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+import { z } from "zod";
 
-// GET /api/v1/expenses — List expenses for a team
+const CreateExpenseSchema = z.object({
+  category_id: z.string().uuid().optional().nullable(),
+  vendor_id: z.string().uuid().optional().nullable(),
+  vendor_name: z.string().max(200).optional().nullable(),
+  description: z.string().min(1).max(1000),
+  amount: z.number().positive(),
+  currency_id: z.string().uuid(),
+  expense_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  receipt_url: z.string().url().optional().nullable(),
+  notes: z.string().max(5000).optional().nullable(),
+});
+
+// GET /api/v1/expenses â€” List expenses for a team
 export async function GET(request: NextRequest) {
   return withAuth(request, async (auth, teamId, params) => {
     requirePermission(auth, "expenses", "read");
@@ -43,16 +56,13 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// POST /api/v1/expenses — Create an expense
+// POST /api/v1/expenses â€” Create an expense
 export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "expenses", "write");
-    const body = await request.json();
-    const { category_id, vendor_id, vendor_name, description, amount, currency_id, expense_date, receipt_url, notes } = body;
-
-    if (!description || amount === undefined || !currency_id || !expense_date) {
-      return NextResponse.json({ error: "description, amount, currency_id, and expense_date are required" }, { status: 400 });
-    }
+    const parsed = CreateExpenseSchema.safeParse(await request.json());
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Validation error" }, { status: 400 });
+    const { category_id, vendor_id, vendor_name, description, amount, currency_id, expense_date, receipt_url, notes } = parsed.data;
 
     const { data, error } = await auth.supabase
       .from("expenses")
@@ -78,3 +88,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data }, { status: 201 });
   });
 }
+

@@ -14,7 +14,7 @@ const nextConfig = typeof nextRaw === "function" ? nextRaw() : nextRaw;
 
 const eslintConfig = [
   includeIgnoreFile(path.resolve(__dirname, ".gitignore")),
-  { ignores: ["scripts/"] },
+  { ignores: ["scripts/"], /* scripts/ contient des outils internes non soumis aux normes du projet */ },
   ...(Array.isArray(nextConfig) ? nextConfig : [nextConfig]),
 ];
 

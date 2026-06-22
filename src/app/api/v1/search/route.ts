@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth, hasPermission } from "@/lib/auth/api-auth";
+import { withAuth, requirePermission, hasPermission } from "@/lib/auth/api-auth";
 
 export async function GET(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     // Allow search if user has at least one of the relevant module permissions
-    const canSearch = auth.isOwner ||
-      hasPermission(auth, "invoices", "read") ||
-      hasPermission(auth, "clients", "read") ||
-      hasPermission(auth, "catalog", "read");
-    if (!canSearch) {
-      return NextResponse.json({ customers: [], invoices: [], products: [] });
+    if (!auth.isOwner &&
+      !hasPermission(auth, "invoices", "read") &&
+      !hasPermission(auth, "clients", "read") &&
+      !hasPermission(auth, "catalog", "read")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const url = new URL(request.url);
     const raw = url.searchParams.get("q")?.trim() ?? "";

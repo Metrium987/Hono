@@ -51,7 +51,7 @@ export async function POST(request: NextRequest, props: { params: Params }) {
 
   const { data: invitation } = await admin
     .from("company_invitations")
-    .select("*")
+    .select("id, email, team_id, role_id, is_owner, expires_at, accepted_at, created_at")
     .eq("token", token)
     .is("accepted_at", null)
     .gt("expires_at", new Date().toISOString())

@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+import { z } from "zod";
 import { render } from "@react-email/components";
+
+const RecordPaymentSchema = z.object({
+  amount: z.number().positive(),
+  currency_id: z.string().uuid(),
+  payment_method_id: z.string().uuid(),
+  reference: z.string().max(200).optional().nullable(),
+  payment_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  notes: z.string().max(2000).optional().nullable(),
+});
 import React from "react";
 import { PaymentConfirmationEmail } from "@/lib/email/payment-confirmation-email";
 import { resend, DEFAULT_FROM as FROM } from "@/lib/email/resend";
@@ -53,18 +63,9 @@ export async function POST(
 
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "invoices", "write");
-    const body = await request.json();
-    const { amount, currency_id, payment_method_id, reference, payment_date, notes } = body;
-
-    if (!amount || amount <= 0) {
-      return NextResponse.json({ error: "A positive amount is required" }, { status: 400 });
-    }
-    if (!currency_id) {
-      return NextResponse.json({ error: "currency_id is required" }, { status: 400 });
-    }
-    if (!payment_method_id) {
-      return NextResponse.json({ error: "payment_method_id is required" }, { status: 400 });
-    }
+    const parsed = RecordPaymentSchema.safeParse(await request.json());
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Validation error" }, { status: 400 });
+    const { amount, currency_id, payment_method_id, reference, payment_date, notes } = parsed.data;
 
     // Verify invoice exists and belongs to team
     const { data: invoice, error: invError } = await auth.supabase
@@ -89,7 +90,7 @@ export async function POST(
       .from("invoice_payments")
       .insert({
         invoice_id: id,
-        amount: Math.round(parseFloat(amount) * 100) / 100,
+        amount: Math.round(amount * 100) / 100,
         currency_id,
         payment_method_id,
         reference: reference ?? null,
@@ -114,7 +115,7 @@ export async function POST(
     });
 
     // Auto-create commission if payment completes the invoice and a commercial is assigned
-    const newPaidTotal = parseFloat(String(invoice.paid_amount || 0)) + parseFloat(String(amount));
+    const newPaidTotal = parseFloat(String(invoice.paid_amount || 0)) + amount;
     const wasAlreadyPaid = ["paid"].includes(invoice.status);
     const isNowPaid = newPaidTotal >= parseFloat(String(invoice.total_ttc));
     if (!wasAlreadyPaid && isNowPaid && invoice.assigned_to) {

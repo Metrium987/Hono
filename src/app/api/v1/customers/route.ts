@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     let query = auth.supabase
       .from("customers")
-      .select("*", { count: "exact" })
+      .select("id, contact_name, company_name, is_b2b, n_tahiti, email, phone, address_line1, address_line2, city, island, postal_code, portal_enabled, payment_terms, notes, consent_recorded, source, assigned_to, customer_type, created_at", { count: "exact" })
       .eq("team_id", teamId);
 
     if (isB2b !== null && isB2b !== undefined) {

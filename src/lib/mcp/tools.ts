@@ -71,7 +71,7 @@ export function registerTools(
       "Détails d'un client.",
       { id: z.string().describe("UUID du client") },
       async ({ id }) => {
-        const { data, error } = await supabase.from("customers").select("*").eq("id", id).eq("team_id", teamId).single();
+        const { data, error } = await supabase.from("customers").select("id, company_name, contact_name, is_b2b, n_tahiti, email, phone, address_line1, address_line2, city, island, postal_code, payment_terms, notes, portal_enabled, created_at").eq("id", id).eq("team_id", teamId).single();
         if (error || !data) return textResult("Client introuvable.");
         return jsonResult(data);
       }

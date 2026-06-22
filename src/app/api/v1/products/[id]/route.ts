@@ -60,6 +60,7 @@ export async function PATCH(
       "price_ht", "cost_price", "supplier_ref", "currency_id", "tax_rate_id",
       "track_stock", "current_stock", "low_stock_alert", "unit",
       "is_active", "is_published", "featured", "slug", "meta_title", "meta_description",
+      "brand_id", "barcode", "weight", "volume", "units_per_box",
     ] as const;
 
     for (const field of updatableFields) {

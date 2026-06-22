@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { rateLimit, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
+
+const quoteRequestSchema = z.object({
+  email: z.string().email().max(300),
+  name: z.string().min(1).max(200),
+  phone: z.string().max(50).optional(),
+  company_name: z.string().max(200).optional(),
+  notes: z.string().max(5000).optional(),
+  items: z.array(z.object({
+    product_id: z.string().uuid().optional().nullable(),
+    description: z.string().max(1000).optional(),
+    quantity: z.union([z.string(), z.number()]),
+    unit_price_ht: z.union([z.string(), z.number()]),
+  })).min(1),
+});
 
 type ItemInput = { description?: string; quantity?: string | number; unit_price_ht?: string | number; product_id?: string | null };
 
@@ -38,15 +53,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, name, phone, company_name, notes, items } = body;
-
-    if (!email || !name) {
-      return NextResponse.json({ error: "email and name are required" }, { status: 400 });
+    const parsed = quoteRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ error: "At least one item is required" }, { status: 400 });
-    }
+    const { email, name, phone, company_name, notes, items } = parsed.data;
 
     const supabase = createAdminClient();
 
@@ -119,11 +130,8 @@ export async function POST(request: NextRequest) {
 
       if (puError) {
         console.error("Failed to create portal user:", puError);
-        // Roll back the customer we just created. Note: no quote exists yet at
-        // this point (the quote is created later at line ~178), so only the
-        // customer row needs cleanup. The earlier code referenced an undefined
-        // `quote.id` here, which threw ReferenceError and was silently swallowed.
-        await supabase.from("customers").delete().eq("id", customerId);
+        // Soft-delete le client créé à l'instant (mandat PF rétention 10 ans — jamais de hard delete)
+        await supabase.from("customers").update({ deleted_at: new Date().toISOString() }).eq("id", customerId);
         return NextResponse.json({ error: "Failed to create portal account" }, { status: 500 });
       }
     }
@@ -210,7 +218,8 @@ export async function POST(request: NextRequest) {
       .insert(itemsWithQuoteId);
 
     if (itemsError) {
-      await supabase.from("quotes").delete().eq("id", quote.id);
+      // Soft-delete le devis orphelin (mandat PF rétention 10 ans — jamais de hard delete)
+      await supabase.from("quotes").update({ deleted_at: new Date().toISOString() }).eq("id", quote.id);
       return NextResponse.json({ error: "Failed to create quote items" }, { status: 500 });
     }
 

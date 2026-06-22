@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     requirePermission(auth, "payments", "read");
     const { data, error } = await auth.supabase
       .from("payment_methods")
-      .select("*")
+      .select("id, name, display_name, is_active, sort_order, created_at")
       .eq("team_id", teamId)
       .order("sort_order", { ascending: true });
 

@@ -15,16 +15,20 @@ export async function GET(
     const { data, error } = await auth.supabase
       .from("invoices")
       .select(`
-        *,
+        id, invoice_number, status, issue_date, service_date, due_date, paid_at,
+        subtotal_ht, tax_amount, total_ttc, paid_amount, currency_id, quote_id,
+        late_fee_fixed, legal_vat_mention, legal_mentions,
+        discount_type, discount_value, discount_amount,
+        notes, message, created_by, created_at, updated_at, deleted_at,
         customer:customer_id(id, company_name, contact_name, email, phone, n_tahiti, is_b2b, address_line1, address_line2, city, island, postal_code, customer_type, payment_terms),
         team:team_id(name, n_tahiti, rcs_number, is_franchise_en_base,
           address_line1, address_line2, city, island, postal_code,
           bank_name, bank_rib, bank_iban, bank_bic,
           invoice_prefix, late_fee_fixed),
         currency:currency_id(code, symbol, symbol_position),
-        items:invoice_items(*, tax_rates:tax_rate_id(name, rate)),
-        payments:invoice_payments(*, payment_method:payment_method_id(name, display_name)),
-        events:invoice_events(*, created_by_user:created_by(id, full_name)),
+        items:invoice_items(id, product_id, group_id, description, quantity, unit_price_ht, tax_rate_id, line_total_ht, sort_order, tax_rates:tax_rate_id(name, rate)),
+        payments:invoice_payments(id, amount, currency_id, payment_method_id, reference, payment_date, notes, created_by, created_at, payment_method:payment_method_id(name, display_name)),
+        events:invoice_events(id, event_type, payload, created_by, created_at, created_by_user:created_by(id, full_name)),
         quote:quote_id(id, quote_number)
       `)
       .eq("id", id)

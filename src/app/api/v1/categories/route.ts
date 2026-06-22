@@ -1,7 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+import { z } from "zod";
 
-// GET /api/v1/categories — List categories for a team
+const TranslationSchema = z.object({
+  locale: z.string().min(2).max(5),
+  name: z.string().min(1).max(200),
+  description: z.string().max(2000).optional().nullable(),
+});
+const CreateCategorySchema = z.object({
+  slug: z.string().min(1).max(200).regex(/^[a-z0-9-]+$/),
+  parent_id: z.string().uuid().optional().nullable(),
+  is_active: z.boolean().optional(),
+  sort_order: z.number().int().min(0).optional(),
+  translations: z.array(TranslationSchema).min(1),
+});
+
+// GET /api/v1/categories â€” List categories for a team
 export async function GET(request: NextRequest) {
   return withAuth(request, async (auth, teamId, params) => {
     requirePermission(auth, "catalog", "read");
@@ -33,21 +47,15 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// POST /api/v1/categories — Create a category with translations
+// POST /api/v1/categories â€” Create a category with translations
 export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "catalog", "write");
-    const body = await request.json();
-    const { slug, parent_id, is_active, sort_order, translations } = body;
+    const parsed = CreateCategorySchema.safeParse(await request.json());
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Validation error" }, { status: 400 });
+    const { slug, parent_id, is_active, sort_order, translations } = parsed.data;
 
-    if (!slug) {
-      return NextResponse.json({ error: "slug is required" }, { status: 400 });
-    }
-    if (!translations || translations.length === 0) {
-      return NextResponse.json({ error: "At least one translation is required (fr)" }, { status: 400 });
-    }
-
-    const frName = (translations as { locale: string; name: string }[]).find((t) => t.locale === "fr")?.name ?? null;
+    const frName = translations.find((t) => t.locale === "fr")?.name ?? null;
 
     // Create category
     const { data: category, error: catError } = await auth.supabase
@@ -68,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert translations
-    const translationRows = translations.map((t: { locale: string; name: string; description?: string }) => ({
+    const translationRows = translations.map((t) => ({
       category_id: category.id,
       locale: t.locale,
       name: t.name,
@@ -87,3 +95,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: category }, { status: 201 });
   });
 }
+

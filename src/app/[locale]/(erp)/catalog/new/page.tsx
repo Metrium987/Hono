@@ -15,10 +15,11 @@ export default async function NewProductPage() {
 
   const teamId = perm.teamId;
 
-  const [{ data: currencies }, { data: taxRates }, { data: categories }] = await Promise.all([
+  const [{ data: currencies }, { data: taxRates }, { data: categories }, { data: brands }] = await Promise.all([
     supabase.from("currencies").select("id, code, symbol").eq("team_id", teamId).order("code"),
     supabase.from("tax_rates").select("id, name, rate").eq("team_id", teamId).eq("is_active", true),
     supabase.from("product_categories").select("id, name").eq("team_id", teamId).order("name"),
+    supabase.from("brands").select("id, name").eq("team_id", teamId).order("name"),
   ]);
 
   return (
@@ -27,6 +28,7 @@ export default async function NewProductPage() {
       currencies={currencies ?? []}
       taxRates={taxRates ?? []}
       categories={categories ?? []}
+      brands={brands ?? []}
       backHref="../catalog"
     />
   );

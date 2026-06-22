@@ -20,7 +20,7 @@ export async function GET(
         payment_method:payment_method_id(name, display_name),
         invoice:invoice_id(
           invoice_number, total_ttc, paid_amount, issue_date, due_date,
-          customer_id(id, company_name, contact_name, email),
+          customer_id(id, company_name, contact_name, email, n_tahiti, is_b2b),
           team_id!inner(name, email, n_tahiti, rcs_number, address_line1, city),
           currency:currency_id(symbol)
         )
@@ -64,6 +64,8 @@ export async function GET(
         company_name: customer?.company_name ?? null,
         contact_name: customer?.contact_name ?? "",
         email: customer?.email ?? null,
+        n_tahiti: customer?.n_tahiti ?? null,
+        is_b2b: customer?.is_b2b ?? false,
       },
       team: {
         name: team?.name ?? "",

@@ -1,7 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+import { z } from "zod";
 
-// GET /api/v1/crm-notes — List CRM notes for a customer (filter: customer_id)
+const CreateCrmNoteSchema = z.object({
+  customer_id: z.string().uuid(),
+  content: z.string().min(1).max(10000),
+});
+
+// GET /api/v1/crm-notes â€” List CRM notes for a customer (filter: customer_id)
 export async function GET(request: NextRequest) {
   return withAuth(request, async (auth, teamId, params) => {
     requirePermission(auth, "clients", "read");
@@ -29,17 +35,14 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// POST /api/v1/crm-notes — Create a CRM note
+// POST /api/v1/crm-notes â€” Create a CRM note
 export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "clients", "write");
 
-    const body = await request.json();
-    const { customer_id, content } = body;
-
-    if (!customer_id || !content) {
-      return NextResponse.json({ error: "customer_id and content are required" }, { status: 400 });
-    }
+    const parsed = CreateCrmNoteSchema.safeParse(await request.json());
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Validation error" }, { status: 400 });
+    const { customer_id, content } = parsed.data;
 
     const { data, error } = await auth.supabase
       .from("crm_notes")
@@ -59,3 +62,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data }, { status: 201 });
   });
 }
+

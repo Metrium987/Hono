@@ -5,6 +5,7 @@ import "@schedule-x/theme-default/dist/index.css";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useCalendarApp, ScheduleXCalendar } from "@schedule-x/react";
 import { createViewMonthGrid, createViewWeek, createViewDay } from "@schedule-x/calendar";
+import type { CalendarEventExternal } from "@schedule-x/calendar";
 import { createDragAndDropPlugin } from "@schedule-x/drag-and-drop";
 import { createResizePlugin } from "@schedule-x/resize";
 import { toast } from "sonner";
@@ -72,7 +73,8 @@ function toTimeInput(d: Date) {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-function toSxEvents(events: CalendarEvent[], filterGroups: string[]) {
+// schedule-x CalendarEventExternal accepts strings at runtime, despite its type definition
+function toSxEvents(events: CalendarEvent[], filterGroups: string[]): any[] {
   return events
     .filter(e => {
       if (filterGroups.length === 0) return true;
@@ -256,7 +258,7 @@ export function CalendarClient({
             start: toSXDate(data.starts_at, data.is_all_day),
             end: toSXDate(data.ends_at, data.is_all_day),
             calendarId: data.event_type,
-          });
+          } as unknown as CalendarEventExternal);
           toast.success("Événement modifié");
           setDialogOpen(false);
         } else {
@@ -275,7 +277,7 @@ export function CalendarClient({
               start: toSXDate(data.starts_at, data.is_all_day),
               end: toSXDate(data.ends_at, data.is_all_day),
               calendarId: data.event_type,
-            });
+            } as unknown as CalendarEventExternal);
           }
           toast.success("Événement créé");
           setDialogOpen(false);

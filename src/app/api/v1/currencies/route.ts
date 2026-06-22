@@ -1,5 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+
+const createCurrencySchema = z.object({
+  code: z.string().min(1).max(10),
+  name: z.string().min(1).max(100),
+  symbol: z.string().min(1).max(10),
+  symbol_position: z.enum(["prefix", "suffix"]).optional(),
+  is_default: z.boolean().optional(),
+  exchange_rate_to_xpf: z.number().positive().optional().nullable(),
+  is_active: z.boolean().optional(),
+});
 
 // GET /api/v1/currencies — List all currencies for a team
 export async function GET(request: NextRequest) {
@@ -7,7 +18,7 @@ export async function GET(request: NextRequest) {
     requirePermission(auth, "currencies", "read");
     const { data, error } = await auth.supabase
       .from("currencies")
-      .select("*")
+      .select("id, code, name, symbol, symbol_position, is_default, exchange_rate_to_xpf, is_active")
       .eq("team_id", teamId)
       .order("code", { ascending: true });
 
@@ -24,11 +35,11 @@ export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "currencies", "write");
     const body = await request.json();
-    const { code, name, symbol, symbol_position, is_default, exchange_rate_to_xpf, is_active } = body;
-
-    if (!code || !name || !symbol) {
-      return NextResponse.json({ error: "code, name, and symbol are required" }, { status: 400 });
+    const parsed = createCurrencySchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
+    const { code, name, symbol, symbol_position, is_default, exchange_rate_to_xpf, is_active } = parsed.data;
 
     const { data, error } = await auth.supabase
       .from("currencies")

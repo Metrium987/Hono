@@ -18,7 +18,7 @@ export default async function TeamPerformancePage() {
   const [{ data: teamMembers }, { data: { users: authUsers } }, { data: rules }, { data: commissions }] = await Promise.all([
     admin.from("team_members").select("user_id, role_name, is_owner").eq("team_id", teamId),
     admin.auth.admin.listUsers({ perPage: 1000 }),
-    supabase.from("commission_rules").select("*").eq("team_id", teamId).order("applies_from", { ascending: false }),
+    supabase.from("commission_rules").select("id, user_id, rate, applies_from, applies_to").eq("team_id", teamId).order("applies_from", { ascending: false }),
     supabase.from("invoice_commissions")
       .select(`*, invoice:invoice_id(number, total_ttc, customer:customer_id(contact_name))`)
       .eq("team_id", teamId).order("created_at", { ascending: false }),

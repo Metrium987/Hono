@@ -128,7 +128,7 @@ async function handleVatByRate(supabase: ReturnType<typeof createClient>, teamId
   const rateBreakdown: Array<{ rate_id: string; name: string; rate: number; taxable_base: number; vat_amount: number }> = [];
 
   if (vatInvoiceIds.length > 0) {
-    for (const tr of taxRates ?? []) {
+    const ratePromises = (taxRates ?? []).map(async (tr) => {
       const { data: items } = await supabase
         .from("invoice_items")
         .select("line_total_ht")
@@ -138,6 +138,12 @@ async function handleVatByRate(supabase: ReturnType<typeof createClient>, teamId
       const taxableBase = (items ?? []).reduce((sum: number, item: { line_total_ht: string }) => sum + parseFloat(item.line_total_ht || "0"), 0);
       const vatAmount = taxableBase * (parseFloat(tr.rate) / 100);
 
+      return { tr, taxableBase, vatAmount };
+    });
+
+    const results = await Promise.all(ratePromises);
+
+    for (const { tr, taxableBase, vatAmount } of results) {
       if (taxableBase > 0) {
         rateBreakdown.push({
           rate_id: tr.id,

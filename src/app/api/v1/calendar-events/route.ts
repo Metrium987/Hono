@@ -1,5 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+import { z } from "zod";
+
+const CreateCalendarEventSchema = z.object({
+  title: z.string().min(1).max(500),
+  description: z.string().max(5000).optional().nullable(),
+  starts_at: z.string().min(1),
+  ends_at: z.string().min(1),
+  event_type: z.enum(["meeting", "call", "task", "reminder", "other"]).optional(),
+  is_all_day: z.boolean().optional(),
+  customer_id: z.string().uuid().optional().nullable(),
+  group_id: z.string().uuid().optional().nullable(),
+  location: z.string().max(500).optional().nullable(),
+});
 
 export async function GET(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
@@ -26,12 +39,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "clients", "write");
-    const body = await request.json();
-    const { title, description, starts_at, ends_at, event_type, is_all_day, customer_id, group_id, location } = body;
-
-    if (!title?.trim() || !starts_at || !ends_at) {
-      return NextResponse.json({ error: "title, starts_at, ends_at requis" }, { status: 400 });
-    }
+    const parsed = CreateCalendarEventSchema.safeParse(await request.json());
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Validation error" }, { status: 400 });
+    const { title, description, starts_at, ends_at, event_type, is_all_day, customer_id, group_id, location } = parsed.data;
 
     const { data, error } = await auth.supabase
       .from("calendar_events")
@@ -55,3 +65,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data }, { status: 201 });
   });
 }
+

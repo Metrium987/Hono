@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     let query = auth.supabase
       .from("crm_requests")
-      .select("*", { count: "exact" })
+      .select("id, customer_id, subject, message, status, created_at", { count: "exact" })
       .eq("team_id", teamId);
 
     if (customerId) query = query.eq("customer_id", customerId);

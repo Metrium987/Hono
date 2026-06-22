@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
       track_stock, current_stock, low_stock_alert, unit,
       is_active, is_published, featured, slug, meta_title, meta_description,
       translations, images,
+      brand_id, barcode, weight, volume, units_per_box,
     } = body;
 
     if (!name || price_ht === undefined || !currency_id) {
@@ -124,6 +125,11 @@ export async function POST(request: NextRequest) {
         meta_description: meta_description ?? null,
         cost_price: cost_price ?? null,
         supplier_ref: supplier_ref ?? null,
+        brand_id: brand_id ?? null,
+        barcode: barcode ?? null,
+        weight: weight ?? null,
+        volume: volume ?? null,
+        units_per_box: units_per_box ?? 1,
       })
       .select()
       .single();

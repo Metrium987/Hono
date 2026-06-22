@@ -35,6 +35,7 @@ const schema = z.object({
   currency_id: z.string().min(1, "Devise obligatoire"),
   tax_rate_id: z.string().optional(),
   category_id: z.string().optional(),
+  brand_id: z.string().optional(),
   unit: z.string().min(1),
   track_stock: z.boolean(),
   current_stock: z.number().min(0),
@@ -46,6 +47,10 @@ const schema = z.object({
   meta_description: z.string().optional(),
   is_published: z.boolean(),
   is_active: z.boolean(),
+  barcode: z.string().optional(),
+  weight: z.number().min(0).optional(),
+  volume: z.number().min(0).optional(),
+  units_per_box: z.number().int().min(1).optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -53,6 +58,7 @@ type FormValues = z.infer<typeof schema>;
 export type Currency = { id: string; code: string; symbol: string };
 export type TaxRate = { id: string; name: string; rate: number };
 export type Category = { id: string; name: string };
+export type Brand = { id: string; name: string };
 
 export type ProductFormProps = {
   teamId: string;
@@ -60,12 +66,13 @@ export type ProductFormProps = {
   currencies: Currency[];
   taxRates: TaxRate[];
   categories: Category[];
+  brands: Brand[];
   backHref: string;
   initialData?: Partial<FormValues>;
 };
 
 export function ProductForm({
-  teamId, productId, currencies, taxRates, categories, backHref, initialData,
+  teamId, productId, currencies, taxRates, categories, brands, backHref, initialData,
 }: ProductFormProps) {
   const router = useRouter();
   const t = useTranslations("product_form");
@@ -91,6 +98,7 @@ export function ProductForm({
       currency_id: currencies[0]?.id ?? "",
       tax_rate_id: "",
       category_id: "",
+      brand_id: "",
       unit: "pcs",
       track_stock: false,
       current_stock: 0,
@@ -102,6 +110,10 @@ export function ProductForm({
       meta_description: "",
       is_published: false,
       is_active: true,
+      barcode: "",
+      weight: undefined,
+      volume: undefined,
+      units_per_box: 1,
       ...initialData,
     },
   });
@@ -137,6 +149,7 @@ export function ProductForm({
       currency_id: values.currency_id,
       tax_rate_id: values.tax_rate_id || undefined,
       category_id: values.category_id || undefined,
+      brand_id: values.brand_id || undefined,
       unit: values.unit.trim() || "pcs",
       track_stock: values.track_stock,
       current_stock: values.track_stock ? values.current_stock : 0,
@@ -147,6 +160,10 @@ export function ProductForm({
       meta_description: values.meta_description?.trim() || undefined,
       is_published: values.is_published,
       is_active: values.is_active,
+      barcode: values.barcode?.trim() || undefined,
+      weight: values.weight ?? null,
+      volume: values.volume ?? null,
+      units_per_box: values.units_per_box ?? 1,
       translations: [{
         locale: "fr",
         name: values.name.trim(),
@@ -251,6 +268,49 @@ export function ProductForm({
             <div className="space-y-2">
               <Label htmlFor="description">{t("description_label")}</Label>
               <Textarea id="description" {...register("description")} rows={4} placeholder="Description détaillée du produit..." />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Marque & Logistique ── */}
+        <Card>
+          <CardHeader><CardTitle className="text-base">Marque & Logistique</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            {brands.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="brand_id">Marque</Label>
+                <Controller
+                  name="brand_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                      <SelectTrigger><SelectValue placeholder="Aucune marque" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Aucune marque</SelectItem>
+                        {brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="barcode">Code-barres (EAN / UPC)</Label>
+              <Input id="barcode" {...register("barcode")} placeholder="Ex: 3760001234567" />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="weight">Poids (kg)</Label>
+                <Input id="weight" type="number" min="0" step="0.001" {...register("weight", { valueAsNumber: true })} placeholder="0.000" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="volume">Volume (L)</Label>
+                <Input id="volume" type="number" min="0" step="0.001" {...register("volume", { valueAsNumber: true })} placeholder="0.000" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="units_per_box">Unités / colis</Label>
+                <Input id="units_per_box" type="number" min="1" step="1" {...register("units_per_box", { valueAsNumber: true })} placeholder="1" />
+              </div>
             </div>
           </CardContent>
         </Card>

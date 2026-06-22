@@ -289,7 +289,7 @@ export async function withAuth(
     if (err instanceof SyntaxError) {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
-    console.error("Auth error:", err);
+    console.error("[auth]", err instanceof Error ? err.message : err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

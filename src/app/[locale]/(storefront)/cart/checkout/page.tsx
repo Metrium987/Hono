@@ -225,7 +225,7 @@ export default function CheckoutPage() {
                     {item.name} × {item.quantity}
                   </span>
                   <span className="font-medium shrink-0">
-                    {(item.priceHt * m * item.quantity).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F
+                    {(item.priceHt * m * item.quantity).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F TTC
                   </span>
                 </div>
                 );
