@@ -5,7 +5,6 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import Link from "next/link";
 import { Search, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 
@@ -174,25 +173,25 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
           <div>
             <h3 className="text-sm font-semibold mb-3">{t("categories")}</h3>
             <nav className="space-y-1">
-              <Link
-                href="./products"
-                className={`block rounded-lg px-3 py-2 text-sm transition-colors ${
-                  !categorySlug ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-accent"
-                }`}
-              >
-                {t("all_products")}
-              </Link>
-              {categories.map((cat) => (
                 <Link
-                  key={cat.id}
-                  href={`./products?category=${cat.slug}`}
-                  className={`block rounded-lg px-3 py-2 text-sm transition-colors ${
-                    categorySlug === cat.slug ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-accent"
+                  href="./products"
+                  className={`block rounded-[0.5rem] px-3 py-2 text-sm transition-colors duration-150 ${
+                    !categorySlug ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-accent"
                   }`}
                 >
-                  {cat.name ?? cat.slug}
+                  {t("all_products")}
                 </Link>
-              ))}
+                {categories.map((cat) => (
+                  <Link
+                    key={cat.id}
+                    href={`./products?category=${cat.slug}`}
+                    className={`block rounded-[0.5rem] px-3 py-2 text-sm transition-colors duration-150 ${
+                      categorySlug === cat.slug ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {cat.name ?? cat.slug}
+                  </Link>
+                ))}
             </nav>
           </div>
         </aside>
@@ -231,60 +230,57 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
 
                 return (
                   <Link key={p.id} href={`./products/${p.id}`}>
-                    <Card className="h-full hover:shadow-lg transition-all hover:-translate-y-0.5 overflow-hidden">
+                    <div className="group rounded-[0.625rem] border bg-card transition-all duration-200 hover:border-primary/30 hover:bg-card/80 overflow-hidden">
                       <div className="relative">
                         {imgSrc ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={imgSrc}
                             alt={p.name}
-                            className="w-full h-40 object-cover"
+                            className="w-full aspect-[4/3] object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                           />
                         ) : (
-                          <div className="w-full h-40 bg-muted flex items-center justify-center">
+                          <div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
                             <Package className="h-8 w-8 text-muted-foreground/40" />
                           </div>
                         )}
-                        {/* Badges overlay */}
                         <div className="absolute top-2 left-2 right-2 flex justify-between items-start">
                           {bestPromo ? (
-                            <Badge className="bg-red-500 text-white text-xs font-bold">{promoLabel(bestPromo)}</Badge>
+                            <Badge variant="destructive" className="text-[10px] font-bold">{promoLabel(bestPromo)}</Badge>
                           ) : <span />}
                           {inStock ? (
-                            <Badge className="bg-green-500/90 text-white text-xs">En stock</Badge>
+                            <Badge variant="success">En stock</Badge>
                           ) : (
-                            <Badge className="bg-red-500/90 text-white text-xs">Rupture</Badge>
+                            <Badge variant="destructive">Rupture</Badge>
                           )}
                         </div>
                       </div>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base line-clamp-2">{p.name}</CardTitle>
+                      <div className="p-3.5 space-y-1.5">
+                        <h3 className="text-sm font-medium leading-snug line-clamp-2">{p.name}</h3>
                         {p.sku && (
                           <p className="text-xs text-muted-foreground">{t("ref_label")} {p.sku}</p>
                         )}
-                      </CardHeader>
-                      <CardContent>
                         {discountedTTC !== null ? (
                           <div className="flex items-baseline gap-2">
-                            <p className="text-2xl font-bold text-red-600">
+                            <p className="text-base font-bold text-destructive">
                               {discountedTTC.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} {sym}
                             </p>
-                            <p className="text-sm text-muted-foreground line-through">
+                            <p className="text-xs text-muted-foreground line-through">
                               {priceTTC.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} {sym}
                             </p>
                           </div>
                         ) : (
-                          <p className="text-2xl font-bold text-primary">
+                          <p className="text-base font-bold text-primary">
                             {priceTTC.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} {sym}
                           </p>
                         )}
                         {(p.short_description || p.description) && (
-                          <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                          <p className="text-xs text-muted-foreground line-clamp-2">
                             {p.short_description ?? p.description}
                           </p>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
                   </Link>
                 );
               })}

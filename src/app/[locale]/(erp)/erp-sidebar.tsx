@@ -190,13 +190,16 @@ export function ErpSidebar({ teamName, permissions, isOwner }: ErpSidebarProps) 
   return (
     <aside
       className={cn(
-        "flex flex-col border-r bg-card transition-all duration-200",
-        collapsed ? "w-[52px]" : "w-56"
+        "flex flex-col border-r bg-card transition-all duration-200 ease-out",
+        collapsed ? "w-16" : "w-56"
       )}
     >
       {/* Brand */}
-      <div className="flex h-13 items-center gap-2.5 border-b px-3">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold tracking-tight">
+      <div className={cn(
+        "flex items-center border-b",
+        collapsed ? "h-12 justify-center" : "h-12 gap-2.5 px-3"
+      )}>
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[0.5rem] bg-primary text-primary-foreground text-xs font-bold tracking-tight">
           H
         </div>
         {!collapsed && (
@@ -232,16 +235,14 @@ export function ErpSidebar({ teamName, permissions, isOwner }: ErpSidebarProps) 
       )}
 
       {/* Collapse toggle */}
-      <div className="border-t p-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full h-8 justify-center text-muted-foreground hover:text-foreground"
+      <div className="border-t p-1.5">
+        <button
+          className="flex w-full items-center justify-center rounded-[0.375rem] h-7 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
           onClick={() => setCollapsed(!collapsed)}
           aria-label={collapsed ? "Déplier le menu" : "Replier le menu"}
         >
-          <ChevronLeft className={cn("h-4 w-4 transition-transform duration-200", collapsed && "rotate-180")} />
-        </Button>
+          <ChevronLeft className={cn("h-3.5 w-3.5 transition-transform duration-200 ease-out", collapsed && "rotate-180")} />
+        </button>
       </div>
     </aside>
   );

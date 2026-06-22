@@ -231,7 +231,7 @@ export function InvoicesListClient({ invoices, currentPage, totalPages, baseUrl,
         </Button>
       </div>
 
-      <div className="rounded-lg border bg-card">
+      <div className="rounded-[0.625rem] border bg-card">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map(hg => (

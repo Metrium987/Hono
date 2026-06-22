@@ -82,14 +82,18 @@ export default async function HomePage() {
 
         <main className="flex-1">
           {/* ── Hero ── */}
-          <section className="border-b bg-card">
-            <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+          <section className="relative overflow-hidden border-b">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,oklch(0.52_0.13_158/0.1),transparent_50%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,oklch(0.52_0.13_158/0.06),transparent_50%)]" />
+            <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
               <div className="max-w-2xl">
-                <p className="text-sm font-medium text-primary mb-3">Polynésie Française</p>
-                <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4">
+                <p className="inline-flex items-center rounded-[0.375rem] bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary mb-5">
+                  Polynésie Française
+                </p>
+                <h1 className="text-[clamp(1.75rem,4vw,2.75rem)] font-bold tracking-tight leading-[1.15] mb-5 text-balance">
                   Le catalogue en ligne de votre fournisseur local
                 </h1>
-                <p className="text-lg text-muted-foreground mb-8 max-w-xl">
+                <p className="text-base text-muted-foreground mb-8 max-w-lg text-balance">
                   Commandez vos produits en ligne, suivez vos devis et factures depuis votre espace client personnel.
                 </p>
                 <div className="flex flex-wrap gap-3">
@@ -108,12 +112,12 @@ export default async function HomePage() {
 
           {/* ── Categories bar ── */}
           {categories.length > 0 && (
-            <section className="border-b bg-background">
+            <section className="border-b">
               <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-                <div className="flex items-center gap-3 overflow-x-auto scrollbar-none">
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-none">
                   <Link
                     href="./products"
-                    className="shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium hover:bg-primary/10 hover:text-primary transition-colors"
+                    className="shrink-0 rounded-[0.5rem] border px-3.5 py-1.5 text-sm font-medium hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors duration-150"
                   >
                     Tous les produits
                   </Link>
@@ -121,7 +125,7 @@ export default async function HomePage() {
                     <Link
                       key={cat.id}
                       href={`./products?category=${cat.slug}`}
-                      className="shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                      className="shrink-0 rounded-[0.5rem] border px-3.5 py-1.5 text-sm font-medium text-muted-foreground hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-colors duration-150"
                     >
                       {cat.name ?? cat.slug}
                     </Link>
@@ -133,11 +137,11 @@ export default async function HomePage() {
 
           {/* ── Featured / Recent products ── */}
           {heroProducts.length > 0 && (
-            <section className="py-12">
+            <section className="py-16">
               <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-end justify-between mb-8">
                   <div>
-                    <h2 className="text-2xl font-bold tracking-tight">
+                    <h2 className="text-[1.375rem] font-bold tracking-tight">
                       {featured.length > 0 ? "Produits mis en avant" : "Nouveautés"}
                     </h2>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -158,48 +162,46 @@ export default async function HomePage() {
                     const inStock = !p.track_stock || p.current_stock > 0;
                     return (
                       <Link key={p.id} href={`./products/${p.id}`}>
-                        <Card className="h-full hover:shadow-md transition-all hover:-translate-y-0.5 overflow-hidden group">
+                        <div className="group rounded-[0.625rem] border bg-card transition-all duration-200 hover:border-primary/30 hover:bg-card/80 overflow-hidden">
                           <div className="relative">
                             {imgSrc ? (
                               // eslint-disable-next-line @next/next/no-img-element
                               <img
                                 src={imgSrc}
                                 alt={p.name}
-                                className="w-full h-44 object-cover group-hover:scale-105 transition-transform duration-300"
+                                className="w-full aspect-[4/3] object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                               />
                             ) : (
-                              <div className="w-full h-44 bg-muted flex items-center justify-center">
-                                <Package className="h-10 w-10 text-muted-foreground/40" />
+                              <div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
+                                <Package className="h-8 w-8 text-muted-foreground/40" />
                               </div>
                             )}
                             <div className="absolute top-2 right-2">
                               {inStock ? (
-                                <Badge className="bg-green-500/90 text-white text-xs">En stock</Badge>
+                                <Badge variant="success">En stock</Badge>
                               ) : (
-                                <Badge className="bg-red-500/90 text-white text-xs">Rupture</Badge>
+                                <Badge variant="destructive">Rupture</Badge>
                               )}
                             </div>
                           </div>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium line-clamp-2">{p.name}</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <p className="text-xl font-bold text-primary">
+                          <div className="p-3.5 space-y-1.5">
+                            <h3 className="text-sm font-medium leading-snug line-clamp-2">{p.name}</h3>
+                            <p className="text-base font-bold text-primary">
                               {p.price_ht.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} {currency?.symbol ?? currency?.code ?? "F"}
                             </p>
                             {(p.short_description || p.description) && (
-                              <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                              <p className="text-xs text-muted-foreground line-clamp-2">
                                 {p.short_description ?? p.description}
                               </p>
                             )}
-                          </CardContent>
-                        </Card>
+                          </div>
+                        </div>
                       </Link>
                     );
                   })}
                 </div>
 
-                <div className="mt-8 text-center sm:hidden">
+                <div className="mt-10 text-center sm:hidden">
                   <Button variant="outline" asChild>
                     <Link href="./products">Voir tous les produits <ArrowRight className="ml-2 h-4 w-4" /></Link>
                   </Button>
@@ -209,10 +211,10 @@ export default async function HomePage() {
           )}
 
           {/* ── CTA band ── */}
-          <section className="border-y bg-primary/5 py-12">
+          <section className="border-y py-16">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center">
-              <h2 className="text-2xl font-bold mb-3">Vous êtes déjà client ?</h2>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              <h2 className="text-[1.375rem] font-bold mb-3">Vous êtes déjà client ?</h2>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto text-balance">
                 Accédez à vos devis, factures et commandes depuis votre espace personnel sécurisé.
               </p>
               <div className="flex justify-center gap-3">

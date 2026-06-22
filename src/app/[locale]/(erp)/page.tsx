@@ -7,6 +7,7 @@ import {
   AlertTriangle, Clock, Users, Package, ShoppingCart,
   ArrowUpRight, ArrowDownRight, Minus, Bell,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RevenueChart } from "./_components/revenue-chart";
@@ -161,12 +162,12 @@ export default async function DashboardPage() {
           <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</p>
         </div>
         <div className="flex gap-2">
-          <Link href="./invoices/new" className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-            <FileText className="h-4 w-4" /> {t("new_invoice")}
-          </Link>
-          <Link href="./quotes/new" className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium hover:bg-accent transition-colors">
-            <FileSignature className="h-4 w-4" /> {t("new_quote")}
-          </Link>
+          <Button asChild>
+            <Link href="./invoices/new"><FileText className="h-4 w-4" /> {t("new_invoice")}</Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="./quotes/new"><FileSignature className="h-4 w-4" /> {t("new_quote")}</Link>
+          </Button>
         </div>
       </div>
 
@@ -344,7 +345,8 @@ export default async function DashboardPage() {
                     className="flex items-center justify-between rounded-md p-2 hover:bg-muted transition-colors">
                     <span className="text-sm truncate max-w-[160px]">{p.name}</span>
                     <Badge
-                      className={`text-[10px] shrink-0 ${p.current_stock === 0 ? "bg-red-100 text-red-700 border-red-200" : "bg-amber-100 text-amber-700 border-amber-200"}`}
+                      variant={p.current_stock === 0 ? "destructive" : "warning"}
+                      className="text-[10px] shrink-0"
                     >
                       {p.current_stock === 0 ? "Rupture" : `${p.current_stock} restants`}
                     </Badge>
@@ -373,7 +375,7 @@ export default async function DashboardPage() {
             </Link>
             <Link href="./invoices" className="flex items-center justify-between rounded-md p-2 hover:bg-muted transition-colors">
               <span className="text-sm">Factures payées</span>
-              <Badge className="bg-green-100 text-green-700 border-green-200 font-semibold">{invCounts.paid}</Badge>
+              <Badge variant="success" className="font-semibold">{invCounts.paid}</Badge>
             </Link>
             <Link href="./quotes" className="flex items-center justify-between rounded-md p-2 hover:bg-muted transition-colors">
               <span className="text-sm">Taux conversion devis</span>
