@@ -32,7 +32,8 @@ export async function GET(request: NextRequest) {
         currency:currency_id(code, symbol),
         customer:customer_id(id, company_name, contact_name)
       `, { count: "exact" })
-      .eq("team_id", teamId);
+      .eq("team_id", teamId)
+      .is("deleted_at", null);
 
     if (categoryId) query = query.eq("category_id", categoryId);
     if (dateFrom) query = query.gte("income_date", dateFrom);

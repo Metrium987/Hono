@@ -108,7 +108,7 @@ export async function DELETE(
     requirePermission(auth, "clients", "write");
     const { error } = await auth.supabase
       .from("customers")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq("id", id)
       .eq("team_id", teamId);
 

@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
         vendor:vendor_id(id, name),
         currency:currency_id(code, symbol)
       `, { count: "exact" })
-      .eq("team_id", teamId);
+      .eq("team_id", teamId)
+      .is("deleted_at", null);
 
     if (categoryId) query = query.eq("category_id", categoryId);
     if (vendorId) query = query.eq("vendor_id", vendorId);

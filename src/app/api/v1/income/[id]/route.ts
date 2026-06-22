@@ -70,7 +70,7 @@ export async function DELETE(request: NextRequest, props: { params: Params }) {
 
     const { error } = await auth.supabase
       .from("income")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq("id", id)
       .eq("team_id", teamId);
 
