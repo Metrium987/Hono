@@ -21,7 +21,7 @@ export default async function EditCustomerPage(props: { params: Params }) {
 
   const { data: customer, error } = await supabase
     .from("customers")
-    .select("*")
+    .select("id, team_id, user_id, company_name, contact_name, is_b2b, n_tahiti, email, phone, address_line1, address_line2, city, island, postal_code, portal_enabled, portal_id, payment_terms, notes, consent_recorded, consent_recorded_at, source, customer_type, created_at, updated_at")
     .eq("id", id)
     .eq("team_id", teamId)
     .single();

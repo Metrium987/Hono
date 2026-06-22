@@ -151,6 +151,6 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  console.log(`[cron/generate-recurring] ${generated} générées, ${skipped} ignorées`);
+  console.info(`[cron/generate-recurring] ${generated} générées, ${skipped} ignorées`);
   return NextResponse.json({ ok: true, generated, skipped });
 }

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
-import { Resend } from "resend";
 import { randomBytes } from "crypto";
-
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+import { resend, DEFAULT_FROM } from "@/lib/email/resend";
 
 // DELETE /api/v1/invitations — Cancel a pending invitation by ID
 export async function DELETE(request: NextRequest) {
@@ -106,7 +104,7 @@ export async function POST(request: NextRequest) {
 
     if (resend) {
       await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL ?? "noreply@hono.pf",
+        from: DEFAULT_FROM,
         to: [email],
         subject: `Invitation à rejoindre ${teamName}`,
         html: `

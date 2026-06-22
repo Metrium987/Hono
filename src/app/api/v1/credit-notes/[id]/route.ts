@@ -76,14 +76,23 @@ export async function PATCH(
 
       if (cn) {
         // 1. Restore stock via inventory ledger for each tracked product
+        // Batch-load all products in one query to avoid N+1
+        const productIds = [...new Set(cn.items.filter((i: { product_id?: string | null }) => i.product_id).map((i: { product_id: string }) => i.product_id))];
+        const productMap = new Map<string, { id: string; current_stock: number; track_stock: boolean }>();
+        if (productIds.length > 0) {
+          const { data: products } = await auth.supabase
+            .from("products")
+            .select("id, current_stock, track_stock")
+            .in("id", productIds)
+            .eq("team_id", teamId);
+          for (const p of products ?? []) {
+            productMap.set(p.id, p);
+          }
+        }
+
         for (const item of cn.items) {
           if (item.product_id) {
-            const { data: product } = await auth.supabase
-              .from("products")
-              .select("id, current_stock, track_stock")
-              .eq("id", item.product_id)
-              .eq("team_id", teamId)
-              .single();
+            const product = productMap.get(item.product_id);
 
             if (product && product.track_stock) {
               const oldStock = product.current_stock || 0;

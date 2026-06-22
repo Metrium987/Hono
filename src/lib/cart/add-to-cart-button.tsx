@@ -9,18 +9,19 @@ type AddToCartButtonProps = {
   productId: string;
   name: string;
   priceHt: number;
+  taxRate?: number;
   imageUrl?: string;
   sku?: string;
   disabled?: boolean;
 };
 
-export function AddToCartButton({ productId, name, priceHt, imageUrl, sku, disabled }: AddToCartButtonProps) {
+export function AddToCartButton({ productId, name, priceHt, taxRate, imageUrl, sku, disabled }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
 
   function handleClick() {
     if (disabled) return;
-    addItem({ productId, name, priceHt, imageUrl, sku });
+    addItem({ productId, name, priceHt, taxRate, imageUrl, sku });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   }

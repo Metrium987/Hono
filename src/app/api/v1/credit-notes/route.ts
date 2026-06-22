@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
         invoice:invoice_id(id, invoice_number),
         currency:currency_id(code, symbol, symbol_position)
       `, { count: "exact" })
-      .eq("team_id", teamId);
+      .eq("team_id", teamId)
+      .is("deleted_at", null);
 
     if (status) query = query.eq("status", status);
     if (invoiceId) query = query.eq("invoice_id", invoiceId);
@@ -141,7 +142,10 @@ export async function POST(request: NextRequest) {
       .insert(itemRows);
 
     if (itemsError) {
-      await auth.supabase.from("credit_notes").delete().eq("id", creditNote.id);
+      await auth.supabase
+        .from("credit_notes")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", creditNote.id);
       return NextResponse.json({ error: itemsError.message }, { status: 400 });
     }
 

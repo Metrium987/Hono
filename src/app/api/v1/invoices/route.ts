@@ -1,7 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+import { z } from "zod";
 
 type ItemInput = { description?: string; quantity?: string | number; unit_price_ht?: string | number; tax_rate_id?: string | null; product_id?: string | null; group_id?: string | null; sort_order?: number };
+
+const InvoiceItemSchema = z.object({
+  description: z.string().max(1000).optional(),
+  quantity: z.union([z.string(), z.number()]),
+  unit_price_ht: z.union([z.string(), z.number()]),
+  tax_rate_id: z.string().uuid().optional().nullable(),
+  product_id: z.string().uuid().optional().nullable(),
+  group_id: z.string().uuid().optional().nullable(),
+  sort_order: z.number().int().optional(),
+});
+
+const CreateInvoiceSchema = z.object({
+  customer_id: z.string().uuid(),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  currency_id: z.string().uuid(),
+  issue_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  service_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  late_fee_fixed: z.number().min(0).optional().nullable(),
+  legal_vat_mention: z.string().max(500).optional().nullable(),
+  legal_mentions: z.string().max(2000).optional().nullable(),
+  discount_type: z.enum(["percentage", "fixed"]).optional().nullable(),
+  discount_value: z.union([z.string(), z.number()]).optional().nullable(),
+  notes: z.string().max(5000).optional().nullable(),
+  message: z.string().max(2000).optional().nullable(),
+  items: z.array(InvoiceItemSchema).min(1),
+});
 
 // GET /api/v1/invoices — List invoices for a team
 export async function GET(request: NextRequest) {
@@ -55,25 +82,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "invoices", "write");
-    const body = await request.json();
+    const rawBody = await request.json();
+    const parsed = CreateInvoiceSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Validation error" }, { status: 400 });
+    }
     const {
       customer_id, issue_date, service_date, due_date,
       currency_id, late_fee_fixed, legal_vat_mention, legal_mentions,
       discount_type, discount_value,
       notes, message, items,
-    } = body;
-
-    if (!customer_id || !due_date || !currency_id) {
-      return NextResponse.json({
-        error: "customer_id, due_date, and currency_id are required",
-      }, { status: 400 });
-    }
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({
-        error: "At least one invoice item is required",
-      }, { status: 400 });
-    }
+    } = parsed.data;
 
     // Calculate totals with discount applied proportionally
     // For PF compliance: discount is distributed proportionally across line items
@@ -205,8 +224,11 @@ export async function POST(request: NextRequest) {
       .insert(itemRows);
 
     if (itemsError) {
-      // Rollback invoice if items fail
-      await auth.supabase.from("invoices").delete().eq("id", invoice.id);
+      // Soft-delete rollback — hard delete would violate PF 10-year retention mandate
+      await auth.supabase
+        .from("invoices")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", invoice.id);
       return NextResponse.json({ error: itemsError.message }, { status: 400 });
     }
 

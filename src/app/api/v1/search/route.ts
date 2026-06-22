@@ -19,26 +19,36 @@ export async function GET(request: NextRequest) {
 
     const pattern = `%${q}%`;
 
+    const canClients = auth.isOwner || hasPermission(auth, "clients", "read");
+    const canInvoices = auth.isOwner || hasPermission(auth, "invoices", "read");
+    const canCatalog = auth.isOwner || hasPermission(auth, "catalog", "read");
+
     const [customersRes, invoicesRes, productsRes] = await Promise.all([
-      auth.supabase
-        .from("customers")
-        .select("id, contact_name, company_name, customer_type")
-        .eq("team_id", teamId)
-        .or(`contact_name.ilike.${pattern},company_name.ilike.${pattern}`)
-        .limit(5),
-      auth.supabase
-        .from("invoices")
-        .select("id, invoice_number, status, total_ttc, customer:customer_id(contact_name, company_name)")
-        .eq("team_id", teamId)
-        .is("deleted_at", null)
-        .ilike("invoice_number", pattern)
-        .limit(5),
-      auth.supabase
-        .from("products")
-        .select("id, name, price_ht, is_published")
-        .eq("team_id", teamId)
-        .ilike("name", pattern)
-        .limit(5),
+      canClients
+        ? auth.supabase
+            .from("customers")
+            .select("id, contact_name, company_name, customer_type")
+            .eq("team_id", teamId)
+            .or(`contact_name.ilike.${pattern},company_name.ilike.${pattern}`)
+            .limit(5)
+        : Promise.resolve({ data: [] }),
+      canInvoices
+        ? auth.supabase
+            .from("invoices")
+            .select("id, invoice_number, status, total_ttc, customer:customer_id(contact_name, company_name)")
+            .eq("team_id", teamId)
+            .is("deleted_at", null)
+            .ilike("invoice_number", pattern)
+            .limit(5)
+        : Promise.resolve({ data: [] }),
+      canCatalog
+        ? auth.supabase
+            .from("products")
+            .select("id, name, price_ht, is_published")
+            .eq("team_id", teamId)
+            .ilike("name", pattern)
+            .limit(5)
+        : Promise.resolve({ data: [] }),
     ]);
 
     return NextResponse.json({

@@ -223,6 +223,27 @@ export function requirePermission(
   }
 }
 
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+function verifyCsrf(request: NextRequest, auth: AuthContext): boolean {
+  if (SAFE_METHODS.has(request.method)) return true;
+  if (auth.authMethod !== "session") return true;
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  const origin = request.headers.get("origin");
+  const referer = request.headers.get("referer");
+
+  const allowed = [appUrl, "http://localhost:3000"].filter(Boolean);
+
+  if (origin) {
+    return allowed.some((u) => origin === u || origin.startsWith(u));
+  }
+  if (referer) {
+    return allowed.some((u) => referer.startsWith(u));
+  }
+  return false;
+}
+
 /**
  * Wrapper for API route handlers.
  * Authenticates the request, validates team_id, and provides an AuthContext
@@ -246,6 +267,10 @@ export async function withAuth(
 ): Promise<NextResponse> {
   try {
     const auth = await authenticateRequest(request);
+
+    if (!verifyCsrf(request, auth)) {
+      return NextResponse.json({ error: "Forbidden: CSRF check failed" }, { status: 403 });
+    }
 
     const { searchParams } = new URL(request.url);
     const teamId = searchParams.get("team_id");

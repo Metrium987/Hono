@@ -56,7 +56,7 @@ export function QuoteForm({ customers, currencies, taxRates, teamId, editId, ini
   const defaultCurrency = currencies.find((c) => c.is_default) ?? currencies[0];
 
   const { control, register, watch, setError, setValue, formState, handleSubmit } = useForm<QuoteFormValues>({
-    resolver: zodResolver(quoteFormSchema) as any,
+    resolver: zodResolver(quoteFormSchema),
     defaultValues: {
       customer_id: initialData?.customer_id ?? "",
       issue_date: initialData?.issue_date ?? new Date().toISOString().split("T")[0],
@@ -147,7 +147,7 @@ export function QuoteForm({ customers, currencies, taxRates, teamId, editId, ini
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="customer">{t("customer_label")}</Label>
-            <Select value={watch("customer_id")} onValueChange={(v) => setValue("customer_id", v as any, { shouldValidate: true })}>
+            <Select value={watch("customer_id")} onValueChange={(v) => setValue("customer_id", v, { shouldValidate: true })}>
               <SelectTrigger id="customer" className={formState.errors.customer_id ? "border-destructive" : ""}>
                 <SelectValue placeholder={t("select_customer_placeholder")} />
               </SelectTrigger>
@@ -161,7 +161,7 @@ export function QuoteForm({ customers, currencies, taxRates, teamId, editId, ini
           </div>
           <div className="space-y-2">
             <Label htmlFor="currency">{t("currency_label")}</Label>
-            <Select value={watch("currency_id")} onValueChange={(v) => setValue("currency_id", v as any, { shouldValidate: true })}>
+            <Select value={watch("currency_id")} onValueChange={(v) => setValue("currency_id", v, { shouldValidate: true })}>
               <SelectTrigger id="currency" className={formState.errors.currency_id ? "border-destructive" : ""}>
                 <SelectValue />
               </SelectTrigger>
@@ -240,7 +240,7 @@ export function QuoteForm({ customers, currencies, taxRates, teamId, editId, ini
                 <div className="col-span-3 sm:col-span-2">
                   <Select
                     value={watch(`items.${idx}.tax_rate_id`)}
-                    onValueChange={(v) => setValue(`items.${idx}.tax_rate_id`, v as any, { shouldValidate: true })}
+                    onValueChange={(v) => setValue(`items.${idx}.tax_rate_id`, v, { shouldValidate: true })}
                   >
                     <SelectTrigger className={itemErrors?.tax_rate_id ? "border-destructive" : ""}>
                       <SelectValue placeholder={t("th_tax")} />

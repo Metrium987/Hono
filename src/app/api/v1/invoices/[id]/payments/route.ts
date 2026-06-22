@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
-import { Resend } from "resend";
 import { render } from "@react-email/components";
 import React from "react";
 import { PaymentConfirmationEmail } from "@/lib/email/payment-confirmation-email";
-
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const FROM = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+import { resend, DEFAULT_FROM as FROM } from "@/lib/email/resend";
 
 // GET /api/v1/invoices/[id]/payments — List payments for an invoice
 export async function GET(
@@ -36,6 +33,7 @@ export async function GET(
         payment_method:payment_method_id(name, display_name)
       `)
       .eq("invoice_id", id)
+      .is("deleted_at", null)
       .order("payment_date", { ascending: false });
 
     if (error) {

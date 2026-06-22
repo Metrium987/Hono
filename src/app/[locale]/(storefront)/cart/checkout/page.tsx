@@ -19,7 +19,7 @@ import { useCart } from "@/lib/cart/cart-context";
 export default function CheckoutPage() {
   const t = useTranslations("storefront");
   const router = useRouter();
-  const { items, subtotalHt, clearCart } = useCart();
+  const { items, subtotalTtc, clearCart } = useCart();
 
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -217,21 +217,24 @@ export default function CheckoutPage() {
               <CardTitle className="text-lg">{t("summary")} ({t("items_count", { count: items.length })})</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {items.map((item) => (
+              {items.map((item) => {
+                const m = 1 + (item.taxRate ?? 0) / 100;
+                return (
                 <div key={item.productId} className="flex justify-between text-sm">
                   <span className="text-muted-foreground truncate mr-2">
                     {item.name} × {item.quantity}
                   </span>
                   <span className="font-medium shrink-0">
-                    {(item.priceHt * item.quantity).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F
+                    {(item.priceHt * m * item.quantity).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F
                   </span>
                 </div>
-              ))}
+                );
+              })}
               <Separator />
               <div className="flex justify-between font-bold">
-                <span>{t("total_estimated_ht")}</span>
+                <span>{t("total_ttc_estimated")}</span>
                 <span className="text-primary">
-                  {subtotalHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F
+                  {subtotalTtc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F
                 </span>
               </div>
             </CardContent>

@@ -1,6 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 import { generateEmbedding } from "@/lib/ai/embeddings";
+import { z } from "zod";
+
+const CreateCustomerSchema = z.object({
+  contact_name: z.string().min(1).max(255),
+  company_name: z.string().max(255).optional().nullable(),
+  is_b2b: z.boolean().optional(),
+  n_tahiti: z.string().max(50).optional().nullable(),
+  email: z.string().email().max(255).optional().nullable(),
+  phone: z.string().max(50).optional().nullable(),
+  address_line1: z.string().max(255).optional().nullable(),
+  address_line2: z.string().max(255).optional().nullable(),
+  city: z.string().max(100).optional().nullable(),
+  island: z.string().max(100).optional().nullable(),
+  postal_code: z.string().max(20).optional().nullable(),
+  portal_enabled: z.boolean().optional(),
+  payment_terms: z.number().int().min(0).max(365).optional(),
+  notes: z.string().max(5000).optional().nullable(),
+  consent_recorded: z.boolean().optional(),
+  source: z.enum(["erp", "storefront", "api", "import"]).optional(),
+  assigned_to: z.string().uuid().optional().nullable(),
+  customer_type: z.enum(["client", "prospect", "partner"]).optional(),
+});
 
 // GET /api/v1/customers — List customers for a team (with search and pagination)
 export async function GET(request: NextRequest) {
@@ -60,17 +82,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "clients", "write");
-    const body = await request.json();
+    const rawBody = await request.json();
+    const parsed = CreateCustomerSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Validation error" }, { status: 400 });
+    }
     const {
       company_name, contact_name, is_b2b,
       n_tahiti, email, phone, address_line1, address_line2,
       city, island, postal_code, portal_enabled, payment_terms,
       notes, consent_recorded, source, assigned_to, customer_type,
-    } = body;
+    } = parsed.data;
 
-    if (!contact_name) {
-      return NextResponse.json({ error: "contact_name is required" }, { status: 400 });
-    }
     if (is_b2b && !n_tahiti) {
       return NextResponse.json({
         error: "n_tahiti (Tahiti business registration number) is required for B2B customers",

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { rateLimit, RATE_LIMIT_CONFIGS } from "@/lib/rate-limit";
-import { Resend } from "resend";
 import { render } from "@react-email/components";
 import { PortalMagicLinkEmail } from "@/lib/email/portal-magic-link-email";
+import { resend, DEFAULT_FROM } from "@/lib/email/resend";
 
 // POST /api/v1/portal/auth — Send a Supabase Auth magic link
 export async function POST(request: NextRequest) {
@@ -124,9 +124,7 @@ export async function POST(request: NextRequest) {
     const magicLink = linkData.properties?.action_link ?? "";
 
     // Send email via Resend (SDK + React Email component)
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (resendApiKey) {
-      const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@votre-domaine.pf";
+    if (resend) {
       const localeMatch = request.nextUrl.pathname.match(/\/([a-z]{2})\//);
       const locale = localeMatch?.[1] ?? "fr";
 
@@ -148,10 +146,9 @@ export async function POST(request: NextRequest) {
 
       (async () => {
         try {
-          const resend = new Resend(resendApiKey);
           const html = await render(emailElement);
           const { error: sendError } = await resend.emails.send({
-            from: fromEmail,
+            from: DEFAULT_FROM,
             to: normalizedEmail,
             subject,
             html,
@@ -170,7 +167,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "If this email is registered, a magic link has been sent.",
-      ...((process.env.NODE_ENV === "development" || !resendApiKey) && { devLink: magicLink }),
+      ...((process.env.NODE_ENV === "development" || !resend) && { devLink: magicLink }),
     });
   } catch (err) {
     console.error("Portal auth error:", err);

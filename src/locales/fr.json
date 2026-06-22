@@ -725,6 +725,7 @@
     "cart_empty": "Votre panier est vide. Parcourez notre catalogue pour ajouter des produits.",
     "cart_summary": "Résumé",
     "total_estimated_ht": "Total estimé HT",
+    "total_ttc_estimated": "Total TTC estimé",
     "continue_shopping": "Continuer le shopping",
     "clear_cart": "Vider",
     "ht_abbr": "HT",

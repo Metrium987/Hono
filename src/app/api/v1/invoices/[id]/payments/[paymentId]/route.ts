@@ -25,12 +25,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
-    // Delete the payment
+    // Soft-delete the payment (financial audit trail — PF 10-year retention)
     const { data: deleted, error } = await auth.supabase
       .from("invoice_payments")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq("id", paymentId)
       .eq("invoice_id", id)
+      .is("deleted_at", null)
       .select()
       .single();
 

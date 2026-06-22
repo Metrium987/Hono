@@ -6,7 +6,7 @@ import { checkPagePermission } from "@/lib/auth/page-auth";
 import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 export default async function TeamPerformancePage() {
-  const perm = await checkPagePermission("team_performance", "read");
+  const perm = await checkPagePermission("reports", "read");
   if (!perm.allowed) return <ForbiddenPage module="team_performance" />;
 
   const cookieStore = await cookies();

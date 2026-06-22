@@ -151,24 +151,30 @@ export default async function PortalInvoiceDetailPage(
               <tr className="border-b text-muted-foreground">
                 <th className="text-left pb-3 font-medium">Description</th>
                 <th className="text-right pb-3 font-medium">Qté</th>
-                <th className="text-right pb-3 font-medium">Prix unitaire HT</th>
-                <th className="text-right pb-3 font-medium">Total HT</th>
+                <th className="text-right pb-3 font-medium">Prix unitaire TTC</th>
+                <th className="text-right pb-3 font-medium">Total TTC</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {items.map((item) => {
+                const rate = unwrapRate(item.tax_rate) ?? 0;
+                const m = 1 + rate / 100;
+                const unitTtc = typeof item.unit_price_ht === "number" ? item.unit_price_ht * m : null;
+                const lineTtc = typeof item.line_total_ht === "number" ? item.line_total_ht * m : null;
+                return (
                 <tr key={item.id} className="border-b last:border-0">
                   <td className="py-3">
                     <p>{item.description}</p>
-                    {item.tax_rate ? (
-                      <p className="text-xs text-muted-foreground mt-0.5">TVA {unwrapRate(item.tax_rate)}%</p>
+                    {rate > 0 ? (
+                      <p className="text-xs text-muted-foreground mt-0.5">TVA {rate}% incluse</p>
                     ) : null}
                   </td>
                   <td className="text-right py-3">{typeof item.quantity === "number" ? item.quantity.toLocaleString("fr-FR") : item.quantity}</td>
-                  <td className="text-right py-3">{typeof item.unit_price_ht === "number" ? item.unit_price_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) : "—"}</td>
-                  <td className="text-right py-3 font-medium">{typeof item.line_total_ht === "number" ? item.line_total_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) : "—"}</td>
+                  <td className="text-right py-3">{unitTtc !== null ? unitTtc.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) : "—"}</td>
+                  <td className="text-right py-3 font-medium">{lineTtc !== null ? lineTtc.toLocaleString("fr-FR", { minimumFractionDigits: 2 }) : "—"}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </CardContent>

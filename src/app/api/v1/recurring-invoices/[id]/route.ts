@@ -33,7 +33,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Params 
     requirePermission(auth, "invoices", "write");
     const { error } = await auth.supabase
       .from("recurring_invoices")
-      .delete()
+      .update({ deleted_at: new Date().toISOString(), is_active: false })
       .eq("id", id)
       .eq("team_id", teamId);
     if (error) return NextResponse.json({ error: error.message }, { status: 400 });

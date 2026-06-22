@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
-import { Resend } from "resend";
 import { render } from "@react-email/components";
 import React from "react";
 import { InvoiceReminderEmail, type InvoiceReminderData } from "@/lib/email/invoice-reminder-email";
-
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const FROM = process.env.RESEND_FROM_EMAIL ?? "noreply@hono.pf";
+import { resend, DEFAULT_FROM as FROM } from "@/lib/email/resend";
 
 const SUBJECTS: Record<number, (inv: string, team: string) => string> = {
   1: (inv, team) => `Rappel — Facture ${inv} — ${team}`,

@@ -65,7 +65,7 @@ const ITEM_MODULES: Record<string, string | null> = {
   break_even: "reports",
   calendar: "clients",
   my_activity: null, // always visible
-  team_performance: "invoices",
+  team_performance: "reports",
   reports: "reports",
   settings: "settings",
 };

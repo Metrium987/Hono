@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { Resend } from "resend";
+import { resend, DEFAULT_FROM as FROM } from "@/lib/email/resend";
 import { render } from "@react-email/components";
 import React from "react";
 import { InvoiceReminderEmail, type InvoiceReminderData } from "@/lib/email/invoice-reminder-email";
@@ -19,8 +19,6 @@ const LEVEL_SUBJECTS: Record<number, string> = {
   3: "Dernier avertissement",
 };
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const FROM = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -59,48 +57,37 @@ export async function GET(request: NextRequest) {
   type TeamShape = { name?: string; email?: string; phone?: string; settings?: Record<string, number> };
   type ReminderShape = { level: number; sent_at: string };
 
-  let sent = 0;
-  let skipped = 0;
+  const results = await Promise.allSettled(
+    (invoices ?? []).map(async (inv): Promise<"sent" | "skipped"> => {
+      const customer: CustomerShape | null = Array.isArray(inv.customer) ? inv.customer[0] : (inv.customer as CustomerShape | null);
+      const team: TeamShape | null = Array.isArray(inv.team) ? inv.team[0] : (inv.team as TeamShape | null);
+      const reminders: ReminderShape[] = Array.isArray(inv.reminders) ? inv.reminders : [];
 
-  for (const inv of invoices ?? []) {
-    const customer: CustomerShape | null = Array.isArray(inv.customer) ? inv.customer[0] : (inv.customer as CustomerShape | null);
-    const team: TeamShape | null = Array.isArray(inv.team) ? inv.team[0] : (inv.team as TeamShape | null);
-    const reminders: ReminderShape[] = Array.isArray(inv.reminders) ? inv.reminders : [];
+      if (!customer?.email || !resend) return "skipped";
 
-    if (!customer?.email) { skipped++; continue; }
+      const lastReminder = reminders
+        .sort((a, b) => b.sent_at.localeCompare(a.sent_at))[0] ?? null;
 
-    // Trouver la dernière relance envoyée (toutes niveaux confondus)
-    const lastReminder = reminders
-      .sort((a, b) => b.sent_at.localeCompare(a.sent_at))[0] ?? null;
+      if (lastReminder && lastReminder.level >= MAX_LEVEL) return "skipped";
+      if (lastReminder && lastReminder.sent_at > cooldownDate) return "skipped";
 
-    // Niveau max atteint : plus de relance automatique
-    if (lastReminder && lastReminder.level >= MAX_LEVEL) { skipped++; continue; }
+      const nextLevel = (lastReminder ? lastReminder.level + 1 : 1) as 1 | 2 | 3;
+      const daysOverdue = Math.max(0, Math.floor(
+        (Date.now() - new Date(inv.due_date).getTime()) / 86_400_000
+      ));
 
-    // Cooldown : si une relance a été envoyée dans les 14 derniers jours, skip
-    if (lastReminder && lastReminder.sent_at > cooldownDate) { skipped++; continue; }
+      const emailData: InvoiceReminderData = {
+        level: nextLevel,
+        invoiceNumber: inv.invoice_number,
+        totalTtc: parseFloat(String(inv.total_ttc || 0)),
+        dueDate: new Date(inv.due_date).toLocaleDateString("fr-FR"),
+        daysOverdue,
+        customerName: customer.company_name || customer.contact_name || "",
+        teamName: team?.name ?? "",
+        teamEmail: team?.email ?? null,
+        teamPhone: team?.phone ?? null,
+      };
 
-    // Escalade : prochain niveau = dernier niveau + 1 (ou 1 si aucune relance)
-    const nextLevel = (lastReminder ? lastReminder.level + 1 : 1) as 1 | 2 | 3;
-
-    const daysOverdue = Math.max(0, Math.floor(
-      (Date.now() - new Date(inv.due_date).getTime()) / 86_400_000
-    ));
-
-    const emailData: InvoiceReminderData = {
-      level: nextLevel,
-      invoiceNumber: inv.invoice_number,
-      totalTtc: parseFloat(String(inv.total_ttc || 0)),
-      dueDate: new Date(inv.due_date).toLocaleDateString("fr-FR"),
-      daysOverdue,
-      customerName: customer.company_name || customer.contact_name || "",
-      teamName: team?.name ?? "",
-      teamEmail: team?.email ?? null,
-      teamPhone: team?.phone ?? null,
-    };
-
-    if (!resend) { skipped++; continue; }
-
-    try {
       const html = await render(React.createElement(InvoiceReminderEmail, { data: emailData }));
       const subjectPrefix = LEVEL_SUBJECTS[nextLevel] ?? "Relance";
 
@@ -113,8 +100,7 @@ export async function GET(request: NextRequest) {
 
       if (sendErr) {
         console.error(`[cron/auto-remind] send failed: ${inv.invoice_number}`, sendErr);
-        skipped++;
-        continue;
+        return "skipped";
       }
 
       await supabase.from("invoice_reminders").insert({
@@ -126,13 +112,20 @@ export async function GET(request: NextRequest) {
         sent_by: null,
       });
 
-      sent++;
-    } catch (err) {
-      console.error(`[cron/auto-remind] error for ${inv.invoice_number}:`, err);
+      return "sent";
+    })
+  );
+
+  let sent = 0;
+  let skipped = 0;
+  for (const r of results) {
+    if (r.status === "fulfilled" && r.value === "sent") sent++;
+    else {
       skipped++;
+      if (r.status === "rejected") console.error("[cron/auto-remind] error:", r.reason);
     }
   }
 
-  console.log(`[cron/auto-remind] terminé : ${sent} envoyées, ${skipped} ignorées`);
+  console.info(`[cron/auto-remind] terminé : ${sent} envoyées, ${skipped} ignorées`);
   return NextResponse.json({ ok: true, sent, skipped });
 }

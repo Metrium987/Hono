@@ -132,43 +132,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: prodError.message }, { status: 400 });
     }
 
-    // Insert translations
-    if (translations && Array.isArray(translations)) {
-      const translationRows = translations.map((t: { locale: string; name: string; description?: string; short_description?: string }) => ({
-        product_id: product.id,
-        locale: t.locale,
-        name: t.name,
-        description: t.description ?? null,
-        short_description: t.short_description ?? null,
-      }));
-
-      await auth.supabase.from("product_translations").insert(translationRows);
-    }
-
-    // Insert images
-    if (images && Array.isArray(images)) {
-      const imageRows = images.map((img: { storage_path: string; position?: number; alt_text?: string }, idx: number) => ({
-        product_id: product.id,
-        storage_path: img.storage_path,
-        position: img.position ?? idx,
-        alt_text: img.alt_text ?? null,
-      }));
-
-      await auth.supabase.from("product_images").insert(imageRows);
-    }
-
-    // Create initial inventory ledger entry
-    if (track_stock && current_stock && current_stock > 0) {
-      await auth.supabase.from("inventory_ledger").insert({
-        team_id: teamId,
-        product_id: product.id,
-        transaction_type: "initial_stock",
-        quantity_change: current_stock,
-        running_balance: current_stock,
-        description: "Initial stock on product creation",
-        created_by: auth.userId,
-      });
-    }
+    // Insert translations, images, and initial ledger entry in parallel
+    await Promise.all([
+      translations && Array.isArray(translations)
+        ? auth.supabase.from("product_translations").insert(
+            translations.map((t: { locale: string; name: string; description?: string; short_description?: string }) => ({
+              product_id: product.id,
+              locale: t.locale,
+              name: t.name,
+              description: t.description ?? null,
+              short_description: t.short_description ?? null,
+            }))
+          )
+        : null,
+      images && Array.isArray(images)
+        ? auth.supabase.from("product_images").insert(
+            images.map((img: { storage_path: string; position?: number; alt_text?: string }, idx: number) => ({
+              product_id: product.id,
+              storage_path: img.storage_path,
+              position: img.position ?? idx,
+              alt_text: img.alt_text ?? null,
+            }))
+          )
+        : null,
+      track_stock && current_stock && current_stock > 0
+        ? auth.supabase.from("inventory_ledger").insert({
+            team_id: teamId,
+            product_id: product.id,
+            transaction_type: "initial_stock",
+            quantity_change: current_stock,
+            running_balance: current_stock,
+            description: "Initial stock on product creation",
+            created_by: auth.userId,
+          })
+        : null,
+    ].filter(Boolean));
 
     // Generate embedding non-blocking
     generateEmbedding(`${name} ${description ?? ""} ${sku ?? ""}`.trim()).then((embedding) => {

@@ -1,7 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+import { z } from "zod";
 
 type ItemInput = { description?: string; quantity?: string | number; unit_price_ht?: string | number; tax_rate_id?: string | null; product_id?: string | null; group_id?: string | null; sort_order?: number };
+
+const CreateQuoteSchema = z.object({
+  customer_id: z.string().uuid(),
+  currency_id: z.string().uuid(),
+  issue_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  validity_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable(),
+  notes: z.string().max(5000).optional().nullable(),
+  items: z.array(z.object({
+    description: z.string().max(1000).optional(),
+    quantity: z.union([z.string(), z.number()]),
+    unit_price_ht: z.union([z.string(), z.number()]),
+    tax_rate_id: z.string().uuid().optional().nullable(),
+    product_id: z.string().uuid().optional().nullable(),
+    group_id: z.string().uuid().optional().nullable(),
+    sort_order: z.number().int().optional(),
+  })).min(1),
+});
 
 // GET /api/v1/quotes — List quotes for a team
 export async function GET(request: NextRequest) {
@@ -46,23 +64,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "quotes", "write");
-    const body = await request.json();
+    const rawBody = await request.json();
+    const parsed = CreateQuoteSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Validation error" }, { status: 400 });
+    }
     const {
       customer_id, issue_date, validity_date,
       currency_id, notes, items,
-    } = body;
-
-    if (!customer_id || !currency_id) {
-      return NextResponse.json({
-        error: "customer_id and currency_id are required",
-      }, { status: 400 });
-    }
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({
-        error: "At least one quote item is required",
-      }, { status: 400 });
-    }
+    } = parsed.data;
 
     // Calculate totals
     let subtotal_ht = 0;

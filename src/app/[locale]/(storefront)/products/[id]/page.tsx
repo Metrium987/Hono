@@ -293,6 +293,7 @@ export default async function ProductDetailPage(
               productId={id}
               name={product.name}
               priceHt={priceHt}
+              taxRate={taxRate?.rate ?? undefined}
               sku={product.sku ?? undefined}
               imageUrl={images.length > 0 ? imageUrl(images[0].storage_path) : undefined}
               disabled={!inStock}

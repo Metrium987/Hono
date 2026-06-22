@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
-import { Resend } from "resend";
 import { render } from "@react-email/components";
 import React from "react";
 import { QuoteEmail, type QuoteEmailData } from "@/lib/email/quote-email";
-
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const FROM = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+import { resend, DEFAULT_FROM as FROM } from "@/lib/email/resend";
 
 type QuoteItem = { description?: string; quantity?: string | number; unit_price_ht?: string | number; line_total_ht?: string | number };
 

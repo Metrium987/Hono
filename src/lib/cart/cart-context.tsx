@@ -6,6 +6,7 @@ export type CartItem = {
   productId: string;
   name: string;
   priceHt: number;
+  taxRate?: number;
   quantity: number;
   imageUrl?: string;
   sku?: string;
@@ -19,6 +20,7 @@ type CartContext = {
   clearCart: () => void;
   totalItems: number;
   subtotalHt: number;
+  subtotalTtc: number;
 };
 
 const CartContext = createContext<CartContext | null>(null);
@@ -95,10 +97,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
   const subtotalHt = items.reduce((sum, i) => sum + i.priceHt * i.quantity, 0);
+  const subtotalTtc = items.reduce((sum, i) => {
+    const m = 1 + (i.taxRate ?? 0) / 100;
+    return sum + i.priceHt * m * i.quantity;
+  }, 0);
 
   return (
     <CartContext.Provider
-      value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, subtotalHt }}
+      value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, subtotalHt, subtotalTtc }}
     >
       {children}
     </CartContext.Provider>

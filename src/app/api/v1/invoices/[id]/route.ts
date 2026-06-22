@@ -16,7 +16,7 @@ export async function GET(
       .from("invoices")
       .select(`
         *,
-        customer:customer_id(*),
+        customer:customer_id(id, company_name, contact_name, email, phone, n_tahiti, is_b2b, address_line1, address_line2, city, island, postal_code, customer_type, payment_terms),
         team:team_id(name, n_tahiti, rcs_number, is_franchise_en_base,
           address_line1, address_line2, city, island, postal_code,
           bank_name, bank_rib, bank_iban, bank_bic,

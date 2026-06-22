@@ -12,7 +12,7 @@ vi.mock("next/headers", () => ({
 function createMockSupabase() {
   const mockSingle = vi.fn();
   const mockLimit = vi.fn(() => ({ single: mockSingle }));
-  const mockEq = vi.fn(() => ({ limit: mockLimit }));
+  const mockEq = vi.fn(() => ({ limit: mockLimit, single: mockSingle }));
   const mockSelect = vi.fn(() => ({ eq: mockEq }));
   const mockFrom = vi.fn(() => ({ select: mockSelect }));
   const mockGetUser = vi.fn();

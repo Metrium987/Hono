@@ -1,12 +1,7 @@
-import { Resend } from "resend";
 import { render } from "@react-email/components";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { InvoiceEmail, type InvoiceEmailData } from "./invoice-email";
-
-const resendApiKey = process.env.RESEND_API_KEY;
-const resendFromEmail =
-  process.env.RESEND_FROM_EMAIL ?? "factures@votre-domaine.pf";
-const resend = resendApiKey ? new Resend(resendApiKey) : null;
+import { resend, DEFAULT_FROM as resendFromEmail } from "./resend";
 
 export type SendInvoiceResult = {
   success: boolean;

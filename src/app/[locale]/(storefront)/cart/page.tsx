@@ -10,7 +10,7 @@ import { useCart } from "@/lib/cart/cart-context";
 
 export default function CartPage() {
   const t = useTranslations("storefront");
-  const { items, removeItem, updateQuantity, clearCart, totalItems, subtotalHt } = useCart();
+  const { items, removeItem, updateQuantity, clearCart, totalItems, subtotalTtc } = useCart();
 
   if (items.length === 0) {
     return (
@@ -50,7 +50,11 @@ export default function CartPage() {
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Items */}
         <div className="lg:col-span-2 space-y-4">
-          {items.map((item) => (
+          {items.map((item) => {
+            const m = 1 + (item.taxRate ?? 0) / 100;
+            const priceTtc = item.priceHt * m;
+            const lineTtc = priceTtc * item.quantity;
+            return (
             <Card key={item.productId} className="overflow-hidden">
               <CardContent className="p-4 flex gap-4 items-center">
                 {/* Thumbnail */}
@@ -75,7 +79,7 @@ export default function CartPage() {
                     <p className="text-xs text-muted-foreground">{t("ref_label")} {item.sku}</p>
                   )}
                   <p className="text-sm font-semibold text-primary mt-1">
-                    {item.priceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F / unité
+                    {priceTtc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F TTC / unité
                   </p>
                 </div>
 
@@ -105,9 +109,9 @@ export default function CartPage() {
                 {/* Line total */}
                 <div className="text-right min-w-[100px]">
                   <p className="font-semibold">
-                    {(item.priceHt * item.quantity).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F
+                    {lineTtc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F
                   </p>
-                  <p className="text-xs text-muted-foreground">{t("ht_abbr")}</p>
+                  <p className="text-xs text-muted-foreground">TTC</p>
                 </div>
 
                 {/* Remove */}
@@ -121,7 +125,8 @@ export default function CartPage() {
                 </Button>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
 
         {/* Summary sidebar */}
@@ -131,23 +136,11 @@ export default function CartPage() {
               <CardTitle className="text-lg">{t("cart_summary")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t("subtotal_ht")}</span>
-                  <span className="font-medium">
-                    {subtotalHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">{t("tax")}</span>
-                  <span className="text-muted-foreground">{t("tax_calculated_on_quote")}</span>
-                </div>
-              </div>
               <Separator />
               <div className="flex justify-between text-lg font-bold">
-                <span>{t("total_estimated_ht")}</span>
+                <span>{t("total_ttc_estimated")}</span>
                 <span className="text-primary">
-                  {subtotalHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F
+                  {subtotalTtc.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">

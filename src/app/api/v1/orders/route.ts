@@ -21,7 +21,8 @@ export async function GET(request: NextRequest) {
         customer:customer_id(id, company_name, contact_name, email),
         items:order_items(*)
       `, { count: "exact" })
-      .eq("team_id", teamId);
+      .eq("team_id", teamId)
+      .is("deleted_at", null);
 
     if (status) query = query.eq("status", status);
     if (customerIdStr) query = query.eq("customer_id", customerIdStr);
@@ -91,7 +92,10 @@ export async function POST(request: NextRequest) {
       .insert(itemRows);
 
     if (itemsError) {
-      await auth.supabase.from("orders").delete().eq("id", order.id);
+      await auth.supabase
+        .from("orders")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", order.id);
       return NextResponse.json({ error: itemsError.message }, { status: 400 });
     }
 

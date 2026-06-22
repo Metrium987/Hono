@@ -4,13 +4,14 @@ import { Redis } from "@upstash/redis";
 type RateLimitConfig = {
   windowMs: number;
   maxRequests: number;
+  failClosed?: boolean;
 };
 
 export const RATE_LIMIT_CONFIGS = {
-  MAGIC_LINK:     { windowMs:     60_000, maxRequests:   5 },
-  PUBLIC_QUOTE:   { windowMs:     60_000, maxRequests:  10 },
-  API_KEYS:       { windowMs:  3_600_000, maxRequests:  20 },
-  STRIPE_WEBHOOK: { windowMs:     60_000, maxRequests: 100 },
+  MAGIC_LINK:     { windowMs:     60_000, maxRequests:   5, failClosed: true },
+  PUBLIC_QUOTE:   { windowMs:     60_000, maxRequests:  10, failClosed: true },
+  API_KEYS:       { windowMs:  3_600_000, maxRequests:  20, failClosed: true },
+  STRIPE_WEBHOOK: { windowMs:     60_000, maxRequests: 100, failClosed: false },
 } as const;
 
 let redis: Redis | null = null;
@@ -50,8 +51,10 @@ export async function rateLimit(key: string, config: RateLimitConfig): Promise<{
     const { success, remaining, reset } = await limiter.limit(key);
     return { allowed: success, remaining, resetAt: reset };
   } catch (err) {
-    // Redis indisponible : on loggue et on applique un fallback conservateur en mémoire
-    console.error("[rate-limit] Redis unavailable, applying in-memory fallback:", err);
+    console.error("[rate-limit] Redis unavailable:", err);
+    if (config.failClosed) {
+      return { allowed: false, remaining: 0, resetAt: Date.now() + config.windowMs };
+    }
     return { allowed: true, remaining: 1, resetAt: Date.now() + config.windowMs };
   }
 }

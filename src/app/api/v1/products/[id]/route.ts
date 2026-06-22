@@ -118,24 +118,22 @@ export async function PATCH(
       await auth.supabase.from("product_images").insert(imageRows);
     }
 
-    // Regenerate embedding if searchable fields changed
+    // Regenerate embedding non-blocking if searchable fields changed
     if (updatePayload.name !== undefined || updatePayload.description !== undefined) {
-      try {
-        const { data: current } = await auth.supabase
-          .from("products")
-          .select("name, description")
-          .eq("id", id)
-          .single();
-        if (current) {
+      auth.supabase
+        .from("products")
+        .select("name, description")
+        .eq("id", id)
+        .single()
+        .then(({ data: current }) => {
+          if (!current) return;
           const text = [current.name, current.description].filter(Boolean).join(" ");
-          const embedding = await generateEmbedding(text);
-          if (embedding) {
-            await auth.supabase.from("products").update({ embedding }).eq("id", id);
-          }
-        }
-      } catch {
-        // Non-blocking — embedding failure shouldn't fail the PATCH
-      }
+          generateEmbedding(text).then((embedding) => {
+            if (embedding) {
+              auth.supabase.from("products").update({ embedding }).eq("id", id).then(() => {});
+            }
+          });
+        });
     }
 
     // Fetch updated product

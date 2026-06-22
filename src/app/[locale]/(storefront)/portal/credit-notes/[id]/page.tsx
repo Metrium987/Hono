@@ -130,22 +130,24 @@ export default async function PortalCreditNoteDetailPage(props: { params: Promis
               <tr className="border-b text-muted-foreground bg-muted/50">
                 <th className="text-left px-6 py-3 font-medium">Description</th>
                 <th className="text-right px-4 py-3 font-medium">Qté</th>
-                <th className="text-right px-4 py-3 font-medium">Prix HT</th>
-                <th className="text-right px-6 py-3 font-medium">Total HT</th>
+                <th className="text-right px-4 py-3 font-medium">Prix TTC</th>
+                <th className="text-right px-6 py-3 font-medium">Total TTC</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => {
                 const tr = unwrap(item.tax_rates);
+                const rate = tr?.rate ?? 0;
+                const m = 1 + rate / 100;
                 return (
                   <tr key={item.id} className="border-b last:border-0">
                     <td className="px-6 py-3">
                       <p>{item.description}</p>
-                      {tr && <p className="text-xs text-muted-foreground mt-0.5">TVA {tr.rate}%</p>}
+                      {rate > 0 && <p className="text-xs text-muted-foreground mt-0.5">TVA {rate}% incluse</p>}
                     </td>
                     <td className="text-right px-4 py-3">{toNum(item.quantity).toLocaleString("fr-FR")}</td>
-                    <td className="text-right px-4 py-3">{fmt(item.unit_price_ht, "")}</td>
-                    <td className="text-right px-6 py-3 font-medium">{fmt(item.line_total_ht, sym)}</td>
+                    <td className="text-right px-4 py-3">{fmt(toNum(item.unit_price_ht) * m, "")}</td>
+                    <td className="text-right px-6 py-3 font-medium">{fmt(toNum(item.line_total_ht) * m, sym)}</td>
                   </tr>
                 );
               })}

@@ -8,7 +8,8 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(params.get("page") ?? "1"));
     const limit = Math.min(100, Math.max(1, parseInt(params.get("limit") ?? "50")));
     const offset = (page - 1) * limit;
-    const search = params.get("search");
+    const rawSearch = params.get("search");
+    const search = rawSearch ? rawSearch.replace(/[,()'"]/g, "").trim() : null;
 
     let query = auth.supabase
       .from("vendors")

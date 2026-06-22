@@ -1,5 +1,6 @@
 import React from "react";
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+import { formatCurrency, formatDate, PDF_NEUTRAL } from "./pdf-shared";
 
 // ── Types ──
 export type CnPdfTeam = {
@@ -62,14 +63,7 @@ export type CreditNotePdfData = {
 };
 
 // ── Styles ──
-const COLORS = {
-  primary: "#b91c1c",
-  text: "#1f2937",
-  muted: "#6b7280",
-  border: "#e5e7eb",
-  background: "#f9fafb",
-  white: "#ffffff",
-};
+const COLORS = { primary: "#b91c1c", ...PDF_NEUTRAL };
 
 const styles = StyleSheet.create({
   page: {
@@ -141,17 +135,6 @@ const styles = StyleSheet.create({
 });
 
 // ── Helpers ──
-function formatCurrency(amount: number, currency: CnPdfCurrency): string {
-  const formatted = amount.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return currency.symbol_position === "prefix"
-    ? `${currency.symbol} ${formatted}`
-    : `${formatted} ${currency.symbol}`;
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
 function getStatusStyle(status: string) {
   switch (status) {
     case "issued": return styles.statusIssued;
@@ -233,7 +216,7 @@ export function CreditNotePdfDocument({ data }: { data: CreditNotePdfData }) {
             <Text style={[styles.tableHeaderCell, styles.colDescription]}>Description</Text>
             <Text style={[styles.tableHeaderCell, styles.colQuantity]}>Qté</Text>
             <Text style={[styles.tableHeaderCell, styles.colPrice]}>Prix HT</Text>
-            <Text style={[styles.tableHeaderCell, styles.colTax]}>TVA</Text>
+            {!team.is_franchise_en_base && <Text style={[styles.tableHeaderCell, styles.colTax]}>TVA</Text>}
             <Text style={[styles.tableHeaderCell, styles.colTotal]}>Total HT</Text>
           </View>
           {items.map((item, index) => (
@@ -241,7 +224,7 @@ export function CreditNotePdfDocument({ data }: { data: CreditNotePdfData }) {
               <Text style={[styles.cellText, styles.colDescription]}>{item.description}</Text>
               <Text style={[styles.cellText, styles.colQuantity]}>{item.quantity}</Text>
               <Text style={[styles.cellText, styles.colPrice]}>{formatCurrency(item.unit_price_ht, currency)}</Text>
-              <Text style={[styles.cellText, styles.colTax]}>{item.tax_rates ? `${item.tax_rates.rate}%` : "—"}</Text>
+              {!team.is_franchise_en_base && <Text style={[styles.cellText, styles.colTax]}>{item.tax_rates ? `${item.tax_rates.rate}%` : "—"}</Text>}
               <Text style={[styles.cellText, styles.colTotal]}>{formatCurrency(item.line_total_ht, currency)}</Text>
             </View>
           ))}
@@ -250,16 +233,20 @@ export function CreditNotePdfDocument({ data }: { data: CreditNotePdfData }) {
         {/* Totals */}
         <View style={styles.totalsSection}>
           <View style={styles.totalsBox}>
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total HT</Text>
-              <Text style={styles.totalValue}>{formatCurrency(data.subtotal_ht, currency)}</Text>
-            </View>
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>TVA</Text>
-              <Text style={styles.totalValue}>{formatCurrency(data.tax_amount, currency)}</Text>
-            </View>
+            {!team.is_franchise_en_base && (
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total HT</Text>
+                <Text style={styles.totalValue}>{formatCurrency(data.subtotal_ht, currency)}</Text>
+              </View>
+            )}
+            {!team.is_franchise_en_base && (
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>TVA</Text>
+                <Text style={styles.totalValue}>{formatCurrency(data.tax_amount, currency)}</Text>
+              </View>
+            )}
             <View style={styles.grandTotalRow}>
-              <Text style={styles.grandTotalLabel}>Total TTC</Text>
+              <Text style={styles.grandTotalLabel}>{team.is_franchise_en_base ? "Total" : "Total TTC"}</Text>
               <Text style={styles.grandTotalValue}>{formatCurrency(data.total_ttc, currency)}</Text>
             </View>
           </View>

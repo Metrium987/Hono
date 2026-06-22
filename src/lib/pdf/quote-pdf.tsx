@@ -1,5 +1,6 @@
 import React from "react";
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+import { formatCurrency, formatDate, groupTaxes, PDF_NEUTRAL } from "./pdf-shared";
 
 // ── Types ──
 export type QuotePdfTeam = {
@@ -67,14 +68,7 @@ export type QuotePdfData = {
 };
 
 // ── Styles ──
-const COLORS = {
-  primary: "#1a56db",
-  text: "#1f2937",
-  muted: "#6b7280",
-  border: "#e5e7eb",
-  background: "#f9fafb",
-  white: "#ffffff",
-};
+const COLORS = { primary: "#1a56db", ...PDF_NEUTRAL };
 
 const styles = StyleSheet.create({
   page: {
@@ -149,17 +143,6 @@ const styles = StyleSheet.create({
 });
 
 // ── Helpers ──
-function formatCurrency(amount: number, currency: QuotePdfCurrency): string {
-  const formatted = amount.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return currency.symbol_position === "prefix"
-    ? `${currency.symbol} ${formatted}`
-    : `${formatted} ${currency.symbol}`;
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
-
 function getStatusStyle(status: string) {
   switch (status) {
     case "accepted": return styles.statusAccepted;
@@ -167,20 +150,6 @@ function getStatusStyle(status: string) {
     case "rejected": case "expired": return styles.statusRejected;
     default: return styles.statusDraft;
   }
-}
-
-function groupTaxes(items: QuotePdfItem[]): { name: string; rate: number; amount: number }[] {
-  const map = new Map<string, { name: string; rate: number; amount: number }>();
-  for (const item of items) {
-    if (item.tax_rates) {
-      const key = item.tax_rates.rate.toString();
-      const existing = map.get(key);
-      const taxAmount = item.line_total_ht * (item.tax_rates.rate / 100);
-      if (existing) existing.amount += taxAmount;
-      else map.set(key, { name: item.tax_rates.name, rate: item.tax_rates.rate, amount: taxAmount });
-    }
-  }
-  return Array.from(map.values());
 }
 
 // ── Component ──
@@ -251,7 +220,7 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
             <Text style={[styles.tableHeaderCell, styles.colDescription]}>Description</Text>
             <Text style={[styles.tableHeaderCell, styles.colQuantity]}>Qté</Text>
             <Text style={[styles.tableHeaderCell, styles.colPrice]}>Prix HT</Text>
-            <Text style={[styles.tableHeaderCell, styles.colTax]}>TVA</Text>
+            {!team.is_franchise_en_base && <Text style={[styles.tableHeaderCell, styles.colTax]}>TVA</Text>}
             <Text style={[styles.tableHeaderCell, styles.colTotal]}>Total HT</Text>
           </View>
           {items.length === 0 ? (
@@ -259,7 +228,7 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
               <Text style={[styles.cellText, styles.colDescription]}>Aucun article</Text>
               <Text style={[styles.cellText, styles.colQuantity]}>0</Text>
               <Text style={[styles.cellText, styles.colPrice]}>0</Text>
-              <Text style={[styles.cellText, styles.colTax]}>—</Text>
+              {!team.is_franchise_en_base && <Text style={[styles.cellText, styles.colTax]}>—</Text>}
               <Text style={[styles.cellText, styles.colTotal]}>0</Text>
             </View>
           ) : (
@@ -268,7 +237,7 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
                 <Text style={[styles.cellText, styles.colDescription]}>{item.description}</Text>
                 <Text style={[styles.cellText, styles.colQuantity]}>{item.quantity}</Text>
                 <Text style={[styles.cellText, styles.colPrice]}>{formatCurrency(item.unit_price_ht, currency)}</Text>
-                <Text style={[styles.cellText, styles.colTax]}>{item.tax_rates ? `${item.tax_rates.rate}%` : "—"}</Text>
+                {!team.is_franchise_en_base && <Text style={[styles.cellText, styles.colTax]}>{item.tax_rates ? `${item.tax_rates.rate}%` : "—"}</Text>}
                 <Text style={[styles.cellText, styles.colTotal]}>{formatCurrency(item.line_total_ht, currency)}</Text>
               </View>
             ))
@@ -282,7 +251,7 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
               <Text style={styles.totalLabel}>Total HT</Text>
               <Text style={styles.totalValue}>{formatCurrency(data.subtotal_ht, currency)}</Text>
             </View>
-            {taxGroups.map((g) => (
+            {!team.is_franchise_en_base && taxGroups.map((g) => (
               <View key={g.rate} style={styles.totalRow}>
                 <Text style={styles.totalLabel}>TVA {g.name} ({g.rate}%)</Text>
                 <Text style={styles.totalValue}>{formatCurrency(g.amount, currency)}</Text>
@@ -297,7 +266,7 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
               </View>
             )}
             <View style={styles.grandTotalRow}>
-              <Text style={styles.grandTotalLabel}>Total TTC</Text>
+              <Text style={styles.grandTotalLabel}>{team.is_franchise_en_base ? "Total" : "Total TTC"}</Text>
               <Text style={styles.grandTotalValue}>{formatCurrency(data.total_ttc, currency)}</Text>
             </View>
           </View>

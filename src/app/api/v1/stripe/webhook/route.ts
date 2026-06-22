@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
       }
 
       const currencyId = invoice.currency_id;
-      const currencyCode = (invoice.currency as any)?.code || "XPF";
+      const rawCurrency = invoice.currency;
+      const currencyCode = (Array.isArray(rawCurrency) ? rawCurrency[0]?.code : rawCurrency?.code) ?? "XPF";
       const isZeroDecimal = ["xpf", "jpy"].includes(currencyCode.toLowerCase());
       const finalAmount = isZeroDecimal ? amountTotal : amountTotal / 100;
 
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
         payload: { source: "stripe", session_id: session.id, amount: amountTotal },
       });
 
-      console.log(`Stripe payment recorded for invoice ${invoiceId}: ${amountTotal} XPF`);
+      console.info(`[stripe-webhook] payment recorded invoice ${invoiceId}: ${amountTotal}`);
     }
 
     return NextResponse.json({ received: true });
