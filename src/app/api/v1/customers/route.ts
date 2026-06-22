@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
-import { generateEmbedding } from "@/lib/embeddings";
+import { generateEmbedding } from "@/lib/ai/embeddings";
 
 // GET /api/v1/customers — List customers for a team (with search and pagination)
 export async function GET(request: NextRequest) {

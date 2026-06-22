@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertTriangle, Send, Clock, FileText, CheckCircle } from "lucide-react";
+import { toast } from "sonner";
 
 export type ReminderInvoice = {
   id: string;
@@ -35,12 +36,10 @@ function fmt(n: number) {
 export function RemindersClient({ invoices, teamId }: { invoices: ReminderInvoice[]; teamId: string }) {
   const [sending, setSending] = useState<Record<string, boolean>>({});
   const [sent, setSent] = useState<Record<string, number>>({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   async function sendReminder(inv: ReminderInvoice) {
     if (!inv.nextLevel) return;
     setSending((s) => ({ ...s, [inv.id]: true }));
-    setErrors((e) => { const n = { ...e }; delete n[inv.id]; return n; });
 
     try {
       const res = await fetch(`/api/v1/invoices/${inv.id}/remind?team_id=${teamId}`, {
@@ -51,8 +50,9 @@ export function RemindersClient({ invoices, teamId }: { invoices: ReminderInvoic
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Erreur d'envoi");
       setSent((s) => ({ ...s, [inv.id]: inv.nextLevel! }));
+      toast.success(`Relance envoyée pour ${inv.invoice_number}`);
     } catch (err) {
-      setErrors((e) => ({ ...e, [inv.id]: err instanceof Error ? err.message : "Erreur" }));
+      toast.error(err instanceof Error ? err.message : "Erreur");
     } finally {
       setSending((s) => ({ ...s, [inv.id]: false }));
     }
@@ -75,7 +75,6 @@ export function RemindersClient({ invoices, teamId }: { invoices: ReminderInvoic
       {invoices.map((inv) => {
         const justSent = sent[inv.id];
         const isSending = sending[inv.id];
-        const err = errors[inv.id];
         const lastLevel = justSent ?? inv.lastReminder?.level ?? null;
         const levelInfo = lastLevel ? LEVEL_LABELS[lastLevel] : null;
 
@@ -148,7 +147,6 @@ export function RemindersClient({ invoices, teamId }: { invoices: ReminderInvoic
                     </Button>
                   ) : null}
 
-                  {err && <p className="text-xs text-red-600 max-w-[180px] text-right">{err}</p>}
                 </div>
               </div>
             </CardContent>

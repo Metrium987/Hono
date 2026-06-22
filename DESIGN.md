@@ -2,13 +2,13 @@
 name: Hono ERP
 description: ERP de facturation SaaS pour les professionnels de Polynésie française
 colors:
-  institution-blue: "oklch(0.546 0.245 262.881)"
-  deep-void: "oklch(0.145 0 0)"
-  ink-white: "oklch(0.985 0 0)"
-  surface-raised: "oklch(0.205 0.042 265.755)"
-  surface-elevated: "oklch(0.269 0.021 257.438)"
-  steel-fog: "oklch(0.708 0.047 252.682)"
-  signal-red: "oklch(0.577 0.245 27.325)"
+  jade-autorite: "oklch(0.52 0.13 158)"
+  vide-ardoise: "oklch(0.12 0.008 162)"
+  blanc-encre: "oklch(0.985 0 0)"
+  surface-principale: "oklch(0.18 0.012 162)"
+  surface-elevee: "oklch(0.26 0.014 162)"
+  brume-jade: "oklch(0.68 0.035 162)"
+  signal-rouge: "oklch(0.577 0.245 27.325)"
 typography:
   display:
     fontFamily: "Geist Sans, system-ui, sans-serif"

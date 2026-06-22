@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Loader2, GripVertical, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import type { CategoryRow } from "./page";
 
 function slugify(str: string) {
@@ -121,6 +122,7 @@ export function CategoriesClient({
 
       setDialog(null);
       router.refresh();
+      toast.success(isEdit ? "Catégorie mise à jour" : "Catégorie créée");
 
       // Optimistic update
       if (isEdit) {
@@ -158,11 +160,16 @@ export function CategoriesClient({
     if (!confirm("Supprimer cette catégorie ? Les produits liés n'auront plus de catégorie.")) return;
     setDeleting(id);
     try {
-      await fetch(`/api/v1/categories/${id}?team_id=${teamId}`, { method: "DELETE" });
-      setCategories((prev) => prev.filter((c) => c.id !== id));
-      router.refresh();
+      const res = await fetch(`/api/v1/categories/${id}?team_id=${teamId}`, { method: "DELETE" });
+      if (res.ok) {
+        setCategories((prev) => prev.filter((c) => c.id !== id));
+        router.refresh();
+        toast.success("Catégorie supprimée");
+      } else {
+        toast.error("Erreur lors de la suppression");
+      }
     } catch {
-      // ignore
+      toast.error("Erreur réseau");
     } finally {
       setDeleting(null);
     }

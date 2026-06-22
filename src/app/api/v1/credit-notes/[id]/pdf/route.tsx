@@ -12,7 +12,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   return withAuth(_request, async (auth, teamId) => {
-    requirePermission(auth, "credit_notes", "read");
+    requirePermission(auth, "invoices", "read");
     const { id } = await params;
 
     const { data: cn, error: cnError } = await auth.supabase

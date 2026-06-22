@@ -26,7 +26,7 @@ export const SECURITY_HEADERS: Record<string, string> = {
       ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:8400"
       : "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    "img-src 'self' data: blob: https://*.supabase.co",
     "font-src 'self' data:",
     process.env.NODE_ENV === "development"
       ? "connect-src 'self' https://*.supabase.co https://api.resend.com https://api.stripe.com http://localhost:8400 ws://localhost:8400"

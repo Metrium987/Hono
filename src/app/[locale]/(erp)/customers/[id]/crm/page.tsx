@@ -136,7 +136,7 @@ export default async function CustomerCrmPage(props: { params: Params }) {
               notes.map((note) => (
                 <Card key={note.id}>
                   <CardContent className="p-4">
-                    <p className="text-sm whitespace-pre-line">{note.content}</p>
+                    <div className="prose prose-invert prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: note.content }} />
                     <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
                       <Clock className="h-3 w-3" />
                       <span>{fmtDateTime(note.created_at)}</span>

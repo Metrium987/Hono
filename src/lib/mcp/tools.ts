@@ -117,7 +117,7 @@ export function registerTools(
         customer_id: z.string().describe("UUID du client"),
         currency_id: z.string().describe("UUID de la devise"),
         issue_date: z.string().describe("Date d'émission au format YYYY-MM-DD"),
-        valid_until: z.string().optional().describe("Date de validité YYYY-MM-DD"),
+        validity_date: z.string().optional().describe("Date de validité YYYY-MM-DD"),
         notes: z.string().optional(),
         items: z.array(z.object({
           description: z.string(),
@@ -126,7 +126,7 @@ export function registerTools(
           tax_rate_id: z.string().nullable().optional(),
         })).min(1).describe("Lignes du devis")
       },
-      async ({ customer_id, currency_id, issue_date, valid_until, notes, items }) => {
+      async ({ customer_id, currency_id, issue_date, validity_date, notes, items }) => {
         // Validate customer belongs to team
         const { data: customer } = await supabase.from("customers").select("id").eq("id", customer_id).eq("team_id", teamId).single();
         if (!customer) return textResult("Erreur : Le client spécifié n'existe pas ou n'appartient pas à votre équipe.");
@@ -176,7 +176,7 @@ export function registerTools(
           quote_number: quote,
           status: "draft",
           issue_date,
-          valid_until: valid_until ?? null,
+          validity_date: validity_date ?? null,
           notes: notes ?? null,
           subtotal_ht: Math.round(subtotal_ht * 100) / 100,
           tax_amount: Math.round(tax_amount * 100) / 100,

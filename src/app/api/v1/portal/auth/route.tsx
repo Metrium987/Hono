@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
         console.error("Failed to send portal magic link email:", emailError);
       }
     } else {
-      console.log(`[DEV] Portal magic link for ${normalizedEmail}: ${magicLink}`);
+      console.warn(`[DEV] Portal magic link would be sent to ${normalizedEmail} (no RESEND_API_KEY configured)`);
     }
 
     return NextResponse.json({

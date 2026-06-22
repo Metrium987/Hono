@@ -108,7 +108,7 @@ const paragraph = {
 
 const button = {
   display: "inline-block",
-  backgroundColor: "#2563eb",
+  backgroundColor: "#0d7a63",
   color: "#ffffff",
   padding: "12px 24px",
   borderRadius: "6px",

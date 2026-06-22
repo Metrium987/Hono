@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { withAuth } from "@/lib/auth/api-auth";
+import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 import { createAdminClient } from "@/utils/supabase/admin";
 
 export async function GET(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
+    requirePermission(auth, "settings", "read");
     const admin = createAdminClient();
     const { data: members } = await admin
       .from("team_members")

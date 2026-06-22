@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Mail, CheckCircle2, Eye, EyeOff } from "lucide-react";
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const invitationRedirect = searchParams.get("redirect") ?? searchParams.get("invitation_redirect");
 
   // --- Staff tab state ---
   const [staffEmail, setStaffEmail] = useState("");
@@ -44,7 +46,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/fr/");
+    router.push(invitationRedirect ?? "/fr/");
     router.refresh();
   }
 
@@ -247,5 +249,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
   );
 }

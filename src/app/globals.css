@@ -1,25 +1,29 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: oklch(0.145 0 0);
-  --color-foreground: oklch(0.985 0 0);
-  --color-primary: oklch(0.546 0.245 262.881);
-  --color-primary-foreground: oklch(0.985 0 0);
-  --color-card: oklch(0.205 0.042 265.755);
-  --color-card-foreground: oklch(0.985 0 0);
-  --color-popover: oklch(0.205 0.042 265.755);
-  --color-popover-foreground: oklch(0.985 0 0);
-  --color-secondary: oklch(0.269 0.021 257.438);
-  --color-secondary-foreground: oklch(0.985 0 0);
-  --color-muted: oklch(0.269 0.021 257.438);
-  --color-muted-foreground: oklch(0.708 0.047 252.682);
-  --color-accent: oklch(0.269 0.021 257.438);
-  --color-accent-foreground: oklch(0.985 0 0);
-  --color-destructive: oklch(0.577 0.245 27.325);
+  /* ── Jade d'Autorité — Hono ERP 2026 ─────────────────────────────────────
+     Primary hue 158 (forest jade): distinctive, financial, non-tropical.
+     All neutrals are tinted toward hue 162 for palette cohesion.
+  */
+  --color-background:           oklch(0.12 0.008 162);
+  --color-foreground:           oklch(0.97 0.005 162);
+  --color-primary:              oklch(0.52 0.13 158);
+  --color-primary-foreground:   oklch(0.985 0 0);
+  --color-card:                 oklch(0.18 0.012 162);
+  --color-card-foreground:      oklch(0.97 0.005 162);
+  --color-popover:              oklch(0.18 0.012 162);
+  --color-popover-foreground:   oklch(0.97 0.005 162);
+  --color-secondary:            oklch(0.25 0.014 162);
+  --color-secondary-foreground: oklch(0.97 0.005 162);
+  --color-muted:                oklch(0.22 0.01 162);
+  --color-muted-foreground:     oklch(0.68 0.035 162);
+  --color-accent:               oklch(0.25 0.014 162);
+  --color-accent-foreground:    oklch(0.97 0.005 162);
+  --color-destructive:          oklch(0.577 0.245 27.325);
   --color-destructive-foreground: oklch(0.985 0 0);
-  --color-border: oklch(0.269 0.021 257.438);
-  --color-input: oklch(0.269 0.021 257.438);
-  --color-ring: oklch(0.546 0.245 262.881);
+  --color-border:               oklch(0.26 0.014 162);
+  --color-input:                oklch(0.26 0.014 162);
+  --color-ring:                 oklch(0.52 0.13 158);
   --radius: 0.625rem;
 }
 
@@ -31,4 +35,46 @@ body {
 
 code, pre, kbd, samp {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* Tiptap editor placeholder (from @tiptap/extension-placeholder) */
+.ProseMirror p.is-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-muted-foreground);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Tiptap prose styles */
+.ProseMirror {
+  outline: none;
+}
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.25rem;
+}
+.ProseMirror ul { list-style-type: disc; }
+.ProseMirror ol { list-style-type: decimal; }
+.ProseMirror strong { font-weight: 600; }
+.ProseMirror em { font-style: italic; }
+
+/* Schedule-X dark theme — mapped to Jade d'Autorité palette */
+.is-dark {
+  --sx-color-primary:                  oklch(0.52 0.13 158);
+  --sx-color-on-primary:               oklch(0.985 0 0);
+  --sx-color-primary-container:        oklch(0.28 0.065 158);
+  --sx-color-on-primary-container:     oklch(0.985 0 0);
+  --sx-color-surface:                  oklch(0.18 0.012 162);
+  --sx-color-surface-dim:              oklch(0.12 0.008 162);
+  --sx-color-surface-bright:           oklch(0.26 0.014 162);
+  --sx-color-on-surface:               oklch(0.97 0.005 162);
+  --sx-color-surface-container:        oklch(0.18 0.012 162);
+  --sx-color-surface-container-low:    oklch(0.15 0.01 162);
+  --sx-color-surface-container-high:   oklch(0.26 0.014 162);
+  --sx-color-background:               oklch(0.12 0.008 162);
+  --sx-color-on-background:            oklch(0.97 0.005 162);
+  --sx-color-outline:                  oklch(0.50 0.035 162);
+  --sx-color-outline-variant:          oklch(0.26 0.014 162);
+  --sx-internal-color-text:            oklch(0.97 0.005 162);
 }

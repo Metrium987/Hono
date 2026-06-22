@@ -25,37 +25,75 @@ import {
   Percent,
   Trophy,
   Activity,
+  CalendarDays,
+  KanbanSquare,
+  RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
-const mainNavItems = [
-  { key: "invoices" as const,     href: "/invoices",     icon: FileText },
-  { key: "quotes" as const,       href: "/quotes",       icon: FileSignature },
-  { key: "credit_notes" as const, href: "/credit-notes", icon: Receipt },
-  { key: "orders" as const,       href: "/orders",       icon: ShoppingCart },
-  { key: "reminders" as const,   href: "/reminders",   icon: Bell },
-  { key: "products" as const,     href: "/catalog",             icon: Package },
-  { key: "categories" as const,  href: "/catalog/categories",  icon: Tag },
-  { key: "promotions" as const,      href: "/promotions",          icon: Percent },
-  { key: "clients" as const,         href: "/customers",           icon: Users },
-  { key: "team_performance" as const, href: "/team-performance",   icon: Trophy },
-  { key: "my_activity" as const,     href: "/my-activity",         icon: Activity },
+type NavItem = {
+  key: string;
+  href: string;
+  icon: React.ElementType;
+};
+
+type NavGroup = {
+  sectionKey: string;
+  items: NavItem[];
+};
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    sectionKey: "commerce_section",
+    items: [
+      { key: "invoices",           href: "/invoices",           icon: FileText },
+      { key: "quotes",             href: "/quotes",             icon: FileSignature },
+      { key: "credit_notes",       href: "/credit-notes",       icon: Receipt },
+      { key: "orders",             href: "/orders",             icon: ShoppingCart },
+      { key: "recurring_invoices", href: "/recurring-invoices", icon: RefreshCw },
+    ],
+  },
+  {
+    sectionKey: "crm_section",
+    items: [
+      { key: "clients",   href: "/customers", icon: Users },
+      { key: "crm_board", href: "/crm-board", icon: KanbanSquare },
+      { key: "reminders", href: "/reminders", icon: Bell },
+    ],
+  },
+  {
+    sectionKey: "catalog_section",
+    items: [
+      { key: "products",    href: "/catalog",             icon: Package },
+      { key: "categories",  href: "/catalog/categories",  icon: Tag },
+      { key: "promotions",  href: "/promotions",          icon: Percent },
+    ],
+  },
+  {
+    sectionKey: "finance_section",
+    items: [
+      { key: "expenses",     href: "/expenses",     icon: TrendingDown },
+      { key: "income",       href: "/income",       icon: TrendingUp },
+      { key: "vendors",      href: "/vendors",      icon: Truck },
+      { key: "treasury",     href: "/treasury",     icon: Wallet },
+      { key: "revenue_book", href: "/revenue-book", icon: BookOpen },
+      { key: "break_even",   href: "/break-even",   icon: Target },
+    ],
+  },
+  {
+    sectionKey: "team_section",
+    items: [
+      { key: "calendar",        href: "/calendar",         icon: CalendarDays },
+      { key: "my_activity",     href: "/my-activity",      icon: Activity },
+      { key: "team_performance", href: "/team-performance", icon: Trophy },
+    ],
+  },
 ];
 
-const financeNavItems = [
-  { key: "expenses" as const,     href: "/expenses",     icon: TrendingDown },
-  { key: "income" as const,       href: "/income",       icon: TrendingUp },
-  { key: "vendors" as const,      href: "/vendors",      icon: Truck },
-  { key: "treasury" as const,     href: "/treasury",     icon: Wallet },
-  { key: "revenue_book" as const, href: "/revenue-book", icon: BookOpen },
-  { key: "break_even" as const,   href: "/break-even",   icon: Target },
-];
-
-const bottomNavItems = [
-  { key: "reports" as const,  href: "/reports",  icon: BarChart3 },
-  { key: "settings" as const, href: "/settings", icon: Settings },
+const BOTTOM_ITEMS: NavItem[] = [
+  { key: "reports",  href: "/reports",  icon: BarChart3 },
+  { key: "settings", href: "/settings", icon: Settings },
 ];
 
 export function ErpSidebar({ teamName }: { teamName: string }) {
@@ -67,19 +105,19 @@ export function ErpSidebar({ teamName }: { teamName: string }) {
   const relativePath = pathname.replace(/^\/[a-z]{2}/, "");
 
   function NavLink({ href, icon: Icon, labelKey }: { href: string; icon: React.ElementType; labelKey: string }) {
-    const isActive = relativePath.startsWith(href);
+    const isActive = relativePath === href || (href !== "/" && relativePath.startsWith(href));
     return (
       <Link
         href={`/${locale}${href}`}
         className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+          "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors duration-150",
           isActive
             ? "bg-primary/10 text-primary"
             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         )}
       >
         <Icon className="h-4 w-4 shrink-0" />
-        {!collapsed && <span>{t(labelKey)}</span>}
+        {!collapsed && <span className="truncate">{t(labelKey)}</span>}
       </Link>
     );
   }
@@ -88,12 +126,12 @@ export function ErpSidebar({ teamName }: { teamName: string }) {
     <aside
       className={cn(
         "flex flex-col border-r bg-card transition-all duration-200",
-        collapsed ? "w-16" : "w-60"
+        collapsed ? "w-[52px]" : "w-56"
       )}
     >
-      {/* Logo / Brand */}
-      <div className="flex h-14 items-center gap-2 border-b px-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
+      {/* Brand */}
+      <div className="flex h-13 items-center gap-2.5 border-b px-3">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold tracking-tight">
           H
         </div>
         {!collapsed && (
@@ -101,41 +139,41 @@ export function ErpSidebar({ teamName }: { teamName: string }) {
         )}
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 space-y-1 p-3">
-        <div className="space-y-1">
-          {mainNavItems.map((item) => (
-            <NavLink key={item.href} href={item.href} icon={item.icon} labelKey={item.key} />
-          ))}
-        </div>
-
-        {!collapsed && <Separator className="my-2" />}
-
-        {!collapsed && <p className="px-3 text-xs font-medium text-muted-foreground">{t("finance_section")}</p>}
-        <div className="space-y-1">
-          {financeNavItems.map((item) => (
-            <NavLink key={item.href} href={item.href} icon={item.icon} labelKey={item.key} />
-          ))}
-        </div>
-
-        {!collapsed && <Separator className="my-2" />}
-
-        <div className="space-y-1">
-          {bottomNavItems.map((item) => (
-            <NavLink key={item.href} href={item.href} icon={item.icon} labelKey={item.key} />
-          ))}
-        </div>
+      {/* Groups */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
+        {NAV_GROUPS.map((group) => (
+          <div key={group.sectionKey}>
+            {!collapsed && (
+              <p className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                {t(group.sectionKey)}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => (
+                <NavLink key={item.href} href={item.href} icon={item.icon} labelKey={item.key} />
+              ))}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Collapse button */}
-      <div className="border-t p-3">
+      {/* Bottom — reports + settings */}
+      <div className="border-t px-2 py-2 space-y-0.5">
+        {BOTTOM_ITEMS.map((item) => (
+          <NavLink key={item.href} href={item.href} icon={item.icon} labelKey={item.key} />
+        ))}
+      </div>
+
+      {/* Collapse toggle */}
+      <div className="border-t p-2">
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-center"
+          className="w-full h-8 justify-center text-muted-foreground hover:text-foreground"
           onClick={() => setCollapsed(!collapsed)}
+          aria-label={collapsed ? "Déplier le menu" : "Replier le menu"}
         >
-          <ChevronLeft className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")} />
+          <ChevronLeft className={cn("h-4 w-4 transition-transform duration-200", collapsed && "rotate-180")} />
         </Button>
       </div>
     </aside>

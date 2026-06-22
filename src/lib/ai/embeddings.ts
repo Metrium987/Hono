@@ -1,8 +1,9 @@
-// Gemini Embedding 2 (Google AI) — free tier, 3072 dims truncated to 1536 for pgvector compat
-// outputDimensionality=1536 keeps the existing DB schema (VECTOR(1536))
+// Gemini Embedding 2 (Google AI) — free tier, 768 dims for pgvector compat
+// Uses 768 dimensions to match the actual DB schema (VECTOR(768)) after migration 00003_vector_768.sql
+// outputDimensionality=768 keeps index compatibility and reduces storage/query cost
 
 const EMBEDDING_MODEL = "gemini-embedding-2";
-const OUTPUT_DIMS = 1536;
+const OUTPUT_DIMS = 768;
 
 function getApiKey(): string {
   const key = process.env.GOOGLE_AI_API_KEY;

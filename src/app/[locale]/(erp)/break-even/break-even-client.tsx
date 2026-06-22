@@ -28,13 +28,12 @@ function fmt(n: number) {
   return `${Math.round(n).toLocaleString("fr-FR")} F`;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border bg-background shadow-md p-3 text-xs min-w-[180px] space-y-1">
       <p className="font-semibold">{label}</p>
-      {payload.map((p: { name: string; value: number; color: string }, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} className="flex justify-between gap-4">
           <span style={{ color: p.color }}>{p.name}</span>
           <span className="font-medium tabular-nums">{fmt(p.value)}</span>

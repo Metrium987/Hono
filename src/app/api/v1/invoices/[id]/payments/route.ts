@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+import { Resend } from "resend";
+import { render } from "@react-email/components";
+import React from "react";
+import { PaymentConfirmationEmail } from "@/lib/email/payment-confirmation-email";
+
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+const FROM = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
 
 // GET /api/v1/invoices/[id]/payments — List payments for an invoice
 export async function GET(
@@ -135,6 +142,52 @@ export async function POST(
           status: "pending",
           created_at: now,
         }, { onConflict: "invoice_id" });
+      }
+    }
+
+    // Send payment confirmation email if invoice is now fully paid
+    if (!wasAlreadyPaid && isNowPaid && resend) {
+      try {
+        const { data: fullInvoice } = await auth.supabase
+          .from("invoices")
+          .select("invoice_number, total_ttc, customer:customer_id(contact_name, company_name, email), team:team_id(name, email, phone), currency:currency_id(symbol, code)")
+          .eq("id", id)
+          .single();
+
+        type CustomerShape = { contact_name?: string; company_name?: string; email?: string };
+        type TeamShape = { name?: string; email?: string; phone?: string };
+        type CurrencyShape = { symbol?: string; code?: string };
+        const rawCustomer: unknown = fullInvoice?.customer;
+        const rawTeam: unknown = fullInvoice?.team;
+        const rawCurrency: unknown = fullInvoice?.currency;
+        const customer = Array.isArray(rawCustomer) ? (rawCustomer[0] as CustomerShape) : (rawCustomer as CustomerShape | null ?? null);
+        const team = Array.isArray(rawTeam) ? (rawTeam[0] as TeamShape) : (rawTeam as TeamShape | null ?? null);
+        const currency = Array.isArray(rawCurrency) ? (rawCurrency[0] as CurrencyShape) : (rawCurrency as CurrencyShape | null ?? null);
+
+        if (customer?.email && fullInvoice) {
+          const html = await render(React.createElement(PaymentConfirmationEmail, {
+            data: {
+              invoiceNumber: fullInvoice.invoice_number,
+              amountPaid: parseFloat(String(amount)),
+              paymentDate: payment_date ?? new Date().toLocaleDateString("fr-FR"),
+              currency: currency?.symbol ?? currency?.code ?? "F",
+              customerName: customer.company_name || customer.contact_name || "",
+              teamName: team?.name ?? "",
+              teamEmail: team?.email ?? null,
+              teamPhone: team?.phone ?? null,
+              isFullyPaid: true,
+            },
+          }));
+
+          await resend.emails.send({
+            from: `${team?.name ?? "Hono"} <${FROM}>`,
+            to: [customer.email],
+            subject: `Paiement reçu — Facture ${fullInvoice.invoice_number} soldée`,
+            html,
+          });
+        }
+      } catch {
+        // Non-critical — don't fail the payment if email errors
       }
     }
 

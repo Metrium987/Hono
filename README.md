@@ -1,132 +1,219 @@
-# HONO ERP
+# Hono ERP
 
-**The first AI-native ERP built for modern business.**
+**ERP cloud-native pour les entreprises de Polynésie française.**
 
-HONO is a full-stack Enterprise Resource Planning platform that combines a complete billing engine, CRM, inventory management, client portal, storefront, and financial reporting with a native **Model Context Protocol (MCP)** server — giving AI assistants direct, permissioned access to your business data.
+Hono est une plateforme de gestion d'entreprise complète (facturation, CRM, catalogue, portail client, finance) construite sur Next.js 16 et Supabase. Elle intègre nativement un serveur **Model Context Protocol (MCP)** qui donne à n'importe quel assistant IA un accès sécurisé et filtré par permissions à toutes vos données métier.
+
+Déployée sur [Vercel](https://hono-self-nu.vercel.app/).
 
 ---
 
-## Why HONO?
+## Pourquoi Hono ?
 
-Most ERPs are monolithic relics from the 2000s — Python, PHP, Java, complex servers to maintain. HONO is built from the ground up on modern infrastructure:
-
-| | HONO | Traditional ERP |
+| | Hono | ERP traditionnel |
 |---|---|---|
-| **Stack** | Next.js 16 + Supabase (serverless) | Python/PHP monolith |
-| **Deploy** | `vercel deploy` — instant | Dedicated server, sysadmin needed |
-| **AI** | Native MCP server, 24 tools, RBAC-filtered | Bolted-on plugin or nothing |
-| **Auth** | Dual-path: client portal (magic link) + ERP (password) + API keys | Single auth or complex SSO |
-| **Search** | pgvector semantic search (OpenAI embeddings) | Basic SQL LIKE queries |
-| **PDF** | Server-side react-pdf, PF-compliant templates | Separate tool or library |
-| **Payments** | Local + Stripe checkout + webhook | Often separate payment gateway |
-| **Multi-tenant** | Team-scoped RLS at database level | Table-per-tenant or complex schemas |
-| **i18n** | next-intl, zero hardcoded strings | Usually English-only |
+| **Stack** | Next.js 16 + Supabase (serverless) | PHP / Python / Java monolithe |
+| **Déploiement** | `vercel deploy` — sans serveur | Serveur dédié + sysadmin |
+| **IA native** | MCP server, 14 outils, filtrage RBAC | Plugin bolté ou absent |
+| **Auth** | Session staff + magic link portail + API keys | Authentification unique |
+| **Recherche** | ILIKE + pgvector (embeddings Google AI) | SQL LIKE basique |
+| **PDF** | react-pdf server-side, conformité PF | Outil séparé |
+| **Multi-tenant** | RLS Supabase par team_id au niveau base | Table-par-tenant ou schéma complexe |
+| **i18n** | next-intl, zéro string en dur | Souvent anglais uniquement |
 
 ---
 
-## Capabilities
+## Fonctionnalités
 
-### Billing Engine
-- **Invoices** — Dynamic line items, TVA selection, live totals, PDF download, email via Resend, auto-status (draft→sent→paid/partial/overdue)
-- **Quotes** — Create, send, accept, convert to invoice, validity dates, PDF
-- **Credit Notes** — Full refund workflow with stock restoration
-- **Invoice Payments** — Record payments, auto-status trigger, Stripe Checkout integration
-- **Recurring Invoices** — Scheduled auto-generation (requires migration deploy)
-- **Invoice Events** — Complete audit trail (created, sent, viewed, paid, etc.)
-- **Invoice Number Rules** — Configurable prefixes, sequences, Free Mode renumbering
+### Commerce & Facturation
 
-### Catalog & CRM
-- **Products** — Multi-category, multi-language translations, stock tracking, low stock alerts, FTS + vector search
-- **Customers** — CRM with N° TAHITI / VAT number, B2B/B2C, portal access toggle, search
-- **Vendors** — Contact management with tax ID
+- **Factures** — Lignes dynamiques, sélection TVA, totaux HT/TTC live, PDF, envoi email (Resend), statuts automatiques (brouillon → envoyée → payée / partielle / en retard)
+- **Devis** — Création, envoi email, acceptation, conversion en facture, date de validité, PDF
+- **Avoirs** — Workflow complet avec restauration de stock
+- **Paiements** — Enregistrement manuel, Stripe Checkout, email de confirmation, déclenchement statut automatique
+- **Factures récurrentes** — Templates avec fréquence (hebdo, mensuel, trimestriel, annuel), génération automatique Vercel Cron (06h Tahiti)
+- **Relances automatiques** — Cron quotidien (08h Tahiti) sur factures en retard, cooldown 14 jours, historique
+- **Numérotation séquentielle** — RPC `generate_next_invoice_number`, conforme aux obligations légales PF
+- **Journal des événements** — Audit trail complet (envoi, paiement, relance…)
 
-### Storefront & Client Portal
-- **Product listing** — Category filter, search, HT/TTC pricing
-- **Cart** — Quantity controls, line totals, localStorage persistence
-- **Checkout** — Contact form → auto-generates quote
-- **Portal** — Magic link auth, dashboard with document counts, quotes/invoices/orders history
+### CRM & Clients
 
-### Financial Reports
-- **Profit & Loss** — Revenue (invoiced + other income) vs expenses, net income, profit margin, expense ratio
-- **VAT by Rate** — Taxable base and VAT collected per rate
-- **Client Statement** — Customer invoices + payments with totals
+- **Pipeline CRM** — Kanban drag-and-drop (`@dnd-kit`), statuts configurables, attribution staff, notes Tiptap
+- **Clients** — Fiche complète (N° Tahiti, B2B/B2C, portail activé), historique factures/devis, notes CRM
+- **Relances** — Planification et suivi des relances par client
+- **Agenda** — Calendrier des événements par groupe de staff, filtre client
 
-### Expenses & Income
-- Expense tracking with categories, vendors, currency, receipt upload
-- Non-invoice income tracking with customer links
-- Vendor management with N° TAHITI
+### Catalogue & Promotions
 
-### AI & Automation
-- **MCP Server** — 24 tools across invoices, quotes, products, customers, orders, payments, settings. Dynamic tool filtering based on API key permissions.
-- **OpenAPI 3.0 Spec** — All 30+ endpoints documented
-- **pgvector Semantic Search** — Vector embeddings on products and customers (infrastructure ready)
+- **Produits** — Multi-catégories, traductions multilingues, suivi stock, alertes seuil, prix de revient + marge live, embedding sémantique auto (création et modification)
+- **Catégories** — Arbre hiérarchique avec slug
+- **Promotions** — Remises par client, produit ou segment, dates de validité
 
-### Admin & Configuration
-- **RBAC** — 4 default roles (Admin, Manager, Salesperson, Accountant), JSONB permissions per module
-- **Educational / Free Mode** — Restrict edits to finalized documents for training
-- **API Key Management** — Create, revoke, permission-scoped keys
-- **Tax Rates** — Configure rates per locale
-- **Currencies** — Multi-currency with exchange rates
-- **Payment Methods** — Offline (cash, check, card, bank transfer) + online (Stripe, PayPal)
+### Finance & Reporting
 
-### Legal & Compliance
-- N° TAHITI / VAT number on invoices, quotes, credit notes, vendors, customers
-- French Polynesia TVA rates (1%, 5%, 13%, 16%, 0% exempt)
-- Legal mentions, service date, late fee, RIB/IBAN on PDFs
-- B2B validation (requires tax ID)
-- Franchise en base support
-- Archived document history for renumbering audit trail
+- **Trésorerie** — Flux entrants/sortants, solde courant
+- **Livre de recettes** — Registre légal des encaissements
+- **Dépenses** — Catégorisées, liées aux fournisseurs, pièces jointes
+- **Revenus annexes** — Revenus hors-factures
+- **Rapports** — P&L, TVA par taux, relevé client
+- **Seuil de rentabilité** — Calcul automatique du point mort
+- **Performance équipe** — Commissions commerciales, règles de commission configurables
+
+### Portail client
+
+- **Catalogue public** — Listing produits, filtre catégorie, prix TTC (obligation DGAE)
+- **Panier** — Quantités, totaux, persistance localStorage
+- **Checkout** — Formulaire contact → génération devis automatique
+- **Portal B2B** — Magic link auth, tableau de bord, historique devis/factures/commandes/avoirs
+
+### Admin & Paramétrage
+
+- **RBAC** — Rôles + permissions JSONB granulaires par module (read/write), propriétaire bypass total
+- **Groupes de staff** — Organisation des collaborateurs avec couleur d'affichage
+- **Invitations** — Envoi par email (token 7 jours), page d'acceptation, vérification email/membre existant
+- **Clés API** — Création, révocation, permissions scopées
+- **Taux de TVA** — Configuration par équipe (16%, 13%, 5%, 1%, 0%)
+- **Devises** — Multi-devises avec taux de change
+- **Moyens de paiement** — Espèces, chèque, virement, CB + Stripe, PayPal
+- **Mode éducatif** — Workflow de demande de suppression avec approbation propriétaire
+
+### IA & MCP
+
+Le serveur MCP (`/api/mcp`) expose **14 outils** filtrés dynamiquement selon les permissions du porteur de clé API :
+
+| Outil | Module |
+|-------|--------|
+| `list_products` / `get_product` | Catalogue |
+| `list_customers` / `get_customer` | CRM |
+| `list_quotes` / `get_quote` / `create_quote` / `convert_quote_to_invoice` | Devis |
+| `list_invoices` / `get_invoice` / `record_payment` | Facturation |
+| `list_orders` / `update_order_status` | Commandes |
+| `get_dashboard_summary` | Reporting |
+
+Authentification via `Authorization: Bearer <api_key>`. Chaque outil n'est exposé que si la clé possède la permission correspondante.
 
 ---
 
-## License
+## Conformité Polynésie française
 
-**GNU Affero General Public License v3.0 (AGPL-3.0)**
-
-HONO is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation.
-
-This license ensures that if anyone runs a modified version on a network server (SaaS), they must make their source code available to users. It protects your business from competitors cloning your work while keeping the project open.
-
-**For commercial use (installing for clients, selling as a service):** You keep the AGPL — it allows you to charge for installation, support, and maintenance. The AGPL only requires you to make the source available to the people you serve, which is compatible with your business model.
-
-If a client wants an exception (closed-source integration), you can sell them a commercial license — that's a conversation for later when you have customers asking.
+| Règle | Implémentation |
+|-------|----------------|
+| Numérotation séquentielle | RPC `generate_next_invoice_number` — jamais assigné manuellement |
+| Immuabilité | Après draft, numéro et lignes verrouillés |
+| Soft-delete | `deleted_at` sur les factures — conservation 10 ans, jamais de hard-delete |
+| N° TAHITI | Affiché vendeur + acheteur sur toutes les factures B2B |
+| Franchise en base | Masquage TVA + mention légale sur les PDFs si `is_franchise_en_base` |
+| TVA 2026 | 16% standard / 13% services / 5% essentiels / 1% archipels éloignés / 0% exonéré |
+| Majoration retard | 5 000 F CFP (paramètres équipe) |
+| Prix TTC storefront | Obligatoire en B2C (règlement DGAE) |
+| Fuseau horaire DB | Pacific/Tahiti |
 
 ---
 
-## Quick Start
+## Architecture
 
-```bash
-git clone https://github.com/your-org/hono
-cd hono
-cp .env.example .env.local
-# Fill in your Supabase and Stripe credentials
-npm install
-npm run dev
+```
+src/
+├── app/
+│   ├── [locale]/
+│   │   ├── (erp)/          # Back-office staff (sidebar layout)
+│   │   ├── (storefront)/   # Catalogue public + portail client
+│   │   └── login/          # Auth unifiée staff + client
+│   └── api/
+│       ├── v1/             # 60+ endpoints REST (withAuth + requirePermission)
+│       ├── cron/           # auto-remind + generate-recurring
+│       └── mcp/            # Serveur MCP
+├── components/
+│   ├── ui/                 # shadcn/ui
+│   └── erp/                # Composants métier
+├── lib/
+│   ├── auth/               # withAuth(), requirePermission()
+│   ├── email/              # Templates React Email (Resend)
+│   ├── pdf/                # react-pdf templates
+│   └── embeddings.ts       # Google AI text-embedding-004 (768 dims)
+└── locales/
+    └── fr.json             # Seule locale active (ty/mq préparées)
 ```
 
-Deploy to Vercel:
-```bash
-vercel deploy
-```
+Toutes les routes API sont protégées par `withAuth()` qui valide :
+1. La session Supabase **ou** un Bearer API key hashé
+2. Le `team_id` query param et l'appartenance du caller
+3. Les permissions RBAC via `requirePermission()`
+
+Le middleware gère dans l'ordre : refresh session → routing i18n → headers de sécurité. Les routes `/api/*` sont exclues du matcher i18n.
 
 ---
 
-## Stack
+## Stack technique
 
-| Layer | Technology |
-|-------|-----------|
-| Framework | Next.js 16 (App Router) |
-| Language | TypeScript (strict) |
-| UI | Tailwind CSS 4 + shadcn/ui |
-| Database | Supabase (PostgreSQL + pgvector) |
-| Auth | Supabase Auth (SSR) + magic link + API keys |
-| Payments | Stripe Checkout + local payment recording |
+| Couche | Technologie |
+|--------|-------------|
+| Framework | Next.js 16 (App Router, Turbopack) |
+| Langage | TypeScript strict |
+| UI | Tailwind CSS 4 + shadcn/ui + Lucide Icons |
+| Base de données | Supabase (PostgreSQL + pgvector + pg_trgm) |
+| Auth | Supabase Auth SSR + magic link + API keys hachées |
+| Paiements | Stripe Checkout + enregistrement local |
 | Email | Resend + React Email |
 | PDF | @react-pdf/renderer |
-| AI Protocol | Model Context Protocol (MCP) |
-| Locales | fr, ty, mq (Tahitian, Marquesan) |
-| Deployment | Vercel (Edge + Serverless) |
+| Protocole IA | Model Context Protocol (MCP) |
+| Embeddings | Google AI text-embedding-004 (768 dimensions) |
+| Drag & Drop | @dnd-kit (Kanban CRM) |
+| Graphiques | Recharts (BarChart CA, AreaChart sparklines) |
+| Éditeur rich text | Tiptap |
+| Tables | TanStack Table v8 + export CSV |
+| Calendrier | Schedule-X |
+| Formulaires | react-hook-form + Zod |
+| Déploiement | Vercel (Edge Middleware + Serverless + Cron) |
 
 ---
 
-*Built for French Polynesia, engineered for the world.*
+## Démarrage rapide
+
+```bash
+git clone <repo>
+cd hono
+cp .env.example .env.local
+npm install
+npx supabase db push    # Appliquer les 35 migrations
+npm run dev             # localhost:3000
+```
+
+**Variables critiques :**
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=       # Server-only, jamais NEXT_PUBLIC_
+PORTAL_COOKIE_SECRET=            # 64 chars hex  →  openssl rand -hex 32
+NEXT_PUBLIC_DEFAULT_TEAM_ID=     # UUID équipe recevant les demandes storefront
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+GOOGLE_AI_API_KEY=               # Embeddings produits/clients
+CRON_SECRET=                     # Sécurise /api/cron/*
+```
+
+**Commandes :**
+
+```bash
+npm run dev                            # Dev server
+npm run build                          # Build production
+npm run lint                           # ESLint
+npx supabase migration new <nom>      # Nouvelle migration
+npx supabase db push                  # Pousser les migrations
+```
+
+---
+
+## Base de données
+
+35 migrations séquentielles (`supabase/migrations/00001_` → `00035_`).
+Extensions : `uuid-ossp`, `vector` (pgvector), `pg_trgm`, `pgcrypto`.
+Toutes les tables métier ont un `team_id` et des policies RLS scopées.
+Un hook JWT custom injecte `team_id`, `role_name`, `is_owner` et `permissions` dans le token d'accès.
+
+---
+
+*Conçu pour la Polynésie française. Architecturé pour passer à l'échelle.*

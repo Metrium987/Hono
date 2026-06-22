@@ -5,6 +5,25 @@ import { randomBytes } from "crypto";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
+// DELETE /api/v1/invitations — Cancel a pending invitation by ID
+export async function DELETE(request: NextRequest) {
+  return withAuth(request, async (auth, teamId) => {
+    requirePermission(auth, "settings", "write");
+    const url = new URL(request.url);
+    const id = url.searchParams.get("invitation_id");
+    if (!id) return NextResponse.json({ error: "invitation_id requis" }, { status: 400 });
+
+    const { error } = await auth.supabase
+      .from("company_invitations")
+      .delete()
+      .eq("id", id)
+      .eq("team_id", teamId);
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ success: true });
+  });
+}
+
 // GET /api/v1/invitations — List pending invitations for the team
 export async function GET(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
@@ -33,15 +52,16 @@ export async function POST(request: NextRequest) {
 
     if (!email) return NextResponse.json({ error: "email is required" }, { status: 400 });
 
-    // Check email is not already a member
-    const { data: existingMember } = await auth.supabase
+    // Check email is not already a member (use admin to bypass RLS on users table)
+    const adminForCheck = (await import("@/utils/supabase/admin")).createAdminClient();
+    const { data: existingMember } = await adminForCheck
       .from("users")
       .select("id")
       .eq("email", email)
       .single();
 
     if (existingMember) {
-      const { data: alreadyMember } = await auth.supabase
+      const { data: alreadyMember } = await adminForCheck
         .from("team_members")
         .select("team_id")
         .eq("team_id", teamId)
@@ -81,7 +101,7 @@ export async function POST(request: NextRequest) {
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    const inviteUrl = `${appUrl}/fr/login?invitation=${token}`;
+    const inviteUrl = `${appUrl}/fr/invitations/${token}`;
     const teamName = team?.name ?? "Hono ERP";
 
     if (resend) {

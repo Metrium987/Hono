@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { RecordPaymentForm } from "./record-payment-form";
 import { PaymentsList } from "./payments-list";
 import { DeleteInvoiceDialog } from "./delete-invoice-dialog";
+import { SendInvoiceButton } from "./send-invoice-button";
 
 type InvoiceItem = {
   id: string;
@@ -162,12 +163,18 @@ export default async function InvoiceDetailPage(props: { params: Params }) {
             <br />{det("due_date_label", { date: formatDate(invoice.due_date) })}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
           <Button variant="outline" size="sm" asChild>
             <Link href={`/api/v1/invoices/${id}/pdf`} target="_blank">
               <Download className="mr-2 h-4 w-4" /> {common("pdf")}
             </Link>
           </Button>
+          {!["draft", "cancelled"].includes(invoice.status) && (() => {
+            const customerEmail = Array.isArray(invoice.customer) ? invoice.customer[0]?.email : invoice.customer?.email;
+            return customerEmail ? (
+              <SendInvoiceButton invoiceId={id} teamId={teamId} customerEmail={customerEmail} />
+            ) : null;
+          })()}
           {invoice.status === "draft" && (
             <Button variant="outline" size="sm" asChild>
               <Link href={`./${id}/edit`}>{common("edit")}</Link>

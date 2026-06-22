@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { SendQuoteButton } from "./send-quote-button";
 
 type Params = Promise<{ id: string }>;
 
@@ -104,6 +105,7 @@ export default async function QuoteDetailPage(props: { params: Params }) {
   const items: QuoteItem[] = Array.isArray(quote.items) ? quote.items : [];
 
   const canEdit = quote.status === "draft";
+  const canSend = !["accepted", "converted", "cancelled"].includes(quote.status) && !!customer?.email;
   const canConvert = ["sent", "viewed", "accepted"].includes(quote.status);
 
   return (
@@ -123,11 +125,14 @@ export default async function QuoteDetailPage(props: { params: Params }) {
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
           {canEdit && (
             <Button variant="outline" asChild>
               <Link href={`./edit`}><Pencil className="mr-2 h-4 w-4" />Modifier</Link>
             </Button>
+          )}
+          {canSend && (
+            <SendQuoteButton quoteId={id} teamId={teamId} customerEmail={customer!.email!} />
           )}
           {canConvert && (
             <Button asChild>

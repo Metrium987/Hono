@@ -3,11 +3,12 @@ import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Users, Pencil, MessageSquare } from "lucide-react";
+import { ArrowLeft, Users, Pencil, MessageSquare, CalendarPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { DeleteRequestButton } from "@/components/erp/delete-request-button";
 
 type Params = Promise<{ id: string }>;
 
@@ -37,6 +38,9 @@ export default async function CustomerDetailPage(props: { params: Params }) {
     .single();
 
   if (error || !customer) notFound();
+
+  const { data: team } = await supabase.from("teams").select("is_educational_mode").eq("id", teamId).single();
+  const isEducational = team?.is_educational_mode ?? false;
 
   const [invoicesRes, quotesRes] = await Promise.all([
     supabase
@@ -86,11 +90,17 @@ export default async function CustomerDetailPage(props: { params: Params }) {
           )}
         </div>
         <Button variant="outline" asChild>
+          <Link href={`../../calendar?customer_id=${id}`}><CalendarPlus className="mr-2 h-4 w-4" />Planifier RDV</Link>
+        </Button>
+        <Button variant="outline" asChild>
           <Link href={`${id}/crm`}><MessageSquare className="mr-2 h-4 w-4" />{t("crm_title")}</Link>
         </Button>
         <Button variant="outline" asChild>
           <Link href={`${id}/edit`}><Pencil className="mr-2 h-4 w-4" />{t("edit")}</Link>
         </Button>
+        {isEducational && (
+          <DeleteRequestButton teamId={teamId} tableName="customers" recordId={id} />
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

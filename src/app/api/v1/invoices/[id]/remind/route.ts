@@ -93,7 +93,7 @@ export async function POST(request: NextRequest, props: { params: Params }) {
       }
     } else {
       // Dev mode — log without sending
-      console.log(`[remind] Would send level ${level} to ${toEmail} for invoice ${invoice.invoice_number}`);
+      console.warn(`[remind] Dev mode — email not sent (no RESEND_API_KEY). Would send level ${level} to ${toEmail}`);
       emailSent = true;
     }
 

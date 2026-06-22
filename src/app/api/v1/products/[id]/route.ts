@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+import { generateEmbedding } from "@/lib/ai/embeddings";
 
 // GET /api/v1/products/[id] — Get single product with translations and images
 export async function GET(
@@ -115,6 +116,26 @@ export async function PATCH(
       }));
 
       await auth.supabase.from("product_images").insert(imageRows);
+    }
+
+    // Regenerate embedding if searchable fields changed
+    if (updatePayload.name !== undefined || updatePayload.description !== undefined) {
+      try {
+        const { data: current } = await auth.supabase
+          .from("products")
+          .select("name, description")
+          .eq("id", id)
+          .single();
+        if (current) {
+          const text = [current.name, current.description].filter(Boolean).join(" ");
+          const embedding = await generateEmbedding(text);
+          if (embedding) {
+            await auth.supabase.from("products").update({ embedding }).eq("id", id);
+          }
+        }
+      } catch {
+        // Non-blocking — embedding failure shouldn't fail the PATCH
+      }
     }
 
     // Fetch updated product

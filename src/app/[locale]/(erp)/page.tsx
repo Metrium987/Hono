@@ -10,6 +10,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RevenueChart } from "./_components/revenue-chart";
+import { Sparkline } from "./_components/sparkline";
 
 function fmt(amount: number) {
   return `${Math.round(amount).toLocaleString("fr-FR")} F`;
@@ -178,7 +179,7 @@ export default async function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{fmt(caCurrentMonth)}</div>
+            <div className="text-2xl font-bold font-mono tabular-nums">{fmt(caCurrentMonth)}</div>
             {caEvolution !== null && (
               <p className={`text-xs mt-1 flex items-center gap-1 ${caEvolution >= 0 ? "text-green-600" : "text-red-600"}`}>
                 {caEvolution >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
@@ -188,6 +189,7 @@ export default async function DashboardPage() {
             {caEvolution === null && caPrevMonth === 0 && (
               <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1"><Minus className="h-3 w-3" /> Pas de données le mois dernier</p>
             )}
+            <Sparkline data={chartData.map(d => d.revenue)} />
           </CardContent>
         </Card>
 
@@ -198,7 +200,7 @@ export default async function DashboardPage() {
             <AlertTriangle className={`h-4 w-4 ${invCounts.overdue > 0 ? "text-red-500" : "text-muted-foreground"}`} />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${invCounts.overdue > 0 ? "text-red-600" : ""}`}>{fmt(totalOverdueAmount)}</div>
+            <div className={`text-2xl font-bold font-mono tabular-nums ${invCounts.overdue > 0 ? "text-red-600" : ""}`}>{fmt(totalOverdueAmount)}</div>
             <p className="text-xs text-muted-foreground mt-1">
               {invCounts.overdue} facture{invCounts.overdue !== 1 ? "s" : ""} en retard · {invCounts.sent} en attente
             </p>
@@ -212,7 +214,7 @@ export default async function DashboardPage() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{quotesSent.length}</div>
+            <div className="text-2xl font-bold font-mono tabular-nums">{quotesSent.length}</div>
             <p className="text-xs text-muted-foreground mt-1">
               {fmt(pendingQuoteValue)} potentiel · {conversionRate}% de conversion
             </p>
@@ -229,12 +231,16 @@ export default async function DashboardPage() {
             }
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${caYear - totalExpenses >= 0 ? "text-green-600" : "text-red-600"}`}>
+            <div className={`text-2xl font-bold font-mono tabular-nums ${caYear - totalExpenses >= 0 ? "text-green-600" : "text-red-600"}`}>
               {fmt(Math.abs(caYear - totalExpenses))}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               {caYear - totalExpenses >= 0 ? "Bénéfice" : "Déficit"} · {fmt(caYear)} encaissé · {fmt(totalExpenses)} dépensé
             </p>
+            <Sparkline
+              data={chartData.map(d => d.revenue - d.expenses)}
+              color={caYear - totalExpenses >= 0 ? "#22c55e" : "#ef4444"}
+            />
           </CardContent>
         </Card>
       </div>

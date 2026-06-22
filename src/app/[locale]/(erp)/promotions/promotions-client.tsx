@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, Package } from "lucide-react";
+import { toast } from "sonner";
 
 export type PromoRow = {
   id: string;
@@ -76,14 +77,9 @@ export function PromotionsClient({
   }
 
   async function openEdit(p: PromoRow) {
-    // Fetch product_ids for this promo
-    const res = await fetch(`/api/v1/promotions/${p.id}?team_id=${teamId}`);
-    // product_ids come from promotion_products — fetch separately via the list (not in single endpoint)
-    // We'll use the already-loaded product list and compare
     const { data: ppRes } = await fetch(
       `/api/v1/promotions/${p.id}/products?team_id=${teamId}`
     ).then((r) => r.json()).catch(() => ({ data: [] }));
-    void res;
     const pids: string[] = Array.isArray(ppRes) ? ppRes.map((x: { product_id: string }) => x.product_id) : [];
 
     setEditing(p.id);
@@ -124,7 +120,10 @@ export function PromotionsClient({
       const listJson = await listRes.json();
       setPromos(listJson.data ?? []);
       setOpen(false);
-    } catch (e) { setErr(e instanceof Error ? e.message : "Erreur"); }
+      toast.success(editing ? "Promotion mise à jour" : "Promotion créée");
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Erreur");
+    }
     finally { setSaving(false); }
   }
 
@@ -135,13 +134,21 @@ export function PromotionsClient({
     });
     if (res.ok) {
       setPromos((prev) => prev.map((x) => x.id === p.id ? { ...x, is_active: !p.is_active } : x));
+      toast.success(p.is_active ? "Promotion désactivée" : "Promotion activée");
+    } else {
+      toast.error("Erreur lors de la mise à jour");
     }
   }
 
   async function deletePromo(id: string) {
     if (!confirm("Supprimer cette promotion ?")) return;
-    await fetch(`/api/v1/promotions/${id}?team_id=${teamId}`, { method: "DELETE" });
-    setPromos((prev) => prev.filter((x) => x.id !== id));
+    const res = await fetch(`/api/v1/promotions/${id}?team_id=${teamId}`, { method: "DELETE" });
+    if (res.ok) {
+      setPromos((prev) => prev.filter((x) => x.id !== id));
+      toast.success("Promotion supprimée");
+    } else {
+      toast.error("Erreur lors de la suppression");
+    }
   }
 
   function toggleProductId(pid: string) {

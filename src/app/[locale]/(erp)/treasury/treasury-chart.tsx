@@ -23,13 +23,12 @@ function fmt(v: number) {
   return `${Math.round(v).toLocaleString("fr-FR")} F`;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-lg border bg-background shadow-md p-3 text-xs space-y-1 min-w-[180px]">
       <p className="font-semibold mb-1">{label}</p>
-      {payload.map((p: { name: string; value: number; color: string }, i: number) => (
+      {payload.map((p, i) => (
         <div key={i} className="flex items-center justify-between gap-4">
           <span className="flex items-center gap-1.5" style={{ color: p.color }}>
             <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />

@@ -108,7 +108,7 @@ export async function PATCH(
       const itemLineTotals: { lineTotal: number; taxRateId: string | null; taxRateValue: number }[] = [];
 
       // Fetch tax rates in batch
-      const taxRateIds = [...new Set(itemsToUse.filter((i: any) => i.tax_rate_id).map((i: any) => i.tax_rate_id))];
+      const taxRateIds = [...new Set(itemsToUse.filter((i: ItemInput) => i.tax_rate_id).map((i: ItemInput) => i.tax_rate_id as string))];
       const taxRateMap = new Map<string, number>();
       if (taxRateIds.length > 0) {
         const { data: rates } = await auth.supabase

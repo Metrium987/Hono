@@ -242,14 +242,14 @@ const logo = {
 const companyName = {
   fontSize: "20px",
   fontWeight: "700",
-  color: "#1a56db",
+  color: "#0d7a63",
   margin: "0 0 4px",
 };
 
 const invoiceTitle = {
   fontSize: "24px",
   fontWeight: "700",
-  color: "#1a56db",
+  color: "#0d7a63",
   margin: "0 0 4px",
 };
 
@@ -300,7 +300,7 @@ const tableSection = {
 };
 
 const tableHeader = {
-  backgroundColor: "#1a56db",
+  backgroundColor: "#0d7a63",
   padding: "8px 12px",
   borderRadius: "4px 4px 0 0",
 };
@@ -415,14 +415,14 @@ const grandTotalRow = {
 const grandTotalLabel = {
   fontSize: "16px",
   fontWeight: "700",
-  color: "#1a56db",
+  color: "#0d7a63",
   margin: "0",
 };
 
 const grandTotalValue = {
   fontSize: "16px",
   fontWeight: "700",
-  color: "#1a56db",
+  color: "#0d7a63",
   margin: "0",
 };
 
@@ -432,7 +432,7 @@ const actionsSection = {
 };
 
 const button = {
-  backgroundColor: "#1a56db",
+  backgroundColor: "#0d7a63",
   borderRadius: "6px",
   color: "#ffffff",
   display: "inline-block",

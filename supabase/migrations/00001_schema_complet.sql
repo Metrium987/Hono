@@ -294,7 +294,7 @@ CREATE TABLE public.products (
   unit            TEXT DEFAULT 'pcs',
   is_active       BOOLEAN DEFAULT TRUE,
   is_published    BOOLEAN DEFAULT FALSE,
-  embedding       VECTOR(1536),
+  embedding       VECTOR(768),
   fts             TSVECTOR GENERATED ALWAYS AS (
     to_tsvector('french', COALESCE(name, '') || ' ' || COALESCE(description, ''))
   ) STORED,
@@ -361,7 +361,7 @@ CREATE TABLE public.customers (
   portal_id           TEXT,
   payment_terms       INTEGER DEFAULT 30,
   notes               TEXT,
-  embedding           VECTOR(1536),
+  embedding           VECTOR(768),
   consent_recorded    BOOLEAN DEFAULT FALSE,
   consent_recorded_at TIMESTAMPTZ,
   source              public.customer_source DEFAULT 'erp',
@@ -1390,7 +1390,7 @@ END; $$;
 
 -- Vector similarity search — products
 CREATE OR REPLACE FUNCTION public.match_products(
-  query_embedding VECTOR(1536),
+  query_embedding VECTOR(768),
   match_threshold FLOAT DEFAULT 0.7,
   match_count     INT DEFAULT 20,
   p_team_id       UUID DEFAULT NULL
@@ -1418,7 +1418,7 @@ END; $$;
 
 -- Vector similarity search — customers
 CREATE OR REPLACE FUNCTION public.match_customers(
-  query_embedding VECTOR(1536),
+  query_embedding VECTOR(768),
   match_threshold FLOAT DEFAULT 0.7,
   match_count     INT DEFAULT 20,
   p_team_id       UUID DEFAULT NULL

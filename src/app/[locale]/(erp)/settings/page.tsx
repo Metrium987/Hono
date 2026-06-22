@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { CreditCard, Key, Building2, Percent, Coins, Users2 } from "lucide-react";
+import { CreditCard, Key, Building2, Percent, Coins, Users2, LayoutList } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function SettingsPage() {
@@ -119,6 +119,20 @@ export default async function SettingsPage() {
             </Card>
           </Link>
         )}
+
+        <Link href="./settings/staff-groups">
+          <Card className="hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
+            <CardHeader className="flex flex-row items-center gap-3 pb-2">
+              <LayoutList className="h-5 w-5 text-primary" />
+              <CardTitle className="text-sm font-medium">Groupes staff</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Organisez votre équipe en groupes pour l&apos;agenda.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
     </div>
   );

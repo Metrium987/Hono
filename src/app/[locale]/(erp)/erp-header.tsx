@@ -10,14 +10,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { GlobalSearch } from "@/components/erp/global-search";
 
 type ErpHeaderProps = {
   userEmail: string;
   teamName: string;
   teamId: string;
+  locale: string;
 };
 
-export function ErpHeader({ userEmail, teamName }: ErpHeaderProps) {
+export function ErpHeader({ userEmail, teamName, teamId, locale }: ErpHeaderProps) {
   return (
     <header className="flex h-14 items-center justify-between border-b bg-card px-6">
       <div className="flex items-center gap-2">
@@ -27,6 +29,8 @@ export function ErpHeader({ userEmail, teamName }: ErpHeaderProps) {
       </div>
 
       <div className="flex items-center gap-4">
+        <GlobalSearch teamId={teamId} locale={locale} />
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-2">
