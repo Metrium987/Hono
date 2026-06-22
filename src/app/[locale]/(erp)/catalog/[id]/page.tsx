@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProductImageUpload } from "./product-image-upload";
 import { ProductPublishToggle } from "./product-publish-toggle";
+import { ProductStockHistory } from "./product-stock-history";
 import { checkPagePermission } from "@/lib/auth/page-auth";
 import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
@@ -164,6 +165,11 @@ export default async function ProductDetailPage(props: { params: Params }) {
           <ProductImageUpload productId={id} teamId={teamId} />
         </CardContent>
       </Card>
+
+      {/* Historique de stock + prix (client component) */}
+      {product.track_stock && (
+        <ProductStockHistory productId={id} teamId={teamId} />
+      )}
     </div>
   );
 }

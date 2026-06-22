@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { CreditCard, Key, Building2, Percent, Coins, Users2, LayoutList } from "lucide-react";
+import { CreditCard, Key, Building2, Percent, Coins, Users2, LayoutList, Shield } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { checkPagePermission } from "@/lib/auth/page-auth";
 import { ForbiddenPage } from "@/components/erp/forbidden-page";
@@ -129,6 +129,22 @@ export default async function SettingsPage() {
             </CardContent>
           </Card>
         </Link>
+
+        {isOwner && (
+          <Link href="./settings/audit-logs">
+            <Card className="hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
+              <CardHeader className="flex flex-row items-center gap-3 pb-2">
+                <Shield className="h-5 w-5 text-primary" />
+                <CardTitle className="text-sm font-medium">Journal d&apos;audit</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  Traçabilité de toutes les actions sur les données de l&apos;équipe.
+                </p>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
       </div>
     </div>
   );

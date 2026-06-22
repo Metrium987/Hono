@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { RecordPaymentForm } from "./record-payment-form";
 import { PaymentsList } from "./payments-list";
+import { PaymentEvidenceSection } from "./payment-evidence-section";
 import { DeleteInvoiceDialog } from "./delete-invoice-dialog";
 import { SendInvoiceButton } from "./send-invoice-button";
 import { checkPagePermission } from "@/lib/auth/page-auth";
@@ -246,6 +247,9 @@ export default async function InvoiceDetailPage(props: { params: Params }) {
               />
             </CardContent>
           </Card>
+
+          {/* Payment evidence */}
+          <PaymentEvidenceSection invoiceId={id} teamId={teamId} payments={payments} />
 
           {/* Events */}
           {Array.isArray(invoice.events) && invoice.events.length > 0 && (
