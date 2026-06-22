@@ -71,7 +71,7 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
     .order("created_at", { ascending: false });
 
   if (categoryId) productQuery = productQuery.eq("category_id", categoryId);
-  if (search) productQuery = productQuery.or(`name.ilike.%${search.replace(/[,()'"]/g, "")}%,sku.ilike.%${search.replace(/[,()'"]/g, "")}%`);
+  if (search) productQuery = productQuery.or(`name.ilike.%${search.replace(/[,()'";%_]/g, "")}%,sku.ilike.%${search.replace(/[,()'";%_]/g, "")}%`);
 
   const [productsRes, categoriesRes] = await Promise.all([
     productQuery,

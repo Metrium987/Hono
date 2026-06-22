@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
     }
 
     for (const item of items) {
-      const qty = parseFloat(item.quantity) || 1;
-      const unitPrice = parseFloat(item.unit_price_ht) || 0;
+      const qty = parseFloat(String(item.quantity)) || 1;
+      const unitPrice = parseFloat(String(item.unit_price_ht)) || 0;
       const lineTotal = qty * unitPrice;
       subtotal_ht += lineTotal;
 

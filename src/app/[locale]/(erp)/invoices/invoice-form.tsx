@@ -1,9 +1,10 @@
+/* eslint-disable react-hooks/incompatible-library */
 "use client";
 
 import { useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useForm, useFieldArray, type SubmitHandler } from "react-hook-form";
+import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Plus, Trash2, Loader2 } from "lucide-react";
@@ -60,7 +61,7 @@ export function InvoiceForm({ customers, currencies, taxRates, team, teamId, edi
 
   const defaultCurrency = currencies.find((c) => c.is_default) ?? currencies[0];
 
-  const { control, register, watch, setError, setValue, formState, handleSubmit } = useForm<InvoiceFormValues>({
+  const { control, register, watch, setError, setValue, formState, handleSubmit } = useForm({
     resolver: zodResolver(invoiceFormSchema),
     defaultValues: {
       customer_id: initialData?.customer_id ?? "",
@@ -85,7 +86,7 @@ export function InvoiceForm({ customers, currencies, taxRates, team, teamId, edi
     name: "items",
   });
 
-  const watchedItems = watch("items");
+  const watchedItems = watch("items") as InvoiceFormValues["items"] | undefined;
   const currencyId = watch("currency_id");
 
   const activeCurrency = currencies.find((c) => c.id === currencyId);
@@ -110,7 +111,7 @@ export function InvoiceForm({ customers, currencies, taxRates, team, teamId, edi
     return { subtotal: sub, taxTotal: tax, total: sub + tax };
   }, [watchedItems, taxRates]);
 
-  const onSubmit: SubmitHandler<InvoiceFormValues> = useCallback(async (data) => {
+  const onSubmit = useCallback(async (data: InvoiceFormValues) => {
     const payload = {
       customer_id: data.customer_id,
       issue_date: data.issue_date,

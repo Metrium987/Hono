@@ -72,8 +72,16 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Phase 1 : génération séquentielle des numéros de facture (évite les doublons)
   let generated = 0;
   let skipped = 0;
+  const invoiceJobs: {
+    tpl: typeof templates[0];
+    invoiceNumber: string;
+    subtotalHt: number;
+    taxAmount: number;
+    dueDate: string;
+  }[] = [];
 
   for (const tpl of templates ?? []) {
     try {
@@ -98,6 +106,18 @@ export async function GET(request: NextRequest) {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + (tpl.payment_terms ?? 30));
 
+      invoiceJobs.push({ tpl, invoiceNumber, subtotalHt, taxAmount, dueDate: dueDate.toISOString().split("T")[0] });
+    } catch (err) {
+      console.error("[cron/generate-recurring] erreur pour", tpl.id, err);
+      skipped++;
+    }
+  }
+
+  // Phase 2 : tous les inserts/updates en parallèle
+  const results = await Promise.allSettled(
+    invoiceJobs.map(async ({ tpl, invoiceNumber, subtotalHt, taxAmount, dueDate }) => {
+      const items = tpl.items ?? [];
+
       const { data: invoice, error: invErr } = await supabase
         .from("invoices")
         .insert({
@@ -107,7 +127,7 @@ export async function GET(request: NextRequest) {
           invoice_number: invoiceNumber,
           status: "draft",
           issue_date: today,
-          due_date: dueDate.toISOString().split("T")[0],
+          due_date: dueDate,
           payment_terms: tpl.payment_terms ?? 30,
           subtotal_ht: Math.round(subtotalHt * 100) / 100,
           tax_amount: Math.round(taxAmount * 100) / 100,
@@ -117,10 +137,10 @@ export async function GET(request: NextRequest) {
         .select("id")
         .single();
 
-      if (invErr || !invoice) { skipped++; continue; }
+      if (invErr || !invoice) throw new Error(invErr?.message ?? "Insert failed");
 
       if (items.length > 0) {
-        await supabase.from("invoice_items").insert(
+        const { error: itemsErr } = await supabase.from("invoice_items").insert(
           items.map((item: { description: string; quantity: number; unit_price_ht: number; tax_rate_id: string | null; product_id: string | null; position: number }) => ({
             invoice_id: invoice.id,
             description: item.description,
@@ -132,21 +152,27 @@ export async function GET(request: NextRequest) {
             position: item.position ?? 0,
           }))
         );
+        if (itemsErr) throw new Error(itemsErr.message);
       }
 
       const nextDate = addFrequency(new Date(tpl.next_generation_date), tpl.frequency, tpl.interval_count ?? 1);
       const nextDateStr = nextDate.toISOString().split("T")[0];
       const shouldDeactivate = tpl.end_date && nextDateStr > tpl.end_date;
 
-      await supabase.from("recurring_invoices").update({
+      const { error: updateErr } = await supabase.from("recurring_invoices").update({
         next_generation_date: nextDateStr,
         last_generated_at: new Date().toISOString(),
         is_active: shouldDeactivate ? false : true,
       }).eq("id", tpl.id);
 
+      if (updateErr) throw new Error(updateErr.message);
       generated++;
-    } catch (err) {
-      console.error("[cron/generate-recurring] erreur pour", tpl.id, err);
+    })
+  );
+
+  for (const r of results) {
+    if (r.status === "rejected") {
+      console.error("[cron/generate-recurring] erreur phase 2:", r.reason);
       skipped++;
     }
   }

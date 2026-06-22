@@ -4,6 +4,8 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 import { InvoicesListClient, type InvoiceRow } from "./invoices-list-client";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
@@ -15,6 +17,9 @@ export default async function InvoicesPage(props: { searchParams: SearchParams }
   const limit = 20;
   const offset = (page - 1) * limit;
 
+  const perm = await checkPagePermission("invoices", "read");
+  if (!perm.allowed) return <ForbiddenPage module="invoices" />;
+
   const t = await getTranslations("invoices_page");
   const common = await getTranslations("common");
   const statusT = await getTranslations("invoice_status");
@@ -22,23 +27,11 @@ export default async function InvoicesPage(props: { searchParams: SearchParams }
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
-
   // Build query
   let query = supabase
     .from("invoices")
     .select("id, invoice_number, status, total_ttc, paid_amount, issue_date, due_date, customer:customer_id(company_name, contact_name), currency:currency_id(symbol)", { count: "exact" })
-    .eq("team_id", teamId)
+    .eq("team_id", perm.teamId)
     .is("deleted_at", null);
 
   if (status) {

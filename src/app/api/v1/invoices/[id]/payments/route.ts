@@ -125,7 +125,7 @@ export async function POST(
         .eq("team_id", teamId)
         .eq("user_id", invoice.assigned_to)
         .lte("applies_from", now)
-        .or(`applies_to.is.null,applies_to.gte.${now}`)
+        .or(`applies_to.is.null,applies_to.gte.${now.replace(/[^0-9T:\-.]/g, "")}`)
         .order("applies_from", { ascending: false })
         .limit(1)
         .single();

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/incompatible-library */
 "use client";
 
 import { useCallback, useMemo } from "react";
@@ -55,7 +56,7 @@ export function QuoteForm({ customers, currencies, taxRates, teamId, editId, ini
 
   const defaultCurrency = currencies.find((c) => c.is_default) ?? currencies[0];
 
-  const { control, register, watch, setError, setValue, formState, handleSubmit } = useForm<QuoteFormValues>({
+  const { control, register, watch, setError, setValue, formState, handleSubmit } = useForm({
     resolver: zodResolver(quoteFormSchema),
     defaultValues: {
       customer_id: initialData?.customer_id ?? "",
@@ -77,7 +78,7 @@ export function QuoteForm({ customers, currencies, taxRates, teamId, editId, ini
     name: "items",
   });
 
-  const watchedItems = watch("items");
+  const watchedItems = watch("items") as QuoteFormValues["items"] | undefined;
   const currencyId = watch("currency_id");
   const activeCurrency = currencies.find((c) => c.id === currencyId);
 

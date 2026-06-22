@@ -210,7 +210,7 @@ export async function DELETE(
 
     const { error } = await auth.supabase
       .from("credit_notes")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq("id", id)
       .eq("team_id", teamId);
 

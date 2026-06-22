@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "@react-pdf/renderer";
 import type { InvoicePdfData, InvoicePdfItem } from "../invoice-pdf";
-import { formatCurrency } from "./_helpers";
+import { formatCurrency } from "../pdf-shared";
 
 const COLORS = { primary: "#1a56db", text: "#1f2937", muted: "#6b7280", border: "#e5e7eb" };
 
@@ -60,7 +60,7 @@ export function InvoiceTotals({ data }: Props) {
         )}
 
         <View style={styles.grandTotalRow}>
-          <Text style={styles.grandTotalLabel}>Total TTC</Text>
+          <Text style={styles.grandTotalLabel}>{data.team.is_franchise_en_base ? "Total" : "Total TTC"}</Text>
           <Text style={styles.grandTotalValue}>{formatCurrency(data.total_ttc, currency)}</Text>
         </View>
 

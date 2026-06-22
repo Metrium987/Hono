@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet } from "@react-pdf/renderer";
 import type { InvoicePdfData } from "../invoice-pdf";
-import { formatDate } from "./_helpers";
+import { formatDate } from "../pdf-shared";
 
 const COLORS = { text: "#1f2937", muted: "#6b7280" };
 

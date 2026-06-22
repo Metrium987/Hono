@@ -99,7 +99,7 @@ export async function DELETE(
 
     const { error } = await auth.supabase
       .from("orders")
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq("id", id)
       .eq("team_id", teamId);
 

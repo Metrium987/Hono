@@ -116,8 +116,8 @@ export async function POST(request: NextRequest) {
     }
 
     for (const item of items) {
-      const qty = parseFloat(item.quantity) || 1;
-      const unitPrice = parseFloat(item.unit_price_ht) || 0;
+      const qty = parseFloat(String(item.quantity)) || 1;
+      const unitPrice = parseFloat(String(item.unit_price_ht)) || 0;
       const lineTotal = qty * unitPrice;
       subtotal_ht += lineTotal;
       itemLineTotals.push({
@@ -130,9 +130,9 @@ export async function POST(request: NextRequest) {
     // Apply discount proportionally
     let discountAmount = 0;
     if (discount_type === "percentage" && discount_value) {
-      discountAmount = subtotal_ht * (parseFloat(discount_value) / 100);
+      discountAmount = subtotal_ht * (parseFloat(String(discount_value)) / 100);
     } else if (discount_type === "fixed" && discount_value) {
-      discountAmount = parseFloat(discount_value);
+      discountAmount = parseFloat(String(discount_value));
     }
 
     const discountRatio = subtotal_ht > 0 ? (subtotal_ht - discountAmount) / subtotal_ht : 1;
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
         legal_vat_mention: legal_vat_mention ?? null,
         legal_mentions: legal_mentions ?? null,
         discount_type: discount_type ?? null,
-        discount_value: discount_value ? parseFloat(discount_value) : null,
+        discount_value: discount_value ? parseFloat(String(discount_value)) : null,
         discount_amount: Math.round(discountAmount * 100) / 100,
         notes: notes ?? null,
         message: message ?? null,

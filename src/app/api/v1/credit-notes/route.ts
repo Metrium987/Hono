@@ -66,7 +66,21 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Calculate totals
+    // Calculate totals with batch-loaded tax rates
+    const taxRateIds = [...new Set(items.map((i: ItemInput) => i.tax_rate_id).filter(Boolean))] as string[];
+    const taxRateMap = new Map<string, number>();
+    if (taxRateIds.length > 0) {
+      const { data: rates } = await auth.supabase
+        .from("tax_rates")
+        .select("id, rate")
+        .in("id", taxRateIds);
+      if (rates) {
+        for (const r of rates) {
+          taxRateMap.set(r.id, r.rate);
+        }
+      }
+    }
+
     let subtotal_ht = 0;
     let tax_amount = 0;
 
@@ -76,15 +90,7 @@ export async function POST(request: NextRequest) {
       subtotal_ht += qty * unitPrice;
 
       if (item.tax_rate_id) {
-        const { data: taxRate } = await auth.supabase
-          .from("tax_rates")
-          .select("rate")
-          .eq("id", item.tax_rate_id)
-          .single();
-
-        if (taxRate) {
-          tax_amount += (qty * unitPrice) * (taxRate.rate / 100);
-        }
+        tax_amount += (qty * unitPrice) * ((taxRateMap.get(item.tax_rate_id) ?? 0) / 100);
       }
     }
 

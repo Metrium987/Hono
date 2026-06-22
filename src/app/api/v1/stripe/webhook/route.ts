@@ -71,8 +71,8 @@ export async function POST(request: NextRequest) {
       }
 
       const currencyId = invoice.currency_id;
-      const rawCurrency = invoice.currency;
-      const currencyCode = (Array.isArray(rawCurrency) ? rawCurrency[0]?.code : rawCurrency?.code) ?? "XPF";
+      const rawCurrency = invoice.currency as { code: string }[] | null;
+      const currencyCode = rawCurrency?.[0]?.code ?? "XPF";
       const isZeroDecimal = ["xpf", "jpy"].includes(currencyCode.toLowerCase());
       const finalAmount = isZeroDecimal ? amountTotal : amountTotal / 100;
 
