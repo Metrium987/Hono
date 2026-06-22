@@ -52,7 +52,7 @@ jobs:
             ${{ runner.os }}-nextjs-
 
       - name: Run lint
-        run: npx eslint .
+        run: npx eslint . --no-cache
 
       - name: Run tests
         run: npm test
