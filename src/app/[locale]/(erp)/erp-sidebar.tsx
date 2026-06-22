@@ -29,7 +29,7 @@ import {
   KanbanSquare,
   RefreshCw,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 
 type NavItem = {
@@ -41,6 +41,33 @@ type NavItem = {
 type NavGroup = {
   sectionKey: string;
   items: NavItem[];
+};
+
+// Map each nav item key to its RBAC permission module.
+// Items not listed (or set to null) are visible to everyone.
+const ITEM_MODULES: Record<string, string | null> = {
+  invoices: "invoices",
+  quotes: "quotes",
+  credit_notes: "invoices",
+  orders: "orders",
+  recurring_invoices: "invoices",
+  clients: "clients",
+  crm_board: "clients",
+  reminders: "clients",
+  products: "catalog",
+  categories: "catalog",
+  promotions: "catalog",
+  expenses: "expenses",
+  income: "income",
+  vendors: "clients",
+  treasury: "reports",
+  revenue_book: "reports",
+  break_even: "reports",
+  calendar: "clients",
+  my_activity: null, // always visible
+  team_performance: "invoices",
+  reports: "reports",
+  settings: "settings",
 };
 
 const NAV_GROUPS: NavGroup[] = [
@@ -96,13 +123,51 @@ const BOTTOM_ITEMS: NavItem[] = [
   { key: "settings", href: "/settings", icon: Settings },
 ];
 
-export function ErpSidebar({ teamName }: { teamName: string }) {
+type ErpSidebarProps = {
+  teamName: string;
+  permissions: Record<string, string[]> | null;
+  isOwner: boolean;
+};
+
+function hasModuleAccess(
+  permissions: Record<string, string[]> | null,
+  isOwner: boolean,
+  module: string | null
+): boolean {
+  if (module === null) return true; // no restriction
+  if (isOwner) return true; // owner bypass
+  if (!permissions) return false;
+  const perms = permissions[module];
+  return Array.isArray(perms) && perms.includes("read");
+}
+
+export function ErpSidebar({ teamName, permissions, isOwner }: ErpSidebarProps) {
   const pathname = usePathname();
   const t = useTranslations("nav");
   const [collapsed, setCollapsed] = useState(false);
 
   const locale = pathname.match(/^\/([a-z]{2})\//)?.[1] ?? "fr";
   const relativePath = pathname.replace(/^\/[a-z]{2}/, "");
+
+  // Filter nav groups based on RBAC permissions
+  const filteredGroups = useMemo(() => {
+    return NAV_GROUPS
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) =>
+          hasModuleAccess(permissions, isOwner, ITEM_MODULES[item.key] ?? null)
+        ),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [permissions, isOwner]);
+
+  const filteredBottom = useMemo(
+    () =>
+      BOTTOM_ITEMS.filter((item) =>
+        hasModuleAccess(permissions, isOwner, ITEM_MODULES[item.key] ?? null)
+      ),
+    [permissions, isOwner]
+  );
 
   function NavLink({ href, icon: Icon, labelKey }: { href: string; icon: React.ElementType; labelKey: string }) {
     const isActive = relativePath === href || (href !== "/" && relativePath.startsWith(href));
@@ -139,9 +204,9 @@ export function ErpSidebar({ teamName }: { teamName: string }) {
         )}
       </div>
 
-      {/* Groups */}
+      {/* Groups — filtré par permissions RBAC */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
-        {NAV_GROUPS.map((group) => (
+        {filteredGroups.map((group) => (
           <div key={group.sectionKey}>
             {!collapsed && (
               <p className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
@@ -157,12 +222,14 @@ export function ErpSidebar({ teamName }: { teamName: string }) {
         ))}
       </nav>
 
-      {/* Bottom — reports + settings */}
-      <div className="border-t px-2 py-2 space-y-0.5">
-        {BOTTOM_ITEMS.map((item) => (
-          <NavLink key={item.href} href={item.href} icon={item.icon} labelKey={item.key} />
-        ))}
-      </div>
+      {/* Bottom — reports + settings (filtré) */}
+      {filteredBottom.length > 0 && (
+        <div className="border-t px-2 py-2 space-y-0.5">
+          {filteredBottom.map((item) => (
+            <NavLink key={item.href} href={item.href} icon={item.icon} labelKey={item.key} />
+          ))}
+        </div>
+      )}
 
       {/* Collapse toggle */}
       <div className="border-t p-2">

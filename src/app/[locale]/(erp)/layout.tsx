@@ -21,7 +21,7 @@ export default async function ErpLayout({
 
   const { data: memberships } = await supabase
     .from("team_members")
-    .select("team_id, teams:team_id(name)")
+    .select("team_id, is_owner, role_id, teams:team_id(name)")
     .limit(1)
     .single();
 
@@ -29,6 +29,8 @@ export default async function ErpLayout({
 
   const activeTeam = memberships as {
     team_id: string;
+    is_owner: boolean;
+    role_id: string | null;
     teams: { name: string } | { name: string }[];
   };
   const teamId = activeTeam.team_id;
@@ -37,9 +39,25 @@ export default async function ErpLayout({
     : (activeTeam.teams?.name ?? "Mon Entreprise");
   const userEmail = user.email ?? "";
 
+  // Fetch user's role permissions for UI filtering
+  let userPermissions: Record<string, string[]> | null = null;
+  let isOwner = activeTeam.is_owner;
+
+  if (activeTeam.role_id) {
+    const { data: role } = await supabase
+      .from("team_roles")
+      .select("permissions")
+      .eq("id", activeTeam.role_id)
+      .single();
+
+    if (role?.permissions) {
+      userPermissions = role.permissions as Record<string, string[]>;
+    }
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
-      <ErpSidebar teamName={teamName} />
+      <ErpSidebar teamName={teamName} permissions={userPermissions} isOwner={isOwner} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <ErpHeader
           userEmail={userEmail}
