@@ -2,6 +2,8 @@
 
 **ERP cloud-native pour les entreprises de Polynésie française.**
 
+[![CI](https://github.com/Metrium987/hono/actions/workflows/ci.yml/badge.svg)](https://github.com/Metrium987/hono/actions/workflows/ci.yml)
+
 Hono est une plateforme de gestion d'entreprise complète (facturation, CRM, catalogue, portail client, finance) construite sur Next.js 16 et Supabase. Elle intègre nativement un serveur **Model Context Protocol (MCP)** qui donne à n'importe quel assistant IA un accès sécurisé et filtré par permissions à toutes vos données métier.
 
 Déployée sur [Vercel](https://hono-self-nu.vercel.app/).

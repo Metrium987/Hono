@@ -1,14 +1,20 @@
-import { dirname } from "path";
+import path from "path";
 import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import { createRequire } from "module";
+import { includeIgnoreFile } from "@eslint/compat";
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename);
 
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
+const require = createRequire(import.meta.url);
 
-const eslintConfig = [...compat.extends("next/core-web-vitals")];
+// eslint-config-next v16 exports a flat config array natively
+const nextRaw = require("eslint-config-next");
+const nextConfig = typeof nextRaw === "function" ? nextRaw() : nextRaw;
+
+const eslintConfig = [
+  includeIgnoreFile(path.resolve(__dirname, ".gitignore")),
+  ...(Array.isArray(nextConfig) ? nextConfig : [nextConfig]),
+];
 
 export default eslintConfig;
