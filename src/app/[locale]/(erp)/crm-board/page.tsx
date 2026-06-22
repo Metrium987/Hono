@@ -2,22 +2,20 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { CrmBoardClient, type CustomerCard } from "./crm-board-client";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 export default async function CrmBoardPage() {
+  const perm = await checkPagePermission("crm", "read");
+  if (!perm.allowed) return <ForbiddenPage module="crm" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) redirect("/onboarding");
+  const teamId = perm.teamId;
 
   const { data } = await supabase
     .from("customers")

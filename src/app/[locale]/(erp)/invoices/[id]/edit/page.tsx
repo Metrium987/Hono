@@ -3,28 +3,23 @@ import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { InvoiceForm } from "../../invoice-form";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 type Params = Promise<{ id: string }>;
 
 export default async function EditInvoicePage({ params }: { params: Params }) {
   const { id } = await params;
+  const perm = await checkPagePermission("invoices", "write");
+  if (!perm.allowed) return <ForbiddenPage module="invoices" action="write" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
   const common = await getTranslations("common");
   const t = await getTranslations("invoice_form");
 
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
+  const teamId = perm.teamId;
 
   // Fetch invoice + reference data in parallel
   const [invoiceRes, customersRes, currenciesRes, taxRatesRes, teamRes] = await Promise.all([

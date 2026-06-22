@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CreditNotesListClient, type CreditNoteRow } from "./credit-notes-list-client";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -15,6 +17,9 @@ export default async function CreditNotesPage(props: { searchParams: SearchParam
   const limit = 20;
   const offset = (page - 1) * limit;
 
+  const perm = await checkPagePermission("credit_notes", "read");
+  if (!perm.allowed) return <ForbiddenPage module="credit_notes" />;
+
   const t = await getTranslations("credit_notes_page");
   const common = await getTranslations("common");
   const statusT = await getTranslations("credit_note_status");
@@ -22,17 +27,7 @@ export default async function CreditNotesPage(props: { searchParams: SearchParam
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
+  const teamId = perm.teamId;
 
   let query = supabase
     .from("credit_notes")

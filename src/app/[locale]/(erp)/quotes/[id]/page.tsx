@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { SendQuoteButton } from "./send-quote-button";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 type Params = Promise<{ id: string }>;
 
@@ -64,6 +66,9 @@ const STATUS_VARIANT: Record<string, "secondary" | "default" | "success" | "dest
 export default async function QuoteDetailPage(props: { params: Params }) {
   const { id } = await props.params;
 
+  const perm = await checkPagePermission("quotes", "read");
+  if (!perm.allowed) return <ForbiddenPage module="quotes" />;
+
   const [statusT, common] = await Promise.all([
     getTranslations("quote_status"),
     getTranslations("common"),
@@ -72,17 +77,7 @@ export default async function QuoteDetailPage(props: { params: Params }) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
+  const teamId = perm.teamId;
 
   const { data: quote, error } = await supabase
     .from("quotes")

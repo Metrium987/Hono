@@ -1,20 +1,19 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { BreakEvenClient, type BreakEvenExpense, type MonthlyCA } from "./break-even-client";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 const MONTHS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
 
 export default async function BreakEvenPage() {
+  const perm = await checkPagePermission("reports", "read");
+  if (!perm.allowed) return <ForbiddenPage module="reports" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>Non connecté</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members").select("team_id").eq("user_id", user.id).limit(1);
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>Aucune équipe</div>;
+  const teamId = perm.teamId;
 
   const now = new Date();
   const yearStart = `${now.getFullYear()}-01-01`;

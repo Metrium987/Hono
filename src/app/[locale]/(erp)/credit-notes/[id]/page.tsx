@@ -6,6 +6,8 @@ import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 type Params = Promise<{ id: string }>;
 
@@ -58,23 +60,16 @@ function getTaxRate(item: CreditNoteItem): number | null {
 
 export default async function CreditNoteDetailPage(props: { params: Params }) {
   const { id } = await props.params;
+  const perm = await checkPagePermission("credit_notes", "read");
+  if (!perm.allowed) return <ForbiddenPage module="credit_notes" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
   const t = await getTranslations("credit_note_detail");
   const st = await getTranslations("credit_note_status");
   const common = await getTranslations("common");
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
+  const teamId = perm.teamId;
 
   const { data: cn } = await supabase
     .from("credit_notes")

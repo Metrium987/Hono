@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { RemindersClient, RemindersStats, type ReminderInvoice } from "./reminders-client";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 function daysDiff(dateStr: string): number {
   const due = new Date(dateStr);
@@ -31,16 +33,13 @@ function getNextAction(reminders: Reminder[]): { level: 1 | 2 | 3 | null; label:
 }
 
 export default async function RemindersPage() {
+  const perm = await checkPagePermission("reminders", "read");
+  if (!perm.allowed) return <ForbiddenPage module="reminders" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>Non connecté</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members").select("team_id").eq("user_id", user.id).limit(1);
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>Aucune équipe</div>;
+  const teamId = perm.teamId;
 
   const today = new Date().toISOString().split("T")[0];
 

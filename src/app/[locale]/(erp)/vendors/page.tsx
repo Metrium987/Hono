@@ -6,6 +6,8 @@ import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -16,23 +18,16 @@ export default async function VendorsPage(props: { searchParams: SearchParams })
   const limit = 20;
   const offset = (page - 1) * limit;
 
+  const perm = await checkPagePermission("clients", "read");
+  if (!perm.allowed) return <ForbiddenPage module="vendors" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
   const t = await getTranslations("vendors_page");
   const common = await getTranslations("common");
 
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
+  const teamId = perm.teamId;
 
   let query = supabase.from("vendors").select("*", { count: "exact" }).eq("team_id", teamId);
   if (search) {

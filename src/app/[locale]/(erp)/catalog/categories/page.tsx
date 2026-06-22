@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { CategoriesClient } from "./categories-client";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 export type CategoryRow = {
   id: string;
@@ -15,20 +17,13 @@ export type CategoryRow = {
 };
 
 export default async function CategoriesPage() {
+  const perm = await checkPagePermission("catalog", "read");
+  if (!perm.allowed) return <ForbiddenPage module="catalog" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>Non connecté</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>Aucune équipe trouvée</div>;
+  const teamId = perm.teamId;
 
   const { data: categories } = await supabase
     .from("product_categories")

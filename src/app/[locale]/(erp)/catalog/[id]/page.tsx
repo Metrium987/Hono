@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProductImageUpload } from "./product-image-upload";
 import { ProductPublishToggle } from "./product-publish-toggle";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 
@@ -23,21 +25,15 @@ type ProductImage = {
 
 export default async function ProductDetailPage(props: { params: Params }) {
   const { id } = await props.params;
+  const perm = await checkPagePermission("catalog", "read");
+  if (!perm.allowed) return <ForbiddenPage module="catalog" />;
+
   const t = await getTranslations("product_detail");
   const common = await getTranslations("common");
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
+  const teamId = perm.teamId;
 
   const { data: product, error } = await supabase
     .from("products")

@@ -9,26 +9,22 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { DeleteRequestButton } from "@/components/erp/delete-request-button";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 type Params = Promise<{ id: string }>;
 
 export default async function CustomerDetailPage(props: { params: Params }) {
   const { id } = await props.params;
+  const perm = await checkPagePermission("clients", "read");
+  if (!perm.allowed) return <ForbiddenPage module="clients" />;
+
   const t = await getTranslations("customer_detail");
   const common = await getTranslations("common");
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
+  const teamId = perm.teamId;
 
   const { data: customer, error } = await supabase
     .from("customers")

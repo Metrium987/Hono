@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddNoteForm } from "./add-note-form";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 type Params = Promise<{ id: string }>;
 
@@ -46,6 +48,9 @@ const REQUEST_STATUS: Record<string, "secondary" | "default" | "success" | "warn
 export default async function CustomerCrmPage(props: { params: Params }) {
   const { id } = await props.params;
 
+  const perm = await checkPagePermission("clients", "read");
+  if (!perm.allowed) return <ForbiddenPage module="clients" />;
+
   const [t, common] = await Promise.all([
     getTranslations("customer_detail"),
     getTranslations("common"),
@@ -54,17 +59,7 @@ export default async function CustomerCrmPage(props: { params: Params }) {
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
+  const teamId = perm.teamId;
 
   const { data: customer } = await supabase
     .from("customers")

@@ -2,23 +2,18 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import { ProductForm } from "../_components/product-form";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 export default async function NewProductPage() {
+  const perm = await checkPagePermission("catalog", "write");
+  if (!perm.allowed) return <ForbiddenPage module="catalog" action="write" />;
+
   const common = await getTranslations("common");
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
+  const teamId = perm.teamId;
 
   const [{ data: currencies }, { data: taxRates }, { data: categories }] = await Promise.all([
     supabase.from("currencies").select("id, code, symbol").eq("team_id", teamId).order("code"),

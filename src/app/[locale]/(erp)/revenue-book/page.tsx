@@ -2,18 +2,17 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { BookOpen } from "lucide-react";
 import { RevenueBookClient, type ReceiptRow } from "./revenue-book-client";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 export default async function RevenueBookPage() {
+  const perm = await checkPagePermission("reports", "read");
+  if (!perm.allowed) return <ForbiddenPage module="reports" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>Non connecté</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members").select("team_id").eq("user_id", user.id).limit(1);
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>Aucune équipe</div>;
+  const teamId = perm.teamId;
 
   const [{ data: payments }, { data: incomeRows }] = await Promise.all([
     // Invoice payments — join invoice for HT/TVA/TTC breakdown

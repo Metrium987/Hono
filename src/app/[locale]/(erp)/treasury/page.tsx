@@ -4,6 +4,8 @@ import Link from "next/link";
 import { TrendingUp, TrendingDown, Wallet, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TreasuryChart, type TreasuryMonthData } from "./treasury-chart";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 function fmt(n: number) {
   return `${Math.round(n).toLocaleString("fr-FR")} F`;
@@ -12,16 +14,13 @@ function fmt(n: number) {
 const MONTHS = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
 
 export default async function TreasuryPage() {
+  const perm = await checkPagePermission("treasury", "read");
+  if (!perm.allowed) return <ForbiddenPage module="treasury" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>Non connecté</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members").select("team_id").eq("user_id", user.id).limit(1);
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>Aucune équipe</div>;
+  const teamId = perm.teamId;
 
   const today = new Date().toISOString().split("T")[0];
   const now = new Date();

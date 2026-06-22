@@ -2,17 +2,17 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { TeamPerformanceClient, type StaffMember, type CommissionRule, type CommissionRow, type StaffPerf } from "./team-performance-client";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 export default async function TeamPerformancePage() {
+  const perm = await checkPagePermission("team_performance", "read");
+  if (!perm.allowed) return <ForbiddenPage module="team_performance" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>Non connecté</div>;
-
-  const { data: memberships } = await supabase.from("team_members").select("team_id").eq("user_id", user.id).limit(1);
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>Aucune équipe</div>;
+  const teamId = perm.teamId;
 
   const admin = createAdminClient();
   const [{ data: teamMembers }, { data: { users: authUsers } }, { data: rules }, { data: commissions }] = await Promise.all([

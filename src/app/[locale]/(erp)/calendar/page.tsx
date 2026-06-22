@@ -2,24 +2,20 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { CalendarClient, type StaffGroup, type CustomerOption } from "./calendar-client";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 type SearchParams = Promise<{ customer_id?: string }>;
 
 export default async function CalendarPage(props: { searchParams: SearchParams }) {
   const searchParams = await props.searchParams;
+  const perm = await checkPagePermission("calendar", "read");
+  if (!perm.allowed) return <ForbiddenPage module="calendar" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>Non connecté</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>Aucune équipe trouvée</div>;
+  const teamId = perm.teamId;
 
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();

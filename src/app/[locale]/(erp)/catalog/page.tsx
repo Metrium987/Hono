@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductsListClient, type ProductRow } from "./products-list-client";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 
@@ -14,23 +16,16 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
   const limit = 20;
   const offset = (page - 1) * limit;
 
+  const perm = await checkPagePermission("catalog", "read");
+  if (!perm.allowed) return <ForbiddenPage module="catalog" />;
+
   const t = await getTranslations("products_page");
   const common = await getTranslations("common");
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
+  const teamId = perm.teamId;
 
   const { data: products, count } = await supabase
     .from("products")

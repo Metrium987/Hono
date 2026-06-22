@@ -3,14 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ShoppingCart, User, Menu, X } from "lucide-react";
+import { ShoppingCart, User, Menu, X, LayoutDashboard } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/lib/cart/cart-context";
 
-export function StorefrontHeader() {
+export function StorefrontHeader({
+  isPortalLoggedIn = false,
+  portalCustomerName = null,
+}: {
+  isPortalLoggedIn?: boolean;
+  portalCustomerName?: string | null;
+}) {
   const t = useTranslations("storefront");
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -19,6 +25,9 @@ export function StorefrontHeader() {
     { label: t("home"), href: "/" },
     { label: t("catalog"), href: "/products" },
     { label: t("contact"), href: "/contact" },
+    ...(isPortalLoggedIn
+      ? [{ label: t("my_space"), href: "/portal/dashboard" }]
+      : []),
   ];
   const locale = pathname.match(/^\/([a-z]{2})\//)?.[1] ?? "fr";
   const { totalItems } = useCart();
@@ -56,11 +65,19 @@ export function StorefrontHeader() {
 
         {/* Actions */}
         <div className="flex items-center gap-3">
-          <Link href={`/${locale}/login`}>
-            <Button variant="ghost" size="icon" className="hidden md:flex">
-              <User className="h-5 w-5" />
-            </Button>
-          </Link>
+          {isPortalLoggedIn ? (
+            <Link href={`/${locale}/portal/dashboard`}>
+              <Button variant="ghost" size="icon" className="hidden md:flex" title={portalCustomerName ?? t("my_space")}>
+                <LayoutDashboard className="h-5 w-5" />
+              </Button>
+            </Link>
+          ) : (
+            <Link href={`/${locale}/login`}>
+              <Button variant="ghost" size="icon" className="hidden md:flex">
+                <User className="h-5 w-5" />
+              </Button>
+            </Link>
+          )}
           <Link href={`/${locale}/cart`}>
             <Button variant="ghost" size="icon" className="relative">
               <ShoppingCart className="h-5 w-5" />
@@ -98,12 +115,21 @@ export function StorefrontHeader() {
                 </Link>
               );
             })}
-            <Link href={`/${locale}/login`} onClick={() => setMobileOpen(false)}>
-              <Button variant="outline" className="w-full mt-2">
-                <User className="mr-2 h-4 w-4" />
-                {t("client_portal")}
-              </Button>
-            </Link>
+            {isPortalLoggedIn ? (
+              <Link href={`/${locale}/portal/dashboard`} onClick={() => setMobileOpen(false)}>
+                <Button variant="default" className="w-full mt-2">
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  {t("my_space")}
+                </Button>
+              </Link>
+            ) : (
+              <Link href={`/${locale}/login`} onClick={() => setMobileOpen(false)}>
+                <Button variant="outline" className="w-full mt-2">
+                  <User className="mr-2 h-4 w-4" />
+                  {t("client_portal")}
+                </Button>
+              </Link>
+            )}
           </nav>
         </div>
       )}

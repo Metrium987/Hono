@@ -6,6 +6,8 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OrderStatusActions } from "./order-status-actions";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 type Params = { id: string };
 
@@ -18,23 +20,16 @@ type OrderItem = {
 
 export default async function OrderDetailPage({ params }: { params: Promise<Params> }) {
   const { id } = await params;
+  const perm = await checkPagePermission("orders", "read");
+  if (!perm.allowed) return <ForbiddenPage module="orders" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
   const t = await getTranslations("order_status");
   const common = await getTranslations("common");
 
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
+  const teamId = perm.teamId;
 
   const { data: order, error } = await supabase
     .from("orders")

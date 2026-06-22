@@ -2,18 +2,18 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import { DeleteRequestsClient } from "./delete-requests-client";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 export default async function DeleteRequestsPage() {
+  const perm = await checkPagePermission("settings", "read");
+  if (!perm.allowed) return <ForbiddenPage module="settings" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) notFound();
-
-  const { data: memberships } = await supabase
-    .from("team_members").select("team_id, is_owner").eq("user_id", user.id).limit(1);
-  const teamId = memberships?.[0]?.team_id;
-  const isOwner = memberships?.[0]?.is_owner ?? false;
+  const teamId = perm.teamId;
+  const isOwner = perm.isOwner;
   if (!teamId) notFound();
 
   if (!isOwner) {
