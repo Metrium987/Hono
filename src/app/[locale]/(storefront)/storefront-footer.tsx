@@ -26,14 +26,14 @@ export async function StorefrontFooter() {
             <h3 className="text-sm font-semibold mb-3">{t("legal")}</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>{t("legal_mentions")}</li>
-              <li>{t("privacy_policy")}</li>
+              <li><Link href="/fr/privacy" className="hover:text-primary transition-colors">{t("privacy_policy")}</Link></li>
               <li>{t("terms")}</li>
             </ul>
           </div>
           <div>
             <h3 className="text-sm font-semibold mb-3">{st("contact")}</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>{t("contact_email")}</li>
+              <li><a href="mailto:contact@hono.pf" className="hover:text-primary transition-colors">{t("contact_email")}</a></li>
             </ul>
           </div>
         </div>

@@ -48,9 +48,9 @@ export function ErpHeader({ userEmail, teamName, teamId, locale }: ErpHeaderProp
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-muted-foreground text-xs">
+            <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
               {userEmail}
-            </DropdownMenuItem>
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
