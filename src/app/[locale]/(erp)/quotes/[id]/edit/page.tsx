@@ -43,7 +43,7 @@ export default async function EditQuotePage({ params }: { params: Params }) {
     currency_id: quote.currency_id,
     notes: quote.notes ?? "",
     items: (quote.items ?? []).map((item: { description: string; quantity: number; unit_price_ht: number; tax_rate_id: string | null }) => ({
-      key: `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      key: crypto.randomUUID(),
       description: item.description,
       quantity: item.quantity.toString(),
       unit_price_ht: item.unit_price_ht.toString(),

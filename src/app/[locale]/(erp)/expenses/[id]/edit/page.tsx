@@ -23,11 +23,6 @@ export default function EditExpensePage(props: { params: Promise<{ id: string }>
   const t = useTranslations("expense_form");
   const common = useTranslations("common");
 
-  const perm = useClientPermission("expenses", "write");
-  if (!perm.allowed && !perm.loading) {
-    return <ClientForbiddenPage module="expenses" action="write" />;
-  }
-
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -45,6 +40,8 @@ export default function EditExpensePage(props: { params: Promise<{ id: string }>
   const [categories, setCategories] = useState<Category[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
+
+  const perm = useClientPermission("expenses", "write");
 
   useEffect(() => {
     async function load() {
@@ -96,6 +93,10 @@ export default function EditExpensePage(props: { params: Promise<{ id: string }>
     }
     load();
   }, [id]);
+
+  if (!perm.allowed && !perm.loading) {
+    return <ClientForbiddenPage module="expenses" action="write" />;
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

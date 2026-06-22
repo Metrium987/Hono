@@ -19,15 +19,11 @@ type Currency = { id: string; code: string; symbol: string };
 
 export default function NewExpensePage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const t = useTranslations("expense_form");
   const common = useTranslations("common");
 
-  const perm = useClientPermission("expenses", "write");
-  if (!perm.allowed && !perm.loading) {
-    return <ClientForbiddenPage module="expenses" action="write" />;
-  }
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
@@ -41,6 +37,8 @@ export default function NewExpensePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
+
+  const perm = useClientPermission("expenses", "write");
 
   useEffect(() => {
     async function load() {
@@ -59,6 +57,10 @@ export default function NewExpensePage() {
     }
     load();
   }, []);
+
+  if (!perm.allowed && !perm.loading) {
+    return <ClientForbiddenPage module="expenses" action="write" />;
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

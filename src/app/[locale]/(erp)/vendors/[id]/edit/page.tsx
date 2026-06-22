@@ -18,11 +18,6 @@ export default function EditVendorPage(props: { params: Promise<{ id: string }> 
   const t = useTranslations("vendor_form");
   const common = useTranslations("common");
 
-  const perm = useClientPermission("clients", "write");
-  if (!perm.allowed && !perm.loading) {
-    return <ClientForbiddenPage module="vendors" action="write" />;
-  }
-
   const [initialLoading, setInitialLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,6 +30,8 @@ export default function EditVendorPage(props: { params: Promise<{ id: string }> 
   const [address, setAddress] = useState("");
   const [nTahiti, setNTahiti] = useState("");
   const [notes, setNotes] = useState("");
+
+  const perm = useClientPermission("clients", "write");
 
   useEffect(() => {
     async function load() {
@@ -70,6 +67,10 @@ export default function EditVendorPage(props: { params: Promise<{ id: string }> 
     }
     load();
   }, [id]);
+
+  if (!perm.allowed && !perm.loading) {
+    return <ClientForbiddenPage module="vendors" action="write" />;
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

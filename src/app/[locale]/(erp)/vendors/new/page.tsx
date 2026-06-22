@@ -14,16 +14,11 @@ import Link from "next/link";
 
 export default function NewVendorPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const t = useTranslations("vendor_form");
   const common = useTranslations("common");
 
-  const perm = useClientPermission("clients", "write");
-  if (!perm.allowed && !perm.loading) {
-    return <ClientForbiddenPage module="vendors" action="write" />;
-  }
-
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [contactName, setContactName] = useState("");
   const [email, setEmail] = useState("");
@@ -31,6 +26,11 @@ export default function NewVendorPage() {
   const [address, setAddress] = useState("");
   const [nTahiti, setNTahiti] = useState("");
   const [notes, setNotes] = useState("");
+
+  const perm = useClientPermission("clients", "write");
+  if (!perm.allowed && !perm.loading) {
+    return <ClientForbiddenPage module="vendors" action="write" />;
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

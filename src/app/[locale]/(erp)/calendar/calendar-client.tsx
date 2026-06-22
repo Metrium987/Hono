@@ -134,8 +134,10 @@ export function CalendarClient({
   const eventsRef = useRef<CalendarEvent[]>(initialEvents);
   const filterGroupsRef = useRef<string[]>([]);
   const calendarAppRef = useRef<ReturnType<typeof useCalendarApp>>(null);
-  eventsRef.current = events;
-  filterGroupsRef.current = filterGroups;
+
+  // Update refs in effects to avoid violating react-hooks/refs
+  useEffect(() => { eventsRef.current = events; }, [events]);
+  useEffect(() => { filterGroupsRef.current = filterGroups; }, [filterGroups]);
 
   const openEdit = useCallback((e: CalendarEvent) => {
     const s = new Date(e.starts_at);
@@ -165,8 +167,8 @@ export function CalendarClient({
 
   const openEditRef = useRef(openEdit);
   const openNewRef = useRef(openNew);
-  openEditRef.current = openEdit;
-  openNewRef.current = openNew;
+  useEffect(() => { openEditRef.current = openEdit; }, [openEdit]);
+  useEffect(() => { openNewRef.current = openNew; }, [openNew]);
 
   const calendarApp = useCalendarApp({
     locale: "fr-FR",

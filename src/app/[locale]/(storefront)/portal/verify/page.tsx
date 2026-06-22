@@ -12,15 +12,15 @@ export default function PortalVerifyPage() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [errorMsg, setErrorMsg] = useState("");
+  const [status, setStatus] = useState<"loading" | "success" | "error">(
+    () => token ? "loading" : "error"
+  );
+  const [errorMsg, setErrorMsg] = useState(
+    () => token ? "" : t("missing_token")
+  );
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-      setErrorMsg(t("missing_token"));
-      return;
-    }
+    if (!token) return;
 
     async function verify() {
       try {
@@ -47,7 +47,7 @@ export default function PortalVerifyPage() {
     }
 
     verify();
-  }, [token, router]);
+  }, [token, router, t]);
 
   return (
     <div className="mx-auto max-w-md px-4 py-20 text-center">

@@ -29,15 +29,6 @@ export default function NewCreditNotePage() {
   const t = useTranslations("credit_note_form");
   const common = useTranslations("common");
 
-  const perm = useClientPermission("credit_notes", "write");
-  const teamId = useTeamId();
-
-  if (!perm.allowed && !perm.loading) {
-    return <ClientForbiddenPage module="credit_notes" action="write" />;
-  }
-
-  const invoiceId = searchParams.get("invoice_id");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -51,6 +42,10 @@ export default function NewCreditNotePage() {
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split("T")[0]);
   const [reason, setReason] = useState("");
   const [items, setItems] = useState<Item[]>([emptyItem()]);
+
+  const perm = useClientPermission("credit_notes", "write");
+  const teamId = useTeamId();
+  const invoiceId = searchParams.get("invoice_id");
 
   useEffect(() => {
     if (!teamId) return;
@@ -91,6 +86,10 @@ export default function NewCreditNotePage() {
     }
     load();
   }, [teamId, invoiceId]);
+
+  if (!perm.allowed && !perm.loading) {
+    return <ClientForbiddenPage module="credit_notes" action="write" />;
+  }
 
   function addItem() {
     setItems((prev) => [...prev, emptyItem()]);

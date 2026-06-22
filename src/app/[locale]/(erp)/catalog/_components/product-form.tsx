@@ -355,7 +355,7 @@ export function ProductForm({
               />
               <div>
                 <Label htmlFor="featured">Produit mis en avant</Label>
-                <p className="text-xs text-muted-foreground">Affiché en priorité sur la page d'accueil de la vitrine.</p>
+                <p className="text-xs text-muted-foreground">Affiché en priorité sur la page d&apos;accueil de la vitrine.</p>
               </div>
             </div>
 

@@ -25,12 +25,6 @@ export default function NewOrderPage() {
   const t = useTranslations("order_form");
   const common = useTranslations("common");
 
-  const perm = useClientPermission("orders", "write");
-  const teamId = useTeamId();
-
-  if (!perm.allowed && !perm.loading) {
-    return <ClientForbiddenPage module="orders" action="write" />;
-  }
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -39,12 +33,19 @@ export default function NewOrderPage() {
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<Item[]>([emptyItem()]);
 
+  const perm = useClientPermission("orders", "write");
+  const teamId = useTeamId();
+
   useEffect(() => {
     if (!teamId) return;
     fetch(`/api/v1/customers?limit=200&team_id=${teamId}`)
       .then((r) => r.json())
       .then((d) => setCustomers(d.data ?? []));
   }, [teamId]);
+
+  if (!perm.allowed && !perm.loading) {
+    return <ClientForbiddenPage module="orders" action="write" />;
+  }
 
   function addItem() {
     setItems((prev) => [...prev, emptyItem()]);

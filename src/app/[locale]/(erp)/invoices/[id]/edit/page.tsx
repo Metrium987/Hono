@@ -49,7 +49,7 @@ export default async function EditInvoicePage({ params }: { params: Params }) {
     notes: invoice.notes ?? "",
     message: invoice.message ?? "",
     items: (invoice.items ?? []).map((item: { description: string; quantity: number; unit_price_ht: number; tax_rate_id: string | null }) => ({
-      key: `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      key: crypto.randomUUID(),
       description: item.description,
       quantity: item.quantity.toString(),
       unit_price_ht: item.unit_price_ht.toString(),

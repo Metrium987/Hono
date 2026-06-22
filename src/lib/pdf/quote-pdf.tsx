@@ -223,9 +223,9 @@ export function QuotePdfDocument({ data }: { data: QuotePdfData }) {
           <View style={styles.infoBlock}>
             <Text style={styles.infoTitle}>Devis</Text>
             <Text style={styles.infoHighlight}>{data.quote_number}</Text>
-            <Text style={styles.infoText}>Date d'émission : {formatDate(data.issue_date)}</Text>
+            <Text style={styles.infoText}>Date d&apos;émission : {formatDate(data.issue_date)}</Text>
             {data.validity_date && (
-              <Text style={styles.validityText}>Valable jusqu'au : {formatDate(data.validity_date)}</Text>
+              <Text style={styles.validityText}>Valable jusqu&apos;au : {formatDate(data.validity_date)}</Text>
             )}
           </View>
           <View style={styles.infoBlock}>

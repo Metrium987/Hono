@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 
 export async function StorefrontFooter() {
   const t = await getTranslations("portal");
@@ -17,8 +18,8 @@ export async function StorefrontFooter() {
           <div>
             <h3 className="text-sm font-semibold mb-3">{t("products")}</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="/fr/products" className="hover:text-primary transition-colors">{st("catalog")}</a></li>
-              <li><a href="/fr/portal/auth" className="hover:text-primary transition-colors">{st("client_portal")}</a></li>
+              <li><Link href="/fr/products" className="hover:text-primary transition-colors">{st("catalog")}</Link></li>
+              <li><Link href="/fr/portal/auth" className="hover:text-primary transition-colors">{st("client_portal")}</Link></li>
             </ul>
           </div>
           <div>

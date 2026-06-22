@@ -197,8 +197,7 @@ export function CreditNotePdfDocument({ data }: { data: CreditNotePdfData }) {
         <View style={styles.infoRow}>
           <View style={styles.infoBlock}>
             <Text style={styles.infoTitle}>Avoir</Text>
-            <Text style={styles.infoHighlight}>{data.credit_note_number}</Text>
-            <Text style={styles.infoText}>Date d'émission : {formatDate(data.issue_date)}</Text>
+            <Text style={styles.infoHighlight}>{data.credit_note_number}</Text>                <Text style={styles.infoText}>Date d&apos;émission : {formatDate(data.issue_date)}</Text>
             {data.invoice && (
               <Text style={styles.infoText}>Facture référencée : {data.invoice.invoice_number}</Text>
             )}

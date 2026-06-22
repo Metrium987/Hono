@@ -81,11 +81,15 @@ export function BreakEvenClient({
 
   // Cumulative chart data
   const chartData = useMemo(() => {
-    let cumul = 0;
-    return monthlyCA.map((m) => {
-      cumul += m.ca;
-      return { month: m.month, "CA mensuel": Math.round(m.ca), "CA cumulé": Math.round(cumul) };
+    const runningTotal: number[] = [];
+    monthlyCA.forEach((m, i) => {
+      runningTotal[i] = (runningTotal[i - 1] ?? 0) + m.ca;
     });
+    return monthlyCA.map((m, i) => ({
+      month: m.month,
+      "CA mensuel": Math.round(m.ca),
+      "CA cumulé": Math.round(runningTotal[i]),
+    }));
   }, [monthlyCA]);
 
   const caAtteint = seuil !== null && totalCA >= seuil;

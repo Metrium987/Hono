@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 
 export type CartItem = {
   productId: string;
@@ -45,21 +45,21 @@ function saveCart(items: CartItem[]) {
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  // Lazy initializer loads cart from localStorage on mount (avoids hydration effect)
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window !== "undefined") return loadCart();
+    return [];
+  });
+  const firstRender = useRef(true);
 
-  // Hydrate from localStorage on mount
+  // Persist to localStorage on change (skip initial render)
   useEffect(() => {
-    setItems(loadCart());
-    setHydrated(true);
-  }, []);
-
-  // Persist to localStorage on change
-  useEffect(() => {
-    if (hydrated) {
+    if (firstRender.current) {
+      firstRender.current = false;
+    } else {
       saveCart(items);
     }
-  }, [items, hydrated]);
+  }, [items]);
 
   const addItem = useCallback((newItem: Omit<CartItem, "quantity">) => {
     setItems((prev) => {

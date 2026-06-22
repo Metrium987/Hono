@@ -56,6 +56,7 @@ export default function CartPage() {
                 {/* Thumbnail */}
                 <div className="w-20 h-20 rounded-lg bg-muted flex-shrink-0 flex items-center justify-center overflow-hidden">
                   {item.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                   ) : (
                     <ShoppingCart className="h-6 w-6 text-muted-foreground/50" />

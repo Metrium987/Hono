@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, useEffect, useCallback } from "react";
+import { useState, FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Loader2, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,9 +43,10 @@ export function RecordPaymentForm({
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().split("T")[0]);
   const [notes, setNotes] = useState("");
 
-  // Reset form when dialog opens
-  useEffect(() => {
-    if (open) {
+  // Reset form when dialog opens — use onOpenChange instead of effect
+  function handleOpenChange(newOpen: boolean) {
+    setOpen(newOpen);
+    if (newOpen) {
       setAmount(remaining.toString());
       setPaymentMethodId(paymentMethods[0]?.id ?? "");
       setCurrencyId(currencies[0]?.id ?? "");
@@ -55,7 +56,7 @@ export function RecordPaymentForm({
       setError("");
       setSuccess(false);
     }
-  }, [open, remaining, paymentMethods, currencies]);
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -101,7 +102,7 @@ export function RecordPaymentForm({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="mr-2 h-4 w-4" /> {t("title")}
