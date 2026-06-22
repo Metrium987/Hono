@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { GlobalSearch } from "@/components/erp/global-search";
+import { createClient } from "@/utils/supabase/client";
 
 type ErpHeaderProps = {
   userEmail: string;
@@ -20,6 +21,12 @@ type ErpHeaderProps = {
 };
 
 export function ErpHeader({ userEmail, teamName, teamId, locale }: ErpHeaderProps) {
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = `/${locale}/login`;
+  }
+
   return (
     <header className="flex h-14 items-center justify-between border-b bg-card px-6">
       <div className="flex items-center gap-2">
@@ -45,7 +52,7 @@ export function ErpHeader({ userEmail, teamName, teamId, locale }: ErpHeaderProp
               {userEmail}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
+            <DropdownMenuItem className="text-destructive" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               Déconnexion
             </DropdownMenuItem>
