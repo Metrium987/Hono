@@ -17,7 +17,7 @@ export default async function ErpLayout({
   const supabase = createClient(cookieStore);
 
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(`/${locale}/login`);
 
   const { data: memberships } = await supabase
     .from("team_members")

@@ -46,7 +46,7 @@ function LoginPageInner() {
       return;
     }
 
-    router.push(invitationRedirect ?? "/fr/");
+    router.push(invitationRedirect ?? "/fr/invoices");
     router.refresh();
   }
 
