@@ -12,6 +12,8 @@ import { RecordPaymentForm } from "./record-payment-form";
 import { PaymentsList } from "./payments-list";
 import { DeleteInvoiceDialog } from "./delete-invoice-dialog";
 import { SendInvoiceButton } from "./send-invoice-button";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 type InvoiceItem = {
   id: string;
@@ -67,20 +69,13 @@ export default async function InvoiceDetailPage(props: { params: Params }) {
   const statusT = await getTranslations("invoice_status");
   const common = await getTranslations("common");
 
+  const perm = await checkPagePermission("invoices", "read");
+  if (!perm.allowed) return <ForbiddenPage module="invoices" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  if (!teamId) return <div>{common("no_team")}</div>;
+  const teamId = perm.teamId;
 
   const { data: paymentMethodsData } = await supabase
     .from("payment_methods")

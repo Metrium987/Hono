@@ -4,25 +4,21 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { CreditCard, Key, Building2, Percent, Coins, Users2, LayoutList } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { checkPagePermission } from "@/lib/auth/page-auth";
+import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
 export default async function SettingsPage() {
+  // Vérification des permissions
+  const perm = await checkPagePermission("settings", "read");
+  if (!perm.allowed) return <ForbiddenPage module="settings" />;
+
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
   const t = await getTranslations("settings_page");
   const common = await getTranslations("common");
 
-  if (!user) return <div>{common("not_connected")}</div>;
-
-  const { data: memberships } = await supabase
-    .from("team_members")
-    .select("team_id, is_owner")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  const teamId = memberships?.[0]?.team_id;
-  const isOwner = memberships?.[0]?.is_owner ?? false;
+  const isOwner = perm.isOwner;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
