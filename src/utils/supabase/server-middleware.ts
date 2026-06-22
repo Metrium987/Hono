@@ -22,8 +22,6 @@ export const updateSession = async (request: NextRequest) => {
         cookiesToSet.forEach(({ name, value, options }) =>
           supabaseResponse.cookies.set(name, value, options)
         );
-        // Prevent CDN/proxy from caching responses that set auth cookies.
-        // @supabase/ssr passes Cache-Control: private, no-store headers here.
         Object.entries(responseHeaders ?? {}).forEach(([key, value]) => {
           supabaseResponse.headers.set(key, value);
         });
@@ -34,7 +32,7 @@ export const updateSession = async (request: NextRequest) => {
   try {
     await supabase.auth.getUser();
   } catch {
-    // Session refresh failed silently — user may need to re-authenticate
+    // Session refresh failed silently
   }
 
   return supabaseResponse;
