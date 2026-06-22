@@ -43,6 +43,10 @@ export default async function MyActivityPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return <div>Non connecté</div>;
 
+  const { data: membership } = await supabase
+    .from("team_members").select("team_id").eq("user_id", user.id).limit(1).single();
+  if (!membership) return <div>Aucune équipe associée à ce compte.</div>;
+
   const [invoicesRes, customersRes, commissionsRes] = await Promise.all([
     supabase
       .from("invoices")

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +50,7 @@ export function RecurringClient({
   taxRates: TaxRate[];
   freqLabels: Record<string, string>;
 }) {
+  const router = useRouter();
   const [data, setData] = useState<RecurringRow[]>(initialData);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -96,10 +98,9 @@ export function RecurringClient({
       });
       const json = await res.json();
       if (!res.ok) { toast.error(json.error ?? "Erreur"); return; }
-      // Reload
-      window.location.reload();
       toast.success("Facturation récurrente créée");
       setOpen(false);
+      router.refresh();
     } catch {
       toast.error("Erreur réseau");
     } finally {

@@ -1,17 +1,20 @@
 import React from "react";
+import path from "path";
 import { Document, Page, View, StyleSheet, Font } from "@react-pdf/renderer";
 
 // ──────────────────────────────────────────────────────────
-// Font Registration (Inter — extended character support)
+// Font Registration (Inter — fichiers locaux dans public/fonts/)
 // ──────────────────────────────────────────────────────────
+
+const FONTS_DIR = path.join(process.cwd(), "public", "fonts");
 
 Font.register({
   family: "Inter",
   fonts: [
-    { src: "https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2", fontWeight: 400 },
-    { src: "https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fAZ9hiJ-Ek-_EeA.woff2", fontWeight: 500 },
-    { src: "https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff2", fontWeight: 600 },
-    { src: "https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuDyYAZ9hiJ-Ek-_EeA.woff2", fontWeight: 700 },
+    { src: path.join(FONTS_DIR, "inter-400.woff2"), fontWeight: 400 },
+    { src: path.join(FONTS_DIR, "inter-500.woff2"), fontWeight: 500 },
+    { src: path.join(FONTS_DIR, "inter-600.woff2"), fontWeight: 600 },
+    { src: path.join(FONTS_DIR, "inter-700.woff2"), fontWeight: 700 },
   ],
 });
 import { InvoiceHeader } from "./components/invoice-header";

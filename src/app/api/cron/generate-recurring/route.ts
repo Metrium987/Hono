@@ -50,11 +50,26 @@ export async function GET(request: NextRequest) {
     `)
     .eq("is_active", true)
     .lte("next_generation_date", today)
-    .or(`end_date.is.null,end_date.gte.${today}`);
+    .or(`end_date.is.null,end_date.gte.${today}`)
+    .limit(100);
 
   if (error) {
     console.error("[cron/generate-recurring]", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Pré-charger tous les tax_rates nécessaires en une seule requête (évite N+1)
+  const allItems = (templates ?? []).flatMap((tpl) => tpl.items ?? []);
+  const taxRateIds = [...new Set(allItems.map((i) => i.tax_rate_id).filter(Boolean))] as string[];
+  const taxRateMap = new Map<string, number>();
+  if (taxRateIds.length > 0) {
+    const { data: taxRates } = await supabase
+      .from("tax_rates")
+      .select("id, rate")
+      .in("id", taxRateIds);
+    for (const tr of taxRates ?? []) {
+      taxRateMap.set(tr.id, tr.rate);
+    }
   }
 
   let generated = 0;
@@ -62,13 +77,11 @@ export async function GET(request: NextRequest) {
 
   for (const tpl of templates ?? []) {
     try {
-      // Générer le numéro de facture via RPC
       const { data: numData } = await supabase
         .rpc("generate_next_invoice_number", { p_team_id: tpl.team_id, p_prefix: tpl.prefix ?? "FAC-" });
 
       const invoiceNumber = numData as string;
 
-      // Calculer totaux HT/TVA à partir des items
       let subtotalHt = 0;
       let taxAmount = 0;
       const items = tpl.items ?? [];
@@ -77,12 +90,8 @@ export async function GET(request: NextRequest) {
         const lineHt = parseFloat(String(item.quantity)) * parseFloat(String(item.unit_price_ht));
         subtotalHt += lineHt;
         if (item.tax_rate_id) {
-          const { data: taxRate } = await supabase
-            .from("tax_rates")
-            .select("rate")
-            .eq("id", item.tax_rate_id)
-            .single();
-          if (taxRate) taxAmount += lineHt * (taxRate.rate / 100);
+          const rate = taxRateMap.get(item.tax_rate_id) ?? 0;
+          taxAmount += lineHt * (rate / 100);
         }
       }
 
@@ -110,7 +119,6 @@ export async function GET(request: NextRequest) {
 
       if (invErr || !invoice) { skipped++; continue; }
 
-      // Copier les lignes
       if (items.length > 0) {
         await supabase.from("invoice_items").insert(
           items.map((item: { description: string; quantity: number; unit_price_ht: number; tax_rate_id: string | null; product_id: string | null; position: number }) => ({
@@ -126,11 +134,8 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Calculer next_generation_date
       const nextDate = addFrequency(new Date(tpl.next_generation_date), tpl.frequency, tpl.interval_count ?? 1);
       const nextDateStr = nextDate.toISOString().split("T")[0];
-
-      // Désactiver si next > end_date
       const shouldDeactivate = tpl.end_date && nextDateStr > tpl.end_date;
 
       await supabase.from("recurring_invoices").update({

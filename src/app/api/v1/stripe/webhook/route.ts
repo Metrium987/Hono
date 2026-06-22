@@ -19,7 +19,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const stripe = (await import("stripe")).default;
-    const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2023-10-16" });
+    const STRIPE_API_VERSION = "2026-05-27.dahlia" as const;
+    const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: STRIPE_API_VERSION });
 
     const body = await request.text();
     const signature = request.headers.get("stripe-signature")!;

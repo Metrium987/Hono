@@ -1,10 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Upload, Loader2 } from "lucide-react";
 
 export function ProductImageUpload({ productId, teamId }: { productId: string; teamId: string }) {
+  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +27,7 @@ export function ProductImageUpload({ productId, teamId }: { productId: string; t
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Upload failed");
       setSuccess(true);
-      setTimeout(() => window.location.reload(), 800);
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur lors de l'upload");
     } finally {

@@ -11,12 +11,18 @@ import { InvoiceReminderEmail, type InvoiceReminderData } from "@/lib/email/invo
 export const maxDuration = 60;
 
 const COOLDOWN_DAYS = 14;
+const MAX_LEVEL = 3;
+
+const LEVEL_SUBJECTS: Record<number, string> = {
+  1: "Rappel",
+  2: "Relance",
+  3: "Dernier avertissement",
+};
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 const FROM = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
 
 export async function GET(request: NextRequest) {
-  // Vercel injecte automatiquement Authorization: Bearer <CRON_SECRET> sur les routes cron
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -30,7 +36,6 @@ export async function GET(request: NextRequest) {
   const today = new Date().toISOString().split("T")[0];
   const cooldownDate = new Date(Date.now() - COOLDOWN_DAYS * 86_400_000).toISOString();
 
-  // Toutes les factures en retard avec dernière relance connue
   const { data: invoices, error } = await supabase
     .from("invoices")
     .select(`
@@ -42,7 +47,8 @@ export async function GET(request: NextRequest) {
     .in("status", ["sent", "overdue"])
     .lt("due_date", today)
     .is("deleted_at", null)
-    .order("due_date", { ascending: true });
+    .order("due_date", { ascending: true })
+    .limit(100);
 
   if (error) {
     console.error("[cron/auto-remind] query error:", error);
@@ -63,18 +69,25 @@ export async function GET(request: NextRequest) {
 
     if (!customer?.email) { skipped++; continue; }
 
-    // Cooldown : si une relance a été envoyée dans les 14 derniers jours, skip
+    // Trouver la dernière relance envoyée (toutes niveaux confondus)
     const lastReminder = reminders
       .sort((a, b) => b.sent_at.localeCompare(a.sent_at))[0] ?? null;
 
+    // Niveau max atteint : plus de relance automatique
+    if (lastReminder && lastReminder.level >= MAX_LEVEL) { skipped++; continue; }
+
+    // Cooldown : si une relance a été envoyée dans les 14 derniers jours, skip
     if (lastReminder && lastReminder.sent_at > cooldownDate) { skipped++; continue; }
+
+    // Escalade : prochain niveau = dernier niveau + 1 (ou 1 si aucune relance)
+    const nextLevel = (lastReminder ? lastReminder.level + 1 : 1) as 1 | 2 | 3;
 
     const daysOverdue = Math.max(0, Math.floor(
       (Date.now() - new Date(inv.due_date).getTime()) / 86_400_000
     ));
 
     const emailData: InvoiceReminderData = {
-      level: 1,
+      level: nextLevel,
       invoiceNumber: inv.invoice_number,
       totalTtc: parseFloat(String(inv.total_ttc || 0)),
       dueDate: new Date(inv.due_date).toLocaleDateString("fr-FR"),
@@ -89,11 +102,12 @@ export async function GET(request: NextRequest) {
 
     try {
       const html = await render(React.createElement(InvoiceReminderEmail, { data: emailData }));
+      const subjectPrefix = LEVEL_SUBJECTS[nextLevel] ?? "Relance";
 
       const { error: sendErr } = await resend.emails.send({
         from: `${team?.name ?? "Hono"} <${FROM}>`,
         to: [customer.email],
-        subject: `Rappel — Facture ${inv.invoice_number} — ${team?.name ?? ""}`,
+        subject: `${subjectPrefix} — Facture ${inv.invoice_number} — ${team?.name ?? ""}`,
         html,
       });
 
@@ -103,13 +117,12 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      // Enregistrer la relance (sent_by null = automatique)
       await supabase.from("invoice_reminders").insert({
         team_id: inv.team_id,
         invoice_id: inv.id,
-        level: 1,
+        level: nextLevel,
         email_to: customer.email,
-        note: "Relance automatique (Vercel Cron — 08h Tahiti)",
+        note: `Relance automatique niveau ${nextLevel} (Vercel Cron — 08h Tahiti)`,
         sent_by: null,
       });
 

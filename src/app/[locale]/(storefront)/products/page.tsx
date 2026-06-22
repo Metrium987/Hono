@@ -26,6 +26,7 @@ type ProductRow = {
   current_stock: number;
   category: { id?: string; slug: string; name: string | null } | Array<{ id?: string; slug: string; name: string | null }> | null;
   currency: { symbol?: string | null; code?: string | null } | Array<{ symbol?: string | null; code?: string | null }> | null;
+  tax_rate: { rate: number } | Array<{ rate: number }> | null;
   images: ProductImage[] | null;
 };
 
@@ -44,19 +45,36 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
+  // Résoudre le category_id depuis le slug (server-side filtering)
+  let categoryId: string | null = null;
+  if (categorySlug) {
+    const { data: cat } = await supabase
+      .from("product_categories")
+      .select("id")
+      .eq("slug", categorySlug)
+      .single();
+    categoryId = cat?.id ?? null;
+  }
+
+  let productQuery = supabase
+    .from("products")
+    .select(`
+      id, name, description, short_description, price_ht, sku, type,
+      track_stock, current_stock,
+      category:category_id(id, slug, name),
+      currency:currency_id(symbol, code),
+      tax_rate:tax_rate_id(rate),
+      images:product_images(storage_path, position)
+    `)
+    .eq("is_active", true)
+    .eq("is_published", true)
+    .order("created_at", { ascending: false });
+
+  if (categoryId) productQuery = productQuery.eq("category_id", categoryId);
+  if (search) productQuery = productQuery.or(`name.ilike.%${search.replace(/[,()'"]/g, "")}%,sku.ilike.%${search.replace(/[,()'"]/g, "")}%`);
+
   const [productsRes, categoriesRes] = await Promise.all([
-    supabase
-      .from("products")
-      .select(`
-        id, name, description, short_description, price_ht, sku, type,
-        track_stock, current_stock,
-        category:category_id(id, slug, name),
-        currency:currency_id(symbol, code),
-        images:product_images(storage_path, position)
-      `)
-      .eq("is_active", true)
-      .eq("is_published", true)
-      .order("created_at", { ascending: false }),
+    productQuery,
     supabase
       .from("product_categories")
       .select("id, slug, name")
@@ -116,25 +134,18 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
       : `-${Math.round(promo.discount_value).toLocaleString("fr-FR")} F`;
   }
 
+  function toTTC(priceHt: number, taxRate: ProductRow["tax_rate"]): number {
+    const rate = Array.isArray(taxRate) ? (taxRate[0]?.rate ?? 0) : (taxRate?.rate ?? 0);
+    return priceHt * (1 + rate / 100);
+  }
+
   const getSlug = (p: ProductRow): string | undefined => {
     const cat = p.category;
     if (Array.isArray(cat)) return cat[0]?.slug;
     return cat?.slug;
   };
 
-  let filtered = allProducts;
-  if (categorySlug) {
-    filtered = filtered.filter((p) => getSlug(p) === categorySlug);
-  }
-  if (search) {
-    const q = search.toLowerCase();
-    filtered = filtered.filter(
-      (p) =>
-        p.name?.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q) ||
-        p.sku?.toLowerCase().includes(q)
-    );
-  }
+  const filtered = allProducts;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -213,7 +224,9 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
                   : null;
                 const inStock = !p.track_stock || p.current_stock > 0;
                 const bestPromo = getBestPromo(p.id, catId);
-                const discountedPrice = bestPromo ? computePromoPrice(p.price_ht, bestPromo) : null;
+                const discountedHt = bestPromo ? computePromoPrice(p.price_ht, bestPromo) : null;
+                const priceTTC = toTTC(p.price_ht, p.tax_rate);
+                const discountedTTC = discountedHt !== null ? toTTC(discountedHt, p.tax_rate) : null;
                 const sym = currency?.symbol ?? currency?.code ?? "F";
 
                 return (
@@ -251,18 +264,18 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
                         )}
                       </CardHeader>
                       <CardContent>
-                        {discountedPrice !== null ? (
+                        {discountedTTC !== null ? (
                           <div className="flex items-baseline gap-2">
                             <p className="text-2xl font-bold text-red-600">
-                              {discountedPrice.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {sym}
+                              {discountedTTC.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} {sym}
                             </p>
                             <p className="text-sm text-muted-foreground line-through">
-                              {p.price_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {sym}
+                              {priceTTC.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} {sym}
                             </p>
                           </div>
                         ) : (
                           <p className="text-2xl font-bold text-primary">
-                            {p.price_ht.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {sym}
+                            {priceTTC.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} {sym}
                           </p>
                         )}
                         {(p.short_description || p.description) && (

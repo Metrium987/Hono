@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
 
     try {
       const stripe = (await import("stripe")).default;
-      const stripeClient = new stripe(stripeKey, { apiVersion: "2023-10-16" });
+      const STRIPE_API_VERSION = "2026-05-27.dahlia" as const;
+      const stripeClient = new stripe(stripeKey, { apiVersion: STRIPE_API_VERSION });
 
       const customerEmail = Array.isArray(invoice.customer)
         ? invoice.customer[0]?.email

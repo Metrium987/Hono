@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ customers: [], invoices: [], products: [] });
     }
     const url = new URL(request.url);
-    const q = url.searchParams.get("q")?.trim() ?? "";
+    const raw = url.searchParams.get("q")?.trim() ?? "";
+    // Sanitiser les caractères spéciaux PostgREST avant interpolation dans .or()
+    const q = raw.replace(/[,()'"]/g, "");
     if (q.length < 2) return NextResponse.json({ customers: [], invoices: [], products: [] });
 
     const pattern = `%${q}%`;

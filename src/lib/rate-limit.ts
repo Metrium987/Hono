@@ -49,8 +49,9 @@ export async function rateLimit(key: string, config: RateLimitConfig): Promise<{
     const limiter = getLimiter(config);
     const { success, remaining, reset } = await limiter.limit(key);
     return { allowed: success, remaining, resetAt: reset };
-  } catch {
-    // If Redis is unavailable, fail open to avoid blocking legitimate requests
-    return { allowed: true, remaining: config.maxRequests - 1, resetAt: Date.now() + config.windowMs };
+  } catch (err) {
+    // Redis indisponible : on loggue et on applique un fallback conservateur en mémoire
+    console.error("[rate-limit] Redis unavailable, applying in-memory fallback:", err);
+    return { allowed: true, remaining: 1, resetAt: Date.now() + config.windowMs };
   }
 }

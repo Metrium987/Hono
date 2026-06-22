@@ -12,13 +12,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "entity must be 'product' or 'customer'" }, { status: 400 });
     }
 
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const safeIds = Array.isArray(ids)
+      ? ids.filter((id: unknown) => typeof id === "string" && UUID_RE.test(id))
+      : [];
+
     const table = entity === "product" ? "products" : "customers";
 
-    const { data: rows, error: fetchError } = await auth.supabase
+    let query = auth.supabase
       .from(table)
       .select("id, name, description")
-      .eq("team_id", teamId)
-      .not("id", "in", `(${Array.isArray(ids) ? ids.join(",") : ""})`);
+      .eq("team_id", teamId);
+
+    if (safeIds.length > 0) {
+      query = query.not("id", "in", `(${safeIds.join(",")})`);
+    }
+
+    const { data: rows, error: fetchError } = await query;
 
     if (fetchError) {
       return NextResponse.json({ error: fetchError.message }, { status: 500 });

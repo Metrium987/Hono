@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,7 @@ import { Plus } from "lucide-react";
 type Role = { id: string; name: string };
 
 export function InviteForm({ teamId, roles }: { teamId: string; roles: Role[] }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState(roles[0]?.id ?? "");
@@ -47,7 +49,7 @@ export function InviteForm({ teamId, roles }: { teamId: string; roles: Role[] })
     setTimeout(() => {
       setSuccess(false);
       setOpen(false);
-      window.location.reload();
+      router.refresh();
     }, 1500);
   }
 

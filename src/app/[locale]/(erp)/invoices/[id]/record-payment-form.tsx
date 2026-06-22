@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Plus, Loader2, Check, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ export function RecordPaymentForm({
 }: RecordPaymentFormProps) {
   const t = useTranslations("payment_form");
   const common = useTranslations("common");
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -92,7 +94,7 @@ export function RecordPaymentForm({
       setTimeout(() => {
         setOpen(false);
         setSuccess(false);
-        window.location.reload();
+        router.refresh();
       }, 1500);
     } catch {
       setError(common("connection_error"));

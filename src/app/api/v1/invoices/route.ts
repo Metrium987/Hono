@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit;
     const status = params.get("status");
     const customerId = params.get("customer_id");
-    const search = params.get("search");
+    const rawSearch = params.get("search");
+    // Sanitiser les caractères spéciaux PostgREST (virgule, parenthèses, guillemets)
+    const search = rawSearch ? rawSearch.replace(/[,()'"]/g, "").trim() : null;
 
     let query = auth.supabase
       .from("invoices")

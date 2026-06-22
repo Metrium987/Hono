@@ -20,8 +20,8 @@ const FREQ_LABELS: Record<string, string> = {
 };
 
 export default async function RecurringInvoicesPage() {
-  const perm = await checkPagePermission("recurring_invoices", "read");
-  if (!perm.allowed) return <ForbiddenPage module="recurring_invoices" />;
+  const perm = await checkPagePermission("invoices", "read");
+  if (!perm.allowed) return <ForbiddenPage module="invoices" />;
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
