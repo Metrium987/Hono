@@ -154,7 +154,7 @@ export async function POST(
     if (ar) {
       const newArPaid = parseFloat(String(ar.paid_amount)) + amount;
       const newBalance = parseFloat(String(ar.total_amount)) - newArPaid;
-      const arStatus = newBalance <= 0 ? "paid" : newArPaid > 0 ? "partial" : "pending";
+      const arStatus = newBalance < 0.01 ? "paid" : newArPaid > 0 ? "partial" : "pending";
       await auth.supabase
         .from("account_receivables")
         .update({
