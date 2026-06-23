@@ -757,7 +757,7 @@ export function registerTools(
       "Liste les bons de livraison.",
       { order_id: z.string().optional(), status: z.enum(["draft", "dispatched", "delivered", "cancelled"]).optional() },
       async ({ order_id, status }) => {
-        let q = supabase.from("delivery_notes").select("id, note_number, status, created_at, order:order_id(id)").eq("team_id", teamId).order("created_at", { ascending: false });
+        let q = supabase.from("delivery_notes").select("id, note_number, status, created_at, order:order_id(id)").order("created_at", { ascending: false });
         if (order_id) q = q.eq("order_id", order_id);
         if (status) q = q.eq("status", status);
         const { data, error } = await q.limit(30);
@@ -779,9 +779,9 @@ export function registerTools(
         items: z.array(z.object({ product_id: z.string(), quantity_dispatched: z.number().positive() })).min(1),
       },
       async ({ order_id, delivery_address, recipient_name, notes, items }) => {
-        const { count } = await supabase.from("delivery_notes").select("id", { count: "exact", head: true }).eq("team_id", teamId);
+        const { count } = await supabase.from("delivery_notes").select("id", { count: "exact", head: true });
         const noteNumber = `BL-${String((count ?? 0) + 1).padStart(5, "0")}`;
-        const { data: dn, error } = await supabase.from("delivery_notes").insert({ team_id: teamId, order_id, note_number: noteNumber, delivery_address: delivery_address ?? null, recipient_name: recipient_name ?? null, notes: notes ?? null }).select("id, note_number").single();
+        const { data: dn, error } = await supabase.from("delivery_notes").insert({ order_id, note_number: noteNumber, delivery_address: delivery_address ?? null, recipient_name: recipient_name ?? null, notes: notes ?? null }).select("id, note_number").single();
         if (error || !dn) return textResult(`Erreur : ${error?.message}`);
         await supabase.from("delivery_note_items").insert(items.map(it => ({ team_id: teamId, delivery_note_id: dn.id, product_id: it.product_id, quantity_dispatched: it.quantity_dispatched, quantity_delivered: 0 })));
         return textResult(`BL ${dn.note_number} créé. ID : ${dn.id}`);
@@ -886,8 +886,8 @@ export function registerTools(
       "Liste les alertes actives (stock bas, impayés, etc.).",
       { dismissed: z.boolean().optional().default(false) },
       async ({ dismissed }) => {
-        let q = supabase.from("alerts").select("id, alert_type, severity, title, message, entity_type, entity_id, created_at").eq("team_id", teamId).order("created_at", { ascending: false }).limit(30);
-        if (!dismissed) q = q.is("dismissed_at", null);
+        let q = supabase.from("system_alerts").select("id, alert_type, severity, title, message, entity_type, entity_id, created_at").eq("team_id", teamId).order("created_at", { ascending: false }).limit(30);
+        if (!dismissed) q = q.eq("is_dismissed", false);
         const { data, error } = await q;
         if (error) return textResult(`Erreur : ${error.message}`);
         return jsonResult(data);
@@ -899,7 +899,7 @@ export function registerTools(
       "Marque une alerte comme lue/traitée.",
       { alert_id: z.string() },
       async ({ alert_id }) => {
-        const { error } = await supabase.from("alerts").update({ dismissed_at: new Date().toISOString() }).eq("id", alert_id).eq("team_id", teamId);
+        const { error } = await supabase.from("system_alerts").update({ is_dismissed: true, dismissed_at: new Date().toISOString() }).eq("id", alert_id).eq("team_id", teamId);
         if (error) return textResult(`Erreur : ${error.message}`);
         return textResult("Alerte masquée.");
       }
@@ -924,7 +924,7 @@ export function registerTools(
       "Approuve une demande (dépense, devis).",
       { approval_id: z.string(), comment: z.string().optional() },
       async ({ approval_id, comment }) => {
-        const { error } = await supabase.from("approvals").update({ status: "approved", reviewed_by: null, reviewed_at: new Date().toISOString(), comment: comment ?? null }).eq("id", approval_id).eq("team_id", teamId);
+        const { error } = await supabase.from("approvals").update({ status: "approved", resolved_by: null, resolved_at: new Date().toISOString(), reason: comment ?? null }).eq("id", approval_id).eq("team_id", teamId);
         if (error) return textResult(`Erreur : ${error.message}`);
         return textResult("Demande approuvée.");
       }
@@ -935,7 +935,7 @@ export function registerTools(
       "Rejette une demande.",
       { approval_id: z.string(), comment: z.string().min(1).describe("Raison du refus") },
       async ({ approval_id, comment }) => {
-        const { error } = await supabase.from("approvals").update({ status: "rejected", reviewed_at: new Date().toISOString(), comment }).eq("id", approval_id).eq("team_id", teamId);
+        const { error } = await supabase.from("approvals").update({ status: "rejected", resolved_at: new Date().toISOString(), reason: comment }).eq("id", approval_id).eq("team_id", teamId);
         if (error) return textResult(`Erreur : ${error.message}`);
         return textResult("Demande rejetée.");
       }

@@ -96,13 +96,20 @@ export async function POST(request: NextRequest) {
     for (const item of items) {
       const qty = parseFloat(String(item.quantity)) || 1;
       const unitPrice = parseFloat(String(item.unit_price_ht)) || 0;
-      const lineTotal = qty * unitPrice;
+      const lineTotal = Math.round(qty * unitPrice * 100) / 100;
       subtotal_ht += lineTotal;
 
       if (item.tax_rate_id) {
         const rateVal = taxRateMap.get(item.tax_rate_id) ?? 0;
         tax_amount += lineTotal * (rateVal / 100);
       }
+    }
+
+    // Franchise en base — TVA non applicable légalement
+    const { data: teamSettings } = await auth.supabase
+      .from("teams").select("is_franchise_en_base").eq("id", teamId).single();
+    if (teamSettings?.is_franchise_en_base) {
+      tax_amount = 0;
     }
 
     const total_ttc = subtotal_ht + tax_amount;

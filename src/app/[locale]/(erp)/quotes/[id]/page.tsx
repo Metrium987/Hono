@@ -46,7 +46,7 @@ function unwrap<T>(v: T | Array<T> | null | undefined): T | null {
 
 function fmt(n: number | string | null, sym = "F") {
   const val = typeof n === "number" ? n : parseFloat(String(n ?? 0));
-  return `${val.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} ${sym}`;
+  return `${Math.round(val).toLocaleString("fr-FR", { maximumFractionDigits: 0 })} ${sym}`;
 }
 
 function fmtDate(d: string) {

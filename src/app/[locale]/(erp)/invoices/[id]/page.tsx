@@ -139,7 +139,7 @@ export default async function InvoiceDetailPage(props: { params: Params }) {
   }
 
   function formatCurrency(amount: number) {
-    return `${amount.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} ${currency?.symbol ?? "F"}`;
+    return `${Math.round(amount).toLocaleString("fr-FR", { maximumFractionDigits: 0 })} ${currency?.symbol ?? "F"}`;
   }
 
   return (
