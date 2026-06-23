@@ -12,6 +12,7 @@ const OrderItemSchema = z.object({
 
 const CreateOrderSchema = z.object({
   customer_id: z.string().uuid(),
+  currency_id: z.string().uuid().optional().nullable(),
   source: z.string().optional(),
   notes: z.string().nullable().optional(),
   items: z.array(OrderItemSchema).min(1, "At least one order item is required"),
@@ -68,7 +69,15 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
-    const { customer_id, source, notes, items } = parsed.data;
+    const { customer_id, currency_id, source, notes, items } = parsed.data;
+
+    // Resolve default currency if not provided
+    let resolvedCurrencyId = currency_id ?? null;
+    if (!resolvedCurrencyId) {
+      const { data: defCur } = await auth.supabase
+        .from("currencies").select("id").eq("team_id", teamId).eq("is_default", true).limit(1).single();
+      resolvedCurrencyId = defCur?.id ?? null;
+    }
 
     // Create order
     const { data: order, error: orderError } = await auth.supabase
@@ -76,6 +85,7 @@ export async function POST(request: NextRequest) {
       .insert({
         team_id: teamId,
         customer_id,
+        currency_id: resolvedCurrencyId,
         source: source ?? "erp",
         status: "pending",
         notes: notes ?? null,
@@ -110,15 +120,22 @@ export async function POST(request: NextRequest) {
       // Pricing rules non-critical — fall through with original prices
     }
 
-    // Create order items
-    const itemRows = pricedItems.map((item) => ({
-      order_id: order.id,
-      product_id: item.product_id ?? null,
-      description: item.description ?? "",
-      quantity: item.quantity,
-      unit_price_ht: item.unit_price_ht ?? null,
-      special_request: item.special_request ?? null,
-    }));
+    // Create order items with computed line totals
+    let subtotal_ht = 0;
+    const itemRows = pricedItems.map((item, idx) => {
+      const lineTotal = Math.round((item.unit_price_ht ?? 0) * item.quantity * 100) / 100;
+      subtotal_ht += lineTotal;
+      return {
+        order_id: order.id,
+        product_id: item.product_id ?? null,
+        description: item.description ?? "",
+        quantity: item.quantity,
+        unit_price_ht: item.unit_price_ht ?? null,
+        line_total_ht: lineTotal,
+        sort_order: idx,
+        special_request: item.special_request ?? null,
+      };
+    });
 
     const { error: itemsError } = await auth.supabase
       .from("order_items")
@@ -132,8 +149,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: itemsError.message }, { status: 400 });
     }
 
+    // Update order totals
+    await auth.supabase
+      .from("orders")
+      .update({ subtotal_ht: Math.round(subtotal_ht * 100) / 100, total_ttc: Math.round(subtotal_ht * 100) / 100 })
+      .eq("id", order.id);
+
     return NextResponse.json({
-      data: { ...order, items: itemRows },
+      data: { ...order, currency_id: resolvedCurrencyId, subtotal_ht, total_ttc: subtotal_ht, items: itemRows },
     }, { status: 201 });
   });
 }
