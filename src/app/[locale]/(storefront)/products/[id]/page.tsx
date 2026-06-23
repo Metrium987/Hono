@@ -7,7 +7,6 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AddToCartButton } from "@/lib/cart/add-to-cart-button";
 
@@ -216,7 +215,7 @@ export default async function ProductDetailPage(
             {catLabel && (
               <Badge variant="secondary" className="mb-2">{catLabel}</Badge>
             )}
-            <h1 className="text-3xl font-bold tracking-tight">{product.name}</h1>
+            <h1 className="text-[28px] font-semibold tracking-tight text-wrap-balance">{product.name}</h1>
             {product.sku && (
               <p className="text-sm text-muted-foreground mt-1">{t("ref_label")} {product.sku}</p>
             )}
@@ -235,51 +234,47 @@ export default async function ProductDetailPage(
           </div>
 
           {/* Pricing */}
-          <Card className={activePromoLabel ? "border-red-200" : ""}>
-            <CardContent className="p-6 space-y-3">
-              {activePromoLabel && (
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-red-500 text-white">{activePromoLabel}</Badge>
-                  <span className="text-xs text-muted-foreground">Promotion en cours</span>
-                </div>
-              )}
-              {taxRate && (
-                <div className="text-sm text-muted-foreground flex justify-between">
-                  <span>Base imposable</span>
-                  {discountedPriceHt !== null ? (
-                    <span className="flex items-baseline gap-2">
-                      <span className="text-red-600 font-medium">
-                        {discountedPriceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
-                      </span>
-                      <span className="line-through">
-                        {priceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
-                      </span>
+          <div className={`rounded-xl border divide-y overflow-hidden ${activePromoLabel ? "border-destructive/30" : ""}`}>
+            {activePromoLabel && (
+              <div className="flex items-center gap-2 px-5 py-3 bg-destructive/5">
+                <Badge variant="destructive">{activePromoLabel}</Badge>
+                <span className="text-[12px] text-muted-foreground">Promotion en cours</span>
+              </div>
+            )}
+            {taxRate && (
+              <div className="flex justify-between items-baseline px-5 py-3 text-[13px] text-muted-foreground">
+                <span>Base imposable</span>
+                {discountedPriceHt !== null ? (
+                  <span className="flex items-baseline gap-2">
+                    <span className="text-destructive font-medium">
+                      {discountedPriceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
                     </span>
-                  ) : (
-                    <span>
+                    <span className="line-through">
                       {priceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
                     </span>
-                  )}
-                </div>
-              )}
-              {taxRate && (
-                <div className="flex justify-between items-baseline text-sm">
-                  <span className="text-muted-foreground">
-                    {t("tax_rate", { rate: taxRate.rate, name: taxRate.name ?? "" })}
                   </span>
-                  <span className="text-muted-foreground">
-                    + {((discountedPriceTtc ?? priceTtc) - (discountedPriceHt ?? priceHt)).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
+                ) : (
+                  <span>
+                    {priceHt.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
                   </span>
-                </div>
-              )}
-              <div className="border-t pt-3 flex justify-between items-baseline">
-                <span className="font-semibold">{t("price_ttc")}</span>
-                <span className={`text-2xl font-bold ${discountedPriceTtc !== null ? "text-red-600" : "text-primary"}`}>
-                  {(discountedPriceTtc ?? priceTtc).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
+                )}
+              </div>
+            )}
+            {taxRate && (
+              <div className="flex justify-between items-baseline px-5 py-3 text-[13px] text-muted-foreground">
+                <span>{t("tax_rate", { rate: taxRate.rate, name: taxRate.name ?? "" })}</span>
+                <span>
+                  + {((discountedPriceTtc ?? priceTtc) - (discountedPriceHt ?? priceHt)).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} {currency.symbol ?? currency.code}
                 </span>
               </div>
-            </CardContent>
-          </Card>
+            )}
+            <div className="flex justify-between items-baseline px-5 py-4 bg-muted/20">
+              <span className="text-[14px] font-semibold">{t("price_ttc")}</span>
+              <span className={`text-[24px] font-bold tabular-nums ${discountedPriceTtc !== null ? "text-destructive" : "text-primary"}`}>
+                {(discountedPriceTtc ?? priceTtc).toLocaleString("fr-FR", { minimumFractionDigits: 0 })} {currency.symbol ?? currency.code}
+              </span>
+            </div>
+          </div>
 
           {/* Description */}
           {product.description && (

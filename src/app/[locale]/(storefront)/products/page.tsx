@@ -150,8 +150,8 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("catalog")}</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-[28px] font-semibold tracking-tight text-wrap-balance">{t("catalog")}</h1>
+          <p className="text-[13px] text-muted-foreground mt-0.5">
             {t("product_count", { count: filtered.length })}
           </p>
         </div>
@@ -230,14 +230,14 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
 
                 return (
                   <Link key={p.id} href={`./products/${p.id}`}>
-                    <div className="group rounded-[0.625rem] border bg-card transition-all duration-200 hover:border-primary/30 hover:bg-card/80 overflow-hidden">
+                    <div className="group rounded-xl border bg-card overflow-hidden transition-shadow duration-200 hover:shadow-[0_4px_20px_rgba(0,0,0,0.07)]">
                       <div className="relative">
                         {imgSrc ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={imgSrc}
                             alt={p.name}
-                            className="w-full aspect-[4/3] object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                            className="w-full aspect-[4/3] object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                           />
                         ) : (
                           <div className="w-full aspect-[4/3] bg-muted flex items-center justify-center">
@@ -248,34 +248,32 @@ export default async function ProductsPage(props: { searchParams: SearchParams }
                           {bestPromo ? (
                             <Badge variant="destructive" className="text-[10px] font-bold">{promoLabel(bestPromo)}</Badge>
                           ) : <span />}
-                          {inStock ? (
-                            <Badge variant="success">En stock</Badge>
-                          ) : (
-                            <Badge variant="destructive">Rupture</Badge>
+                          {!inStock && (
+                            <Badge variant="secondary">Rupture</Badge>
                           )}
                         </div>
                       </div>
-                      <div className="p-3.5 space-y-1.5">
-                        <h3 className="text-sm font-medium leading-snug line-clamp-2">{p.name}</h3>
+                      <div className="p-4 space-y-1.5">
+                        <h3 className="text-[14px] font-medium leading-snug line-clamp-2">{p.name}</h3>
                         {p.sku && (
-                          <p className="text-xs text-muted-foreground">{t("ref_label")} {p.sku}</p>
+                          <p className="text-[11px] text-muted-foreground">{t("ref_label")} {p.sku}</p>
                         )}
                         {discountedTTC !== null ? (
                           <div className="flex items-baseline gap-2">
-                            <p className="text-base font-bold text-destructive">
+                            <p className="text-[15px] font-bold text-destructive">
                               {discountedTTC.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} {sym}
                             </p>
-                            <p className="text-xs text-muted-foreground line-through">
+                            <p className="text-[12px] text-muted-foreground line-through">
                               {priceTTC.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} {sym}
                             </p>
                           </div>
                         ) : (
-                          <p className="text-base font-bold text-primary">
+                          <p className="text-[15px] font-bold text-primary">
                             {priceTTC.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} {sym}
                           </p>
                         )}
                         {(p.short_description || p.description) && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">
+                          <p className="text-[12px] text-muted-foreground line-clamp-2">
                             {p.short_description ?? p.description}
                           </p>
                         )}

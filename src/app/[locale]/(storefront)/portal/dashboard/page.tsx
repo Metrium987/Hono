@@ -3,116 +3,83 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FileText, FileSignature, ClipboardList, LogOut, ReceiptText } from "lucide-react";
+import { FileText, FileSignature, ClipboardList, LogOut, ReceiptText, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPortalSession } from "@/lib/portal/session";
 
 export default async function PortalDashboardPage() {
   const session = await getPortalSession();
-  if (!session) {
-    redirect("./auth");
-  }
+  if (!session) redirect("./auth");
 
   const pt = await getTranslations("portal");
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  // Fetch customer data
   const { data: customer } = await supabase
     .from("customers")
     .select("id, company_name, contact_name, email, phone, portal_enabled")
     .eq("id", session.customerId)
     .single();
 
-  // Fetch counts
-  const [{ count: quotesCount }, { count: invoicesCount }, { count: ordersCount }, { count: creditNotesCount }] = await Promise.all([
-    supabase
-      .from("quotes")
-      .select("*", { count: "exact", head: true })
-      .eq("customer_id", session.customerId),
-    supabase
-      .from("invoices")
-      .select("*", { count: "exact", head: true })
-      .eq("customer_id", session.customerId),
-    supabase
-      .from("orders")
-      .select("*", { count: "exact", head: true })
-      .eq("customer_id", session.customerId),
-    supabase
-      .from("credit_notes")
-      .select("*", { count: "exact", head: true })
-      .eq("customer_id", session.customerId),
+  const [
+    { count: quotesCount },
+    { count: invoicesCount },
+    { count: ordersCount },
+    { count: creditNotesCount },
+  ] = await Promise.all([
+    supabase.from("quotes").select("*", { count: "exact", head: true }).eq("customer_id", session.customerId),
+    supabase.from("invoices").select("*", { count: "exact", head: true }).eq("customer_id", session.customerId),
+    supabase.from("orders").select("*", { count: "exact", head: true }).eq("customer_id", session.customerId),
+    supabase.from("credit_notes").select("*", { count: "exact", head: true }).eq("customer_id", session.customerId),
   ]);
 
+  const navItems = [
+    { href: "./quotes",       icon: FileSignature, label: pt("my_quotes"),       count: quotesCount ?? 0 },
+    { href: "./invoices",     icon: FileText,      label: pt("my_invoices"),      count: invoicesCount ?? 0 },
+    { href: "./orders",       icon: ClipboardList, label: pt("my_orders"),        count: ordersCount ?? 0 },
+    { href: "./credit-notes", icon: ReceiptText,   label: pt("my_credit_notes"),  count: creditNotesCount ?? 0 },
+  ] as const;
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+    <div className="mx-auto max-w-lg px-4 py-10 sm:px-6">
+      {/* Profile header */}
+      <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-[22px] font-semibold tracking-tight text-wrap-balance">
             {pt("hello", { name: customer?.contact_name ?? session.name ?? session.email })}
           </h1>
-          <p className="text-sm text-muted-foreground">
-            {customer?.company_name ? `${customer.company_name} — ` : ""}
+          <p className="text-[13px] text-muted-foreground mt-0.5">
+            {customer?.company_name ? `${customer.company_name} · ` : ""}
             {customer?.email}
           </p>
         </div>
         <form action="/api/v1/portal/logout" method="POST">
-          <Button variant="outline" type="submit">
-            <LogOut className="mr-2 h-4 w-4" />
+          <Button variant="ghost" size="sm" type="submit" className="text-muted-foreground gap-2">
+            <LogOut className="h-4 w-4" />
             {pt("logout")}
           </Button>
         </form>
       </div>
 
-      {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Link href="./quotes">
-          <Card className="hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
-            <CardHeader className="flex flex-row items-center gap-3 pb-2">
-              <FileSignature className="h-5 w-5 text-primary" />
-              <CardTitle className="text-sm font-medium">{pt("my_quotes")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{quotesCount ?? 0}</p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="./invoices">
-          <Card className="hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
-            <CardHeader className="flex flex-row items-center gap-3 pb-2">
-              <FileText className="h-5 w-5 text-primary" />
-              <CardTitle className="text-sm font-medium">{pt("my_invoices")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{invoicesCount ?? 0}</p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="./orders">
-          <Card className="hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
-            <CardHeader className="flex flex-row items-center gap-3 pb-2">
-              <ClipboardList className="h-5 w-5 text-primary" />
-              <CardTitle className="text-sm font-medium">{pt("my_orders")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{ordersCount ?? 0}</p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="./credit-notes">
-          <Card className="hover:shadow-lg transition-all hover:-translate-y-0.5 cursor-pointer">
-            <CardHeader className="flex flex-row items-center gap-3 pb-2">
-              <ReceiptText className="h-5 w-5 text-primary" />
-              <CardTitle className="text-sm font-medium">{pt("my_credit_notes")}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold">{creditNotesCount ?? 0}</p>
-            </CardContent>
-          </Card>
-        </Link>
+      {/* Document navigation — iOS grouped list */}
+      <div className="rounded-xl border divide-y bg-card overflow-hidden">
+        {navItems.map(({ href, icon: Icon, label, count }) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex items-center gap-4 px-5 py-4 hover:bg-accent/50 transition-colors group"
+          >
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-primary/10">
+              <Icon className="h-4 w-4 text-primary" />
+            </div>
+            <span className="flex-1 text-[15px] font-medium">{label}</span>
+            <span className="text-[13px] font-semibold tabular-nums text-muted-foreground mr-1">
+              {count}
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+          </Link>
+        ))}
       </div>
     </div>
   );
