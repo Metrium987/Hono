@@ -240,14 +240,15 @@ export function ErpSidebar({ teamName, permissions, isOwner }: ErpSidebarProps) 
       aria-label="Navigation principale"
       style={{
         width: collapsed ? 56 : 220,
-        /* P0 fix: transition-[width] instead of transition-all to avoid
-           animating layout-thrash properties like height/padding/margin */
         transition: "width 200ms cubic-bezier(0.4,0,0.2,1)",
       }}
       className={cn(
         "flex flex-col shrink-0 overflow-hidden",
-        "bg-[var(--color-sidebar)]",
-        "border-r border-black/[0.08] dark:border-white/[0.08]",
+        /* macOS sidebar: frosted white en clair, profond en sombre */
+        "bg-[rgba(246,246,250,0.92)] dark:bg-[#1C1C1E]",
+        "supports-[backdrop-filter]:bg-[rgba(246,246,250,0.78)] dark:supports-[backdrop-filter]:bg-[rgba(28,28,30,0.82)]",
+        "supports-[backdrop-filter]:backdrop-blur-xl",
+        "border-r border-black/[0.07] dark:border-white/[0.07]",
       )}
     >
       {/* ── Brand / Team ───────────────────────────────────────────────── */}
