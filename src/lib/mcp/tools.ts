@@ -314,6 +314,271 @@ export function registerTools(
     );
   }
 
+  // ── Customers (write) ────────────────────────────────────────────────
+  if (can(permissions, "customers", "write", isOwner)) {
+    server.tool(
+      "create_customer",
+      "Crée un nouveau client.",
+      {
+        company_name: z.string().optional().describe("Raison sociale"),
+        contact_name: z.string().optional().describe("Nom du contact"),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        address_line1: z.string().optional(),
+        city: z.string().optional(),
+        island: z.string().optional().describe("Île (ex: Tahiti, Moorea)"),
+        n_tahiti: z.string().optional().describe("N° Tahiti fiscal"),
+        is_b2b: z.boolean().optional().describe("Client professionnel (B2B)"),
+        notes: z.string().optional(),
+      },
+      async (args) => {
+        const { data, error } = await supabase.from("customers").insert({ team_id: teamId, ...args }).select("id, company_name, contact_name").single();
+        if (error) return textResult(`Erreur : ${error.message}`);
+        return textResult(`Client créé. ID : ${data.id} — ${data.company_name ?? data.contact_name}`);
+      }
+    );
+
+    server.tool(
+      "update_customer",
+      "Met à jour les informations d'un client.",
+      {
+        id: z.string().describe("UUID du client"),
+        company_name: z.string().optional(),
+        contact_name: z.string().optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        address_line1: z.string().optional(),
+        city: z.string().optional(),
+        island: z.string().optional(),
+        n_tahiti: z.string().optional(),
+        notes: z.string().optional(),
+      },
+      async ({ id, ...fields }) => {
+        const { error } = await supabase.from("customers").update({ ...fields, updated_at: new Date().toISOString() }).eq("id", id).eq("team_id", teamId);
+        if (error) return textResult(`Erreur : ${error.message}`);
+        return textResult(`Client ${id} mis à jour.`);
+      }
+    );
+  }
+
+  // ── Vendors ────────────────────────────────────────────────────────
+  if (can(permissions, "clients", "read", isOwner)) {
+    server.tool(
+      "list_vendors",
+      "Liste les fournisseurs.",
+      { search: z.string().optional() },
+      async ({ search }) => {
+        let q = supabase.from("vendors").select("id, name, contact_name, email, phone, n_tahiti").eq("team_id", teamId).order("name");
+        if (search) { const s = search.replace(/[,()'";%_]/g, ""); if (s) q = q.or(`name.ilike.%${s}%,email.ilike.%${s}%`); }
+        const { data, error } = await q.limit(50);
+        if (error) return textResult(`Erreur : ${error.message}`);
+        return jsonResult(data);
+      }
+    );
+
+    server.tool(
+      "get_vendor",
+      "Détails d'un fournisseur.",
+      { id: z.string() },
+      async ({ id }) => {
+        const { data, error } = await supabase.from("vendors").select("*").eq("id", id).eq("team_id", teamId).single();
+        if (error || !data) return textResult("Fournisseur introuvable.");
+        return jsonResult(data);
+      }
+    );
+  }
+
+  // ── Expenses ────────────────────────────────────────────────────────
+  if (can(permissions, "expenses", "read", isOwner)) {
+    server.tool(
+      "list_expenses",
+      "Liste les dépenses.",
+      {
+        date_from: z.string().optional().describe("YYYY-MM-DD"),
+        date_to: z.string().optional().describe("YYYY-MM-DD"),
+        vendor_id: z.string().optional(),
+      },
+      async ({ date_from, date_to, vendor_id }) => {
+        let q = supabase.from("expenses")
+          .select("id, description, amount, expense_date, category:category_id(name), vendor:vendor_id(name)")
+          .eq("team_id", teamId).is("deleted_at", null).order("expense_date", { ascending: false });
+        if (date_from) q = q.gte("expense_date", date_from);
+        if (date_to) q = q.lte("expense_date", date_to);
+        if (vendor_id) q = q.eq("vendor_id", vendor_id);
+        const { data, error } = await q.limit(50);
+        if (error) return textResult(`Erreur : ${error.message}`);
+        return jsonResult(data);
+      }
+    );
+  }
+
+  if (can(permissions, "expenses", "write", isOwner)) {
+    server.tool(
+      "create_expense",
+      "Crée une dépense. Utilise list_currencies pour obtenir currency_id.",
+      {
+        description: z.string().min(1),
+        amount: z.number().positive(),
+        expense_date: z.string().describe("YYYY-MM-DD"),
+        currency_id: z.string().describe("UUID de la devise"),
+        category_id: z.string().optional().describe("UUID de la catégorie"),
+        vendor_id: z.string().optional().describe("UUID du fournisseur"),
+        vendor_name: z.string().optional().describe("Nom du fournisseur si pas dans le système"),
+        notes: z.string().optional(),
+      },
+      async (args) => {
+        const { data, error } = await supabase.from("expenses").insert({ team_id: teamId, ...args }).select("id").single();
+        if (error) return textResult(`Erreur : ${error.message}`);
+        return textResult(`Dépense créée. ID : ${data.id}`);
+      }
+    );
+  }
+
+  // ── Products (write) ────────────────────────────────────────────────
+  if (can(permissions, "catalog", "write", isOwner)) {
+    server.tool(
+      "create_product",
+      "Crée un produit dans le catalogue.",
+      {
+        name: z.string().min(1),
+        description: z.string().optional(),
+        sku: z.string().optional(),
+        price_ht: z.number().nonnegative(),
+        type: z.enum(["product", "service"]).default("product"),
+        track_stock: z.boolean().optional().default(false),
+        current_stock: z.number().optional(),
+        low_stock_alert: z.number().optional(),
+        category_id: z.string().optional(),
+      },
+      async (args) => {
+        const { data, error } = await supabase.from("products").insert({ team_id: teamId, is_active: true, ...args }).select("id, name").single();
+        if (error) return textResult(`Erreur : ${error.message}`);
+        return textResult(`Produit "${data.name}" créé. ID : ${data.id}`);
+      }
+    );
+
+    server.tool(
+      "update_product_stock",
+      "Met à jour le stock d'un produit.",
+      {
+        product_id: z.string(),
+        current_stock: z.number().min(0),
+      },
+      async ({ product_id, current_stock }) => {
+        const { error } = await supabase.from("products").update({ current_stock }).eq("id", product_id).eq("team_id", teamId);
+        if (error) return textResult(`Erreur : ${error.message}`);
+        return textResult(`Stock mis à jour → ${current_stock} unités.`);
+      }
+    );
+  }
+
+  // ── Référentiels (devises, TVA, paiements) ────────────────────────
+  server.tool(
+    "list_currencies",
+    "Liste les devises disponibles pour cette équipe. Utiliser currency_id lors de la création de devis/factures.",
+    {},
+    async () => {
+      const { data, error } = await supabase.from("currencies").select("id, code, symbol, name, is_default").eq("team_id", teamId).order("is_default", { ascending: false });
+      if (error) return textResult(`Erreur : ${error.message}`);
+      return jsonResult(data);
+    }
+  );
+
+  server.tool(
+    "list_tax_rates",
+    "Liste les taux de TVA configurés. Utiliser tax_rate_id dans les lignes de devis/factures.",
+    {},
+    async () => {
+      const { data, error } = await supabase.from("tax_rates").select("id, name, rate, is_default").eq("team_id", teamId).order("rate");
+      if (error) return textResult(`Erreur : ${error.message}`);
+      return jsonResult(data);
+    }
+  );
+
+  server.tool(
+    "list_payment_methods",
+    "Liste les méthodes de paiement. Utiliser payment_method_id lors de l'enregistrement d'un paiement.",
+    {},
+    async () => {
+      const { data, error } = await supabase.from("payment_methods").select("id, name, display_name, is_active").eq("team_id", teamId).eq("is_active", true).order("display_name");
+      if (error) return textResult(`Erreur : ${error.message}`);
+      return jsonResult(data);
+    }
+  );
+
+  server.tool(
+    "list_expense_categories",
+    "Liste les catégories de dépenses disponibles.",
+    {},
+    async () => {
+      const { data, error } = await supabase.from("expense_categories").select("id, name").eq("team_id", teamId).order("name");
+      if (error) return textResult(`Erreur : ${error.message}`);
+      return jsonResult(data);
+    }
+  );
+
+  // ── Équipe / Paramètres ────────────────────────────────────────────
+  if (isOwner || can(permissions, "settings", "read", isOwner)) {
+    server.tool(
+      "get_team_settings",
+      "Retourne les paramètres de l'équipe (nom, email, adresse, N° Tahiti, franchise en base, etc.).",
+      {},
+      async () => {
+        const { data, error } = await supabase.from("teams").select("id, name, email, phone, address_line1, address_line2, city, island, postal_code, n_tahiti, is_franchise_en_base, siret, website, logo_url, late_fee_fixed").eq("id", teamId).single();
+        if (error || !data) return textResult("Paramètres introuvables.");
+        return jsonResult(data);
+      }
+    );
+  }
+
+  if (isOwner || can(permissions, "settings", "write", isOwner)) {
+    server.tool(
+      "update_team_settings",
+      "Met à jour les paramètres de l'équipe.",
+      {
+        name: z.string().optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        address_line1: z.string().optional(),
+        city: z.string().optional(),
+        island: z.string().optional(),
+        n_tahiti: z.string().optional().describe("N° Tahiti fiscal"),
+        is_franchise_en_base: z.boolean().optional().describe("Si true, TVA masquée sur les PDFs"),
+        website: z.string().optional(),
+      },
+      async (fields) => {
+        const { error } = await supabase.from("teams").update({ ...fields, updated_at: new Date().toISOString() }).eq("id", teamId);
+        if (error) return textResult(`Erreur : ${error.message}`);
+        return textResult("Paramètres mis à jour.");
+      }
+    );
+  }
+
+  // ── Rapports ────────────────────────────────────────────────────────
+  if (can(permissions, "reports", "read", isOwner)) {
+    server.tool(
+      "get_pnl_report",
+      "Rapport Profits & Pertes pour une période donnée.",
+      {
+        date_from: z.string().describe("YYYY-MM-DD"),
+        date_to: z.string().describe("YYYY-MM-DD"),
+      },
+      async ({ date_from, date_to }) => {
+        const [invRes, expRes, incRes] = await Promise.all([
+          supabase.from("invoices").select("total_ttc, status").eq("team_id", teamId).in("status", ["paid", "partial", "sent"]).gte("issue_date", date_from).lte("issue_date", date_to).is("deleted_at", null),
+          supabase.from("expenses").select("amount").eq("team_id", teamId).gte("expense_date", date_from).lte("expense_date", date_to).is("deleted_at", null),
+          supabase.from("income").select("amount").eq("team_id", teamId).gte("income_date", date_from).lte("income_date", date_to),
+        ]);
+        const totalInvoiced = (invRes.data ?? []).reduce((s, i) => s + parseFloat(String(i.total_ttc || 0)), 0);
+        const totalExpenses = (expRes.data ?? []).reduce((s, e) => s + parseFloat(String(e.amount || 0)), 0);
+        const totalOtherIncome = (incRes.data ?? []).reduce((s, i) => s + parseFloat(String(i.amount || 0)), 0);
+        const totalRevenue = totalInvoiced + totalOtherIncome;
+        const netIncome = totalRevenue - totalExpenses;
+        return jsonResult({ period: { from: date_from, to: date_to }, total_invoiced: Math.round(totalInvoiced), other_income: Math.round(totalOtherIncome), total_revenue: Math.round(totalRevenue), total_expenses: Math.round(totalExpenses), net_income: Math.round(netIncome), profit_margin_pct: totalRevenue > 0 ? Math.round((netIncome / totalRevenue) * 100) : 0 });
+      }
+    );
+  }
+
   // ── Dashboard ────────────────────────────────────────────────────────
   if (can(permissions, "reports", "read", isOwner)) {
     server.tool(
