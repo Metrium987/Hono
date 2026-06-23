@@ -44,6 +44,58 @@ export async function POST(
       return NextResponse.json({ error: `Cannot send a ${quote.status} quote` }, { status: 409 });
     }
 
+    // Phase 6.2 — Approval required for large quotes (> 100 000 F CFP)
+    const QUOTE_APPROVAL_THRESHOLD = 100000;
+    const totalTtc = parseFloat(String(quote.total_ttc || 0));
+    if (totalTtc > QUOTE_APPROVAL_THRESHOLD) {
+      const { data: approval } = await auth.supabase
+        .from("approvals")
+        .select("id, status")
+        .eq("team_id", teamId)
+        .eq("entity_type", "quote")
+        .eq("entity_id", id)
+        .order("requested_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!approval) {
+        // Auto-create approval request and block
+        if (auth.userId) {
+          await auth.supabase.from("approvals").insert({
+            team_id: teamId,
+            approval_type: "quote_approval",
+            status: "pending",
+            entity_type: "quote",
+            entity_id: id,
+            requested_by: auth.userId,
+            metadata: { total_ttc: totalTtc, threshold: QUOTE_APPROVAL_THRESHOLD, quote_number: quote.quote_number },
+          });
+        }
+        return NextResponse.json({
+          error: "Approbation requise",
+          reason: `Ce devis dépasse le seuil de ${QUOTE_APPROVAL_THRESHOLD.toLocaleString("fr-FR")} F CFP. Une demande d'approbation a été créée.`,
+          requires_approval: true,
+        }, { status: 409 });
+      }
+
+      if (approval.status === "pending") {
+        return NextResponse.json({
+          error: "Approbation en attente",
+          reason: "Ce devis est en attente d'approbation avant envoi.",
+          requires_approval: true,
+        }, { status: 409 });
+      }
+
+      if (approval.status === "rejected") {
+        return NextResponse.json({
+          error: "Approbation refusée",
+          reason: "Ce devis a été refusé. Modifiez-le avant de l'envoyer.",
+          requires_approval: true,
+        }, { status: 409 });
+      }
+      // status === 'approved' → proceed
+    }
+
     const customerName = customer.company_name || customer.contact_name || "";
     const currency = quote.currency?.symbol || quote.currency?.code || "F";
     const team = Array.isArray(quote.team) ? quote.team[0] : quote.team as { name: string; email?: string; phone?: string; address_line1?: string; city?: string; logo_url?: string } | null;

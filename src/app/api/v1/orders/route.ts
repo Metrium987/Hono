@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
+import { z } from "zod";
 
-type ItemInput = { description?: string; quantity?: string | number; unit_price_ht?: string | number; product_id?: string | null; special_request?: string | null };
+const OrderItemSchema = z.object({
+  product_id: z.string().uuid().nullable().optional(),
+  description: z.string().optional(),
+  quantity: z.coerce.number().positive(),
+  unit_price_ht: z.coerce.number().nonnegative().nullable().optional(),
+  special_request: z.string().nullable().optional(),
+});
+
+const CreateOrderSchema = z.object({
+  customer_id: z.string().uuid(),
+  source: z.string().optional(),
+  notes: z.string().nullable().optional(),
+  items: z.array(OrderItemSchema).min(1, "At least one order item is required"),
+});
 
 // GET /api/v1/orders — List orders for a team
 export async function GET(request: NextRequest) {
@@ -50,15 +64,11 @@ export async function POST(request: NextRequest) {
   return withAuth(request, async (auth, teamId) => {
     requirePermission(auth, "orders", "write");
     const body = await request.json();
-    const { customer_id, source, notes, items } = body;
-
-    if (!customer_id) {
-      return NextResponse.json({ error: "customer_id is required" }, { status: 400 });
+    const parsed = CreateOrderSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return NextResponse.json({ error: "At least one order item is required" }, { status: 400 });
-    }
+    const { customer_id, source, notes, items } = parsed.data;
 
     // Create order
     const { data: order, error: orderError } = await auth.supabase
@@ -77,13 +87,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: orderError.message }, { status: 400 });
     }
 
+    // Apply pricing rules (Phase 7 — dynamic pricing)
+    let pricedItems = items;
+    try {
+      const rpcPayload = items.map((item) => ({
+        product_id: item.product_id ?? null,
+        unit_price_ht: item.unit_price_ht ?? 0,
+        quantity: item.quantity,
+      }));
+      const { data: pricingResult } = await auth.supabase.rpc("apply_pricing_rules", {
+        p_team_id: teamId,
+        p_customer_id: customer_id,
+        p_items: JSON.stringify(rpcPayload),
+      });
+      if (pricingResult && Array.isArray(pricingResult)) {
+        pricedItems = items.map((item, idx) => ({
+          ...item,
+          unit_price_ht: (pricingResult[idx] as { applied_price?: number })?.applied_price ?? item.unit_price_ht,
+        }));
+      }
+    } catch {
+      // Pricing rules non-critical — fall through with original prices
+    }
+
     // Create order items
-    const itemRows = items.map((item: ItemInput, idx: number) => ({
+    const itemRows = pricedItems.map((item) => ({
       order_id: order.id,
       product_id: item.product_id ?? null,
       description: item.description ?? "",
-      quantity: parseFloat(item.quantity as string) || 1,
-      unit_price_ht: item.unit_price_ht ? parseFloat(item.unit_price_ht as string) : null,
+      quantity: item.quantity,
+      unit_price_ht: item.unit_price_ht ?? null,
       special_request: item.special_request ?? null,
     }));
 

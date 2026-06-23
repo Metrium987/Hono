@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { Shield, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,40 +38,42 @@ export default function AuditLogsPage() {
   const perm = useClientPermission("governance", "read");
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [count, setCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [isPending, startTransition] = useTransition();
   const [page, setPage] = useState(0);
   const [filterTable, setFilterTable] = useState("all");
   const [filterAction, setFilterAction] = useState("all");
   const [tables, setTables] = useState<string[]>([]);
 
-  const load = useCallback(async () => {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const tablesInitialized = useRef(false);
+
+  useEffect(() => {
     if (!perm.teamId) return;
-    setLoading(true);
-    const params = new URLSearchParams({
-      team_id: perm.teamId,
-      limit: String(PAGE_SIZE),
-      offset: String(page * PAGE_SIZE),
-    });
-    if (filterTable !== "all") params.set("table_name", filterTable);
-    if (filterAction !== "all") params.set("action", filterAction);
-
-    try {
-      const res = await fetch(`/api/v1/audit-logs?${params}`);
-      const json = await res.json();
-      if (json.data) {
-        setLogs(json.data);
-        setCount(json.count ?? 0);
-        if (tables.length === 0 && json.data.length > 0) {
-          const unique = [...new Set<string>(json.data.map((l: AuditLog) => l.table_name))].sort();
-          setTables(unique);
+    startTransition(async () => {
+      const params = new URLSearchParams({
+        team_id: perm.teamId ?? "",
+        limit: String(PAGE_SIZE),
+        offset: String(page * PAGE_SIZE),
+      });
+      if (filterTable !== "all") params.set("table_name", filterTable);
+      if (filterAction !== "all") params.set("action", filterAction);
+      try {
+        const res = await fetch(`/api/v1/audit-logs?${params}`);
+        const json = await res.json();
+        if (json.data) {
+          setLogs(json.data);
+          setCount(json.count ?? 0);
+          if (!tablesInitialized.current && json.data.length > 0) {
+            tablesInitialized.current = true;
+            const unique = [...new Set<string>(json.data.map((l: AuditLog) => l.table_name))].sort();
+            setTables(unique);
+          }
         }
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [perm.teamId, page, filterTable, filterAction, tables.length]);
+      } catch { /* errors handled silently */ }
+    });
+  }, [perm.teamId, page, filterTable, filterAction, refreshKey]);
 
-  useEffect(() => { load(); }, [load]);
+  const load = () => setRefreshKey((k) => k + 1);
 
   if (perm.loading) return null;
   if (!perm.allowed) return <ClientForbiddenPage module="governance" />;
@@ -105,8 +107,8 @@ export default function AuditLogsPage() {
               <SelectItem value="DELETE">DELETE</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={load} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={load} disabled={isPending}>
+            <RefreshCw className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </div>
@@ -116,7 +118,7 @@ export default function AuditLogsPage() {
           <CardTitle className="text-sm text-muted-foreground">Événements récents</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {loading ? (
+          {isPending ? (
             <p className="text-sm text-muted-foreground p-4">Chargement…</p>
           ) : logs.length === 0 ? (
             <p className="text-sm text-muted-foreground p-4">Aucune entrée d&apos;audit.</p>

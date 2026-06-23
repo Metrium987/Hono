@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   DndContext,
   DragOverlay,
@@ -19,7 +20,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { useDroppable } from "@dnd-kit/core";
 import { toast } from "sonner";
-import { GripVertical, Mail } from "lucide-react";
+import { GripVertical, Mail, FilePlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -88,13 +89,27 @@ function KanbanCard({ card, isDragging }: { card: CustomerCard; isDragging?: boo
           {getInitials(card.name)}
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium truncate">{card.name}</p>
+          <Link
+            href={`../customers/${card.id}`}
+            className="text-sm font-medium truncate block hover:text-primary hover:underline transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {card.name}
+          </Link>
           {card.email && (
-            <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+            <p className="text-xs text-muted-foreground flex items-center gap-1 truncate" title={card.email}>
               <Mail className="h-2.5 w-2.5 shrink-0" />
               {card.email}
             </p>
           )}
+          <Link
+            href={`../quotes/new?customer_id=${card.id}`}
+            className="mt-1 text-xs text-primary/70 hover:text-primary flex items-center gap-1 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FilePlus className="h-3 w-3" />
+            Créer un devis
+          </Link>
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Building2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { checkPagePermission } from "@/lib/auth/page-auth";
 import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
@@ -24,14 +25,34 @@ export default async function VendorDetailPage(props: { params: Params }) {
 
   const teamId = perm.teamId;
 
-  const { data: vendor, error } = await supabase
-    .from("vendors")
-    .select("id, name, contact_name, email, phone, address, n_tahiti, notes, created_at")
-    .eq("id", id)
-    .eq("team_id", teamId)
-    .single();
+  const [{ data: vendor, error }, { data: expensesData }] = await Promise.all([
+    supabase
+      .from("vendors")
+      .select("id, name, contact_name, email, phone, address, n_tahiti, notes, created_at")
+      .eq("id", id)
+      .eq("team_id", teamId)
+      .single(),
+    supabase
+      .from("expenses")
+      .select("id, description, amount, expense_date, category:category_id(name)")
+      .eq("vendor_id", id)
+      .eq("team_id", teamId)
+      .is("deleted_at", null)
+      .order("expense_date", { ascending: false })
+      .limit(10),
+  ]);
 
   if (error || !vendor) notFound();
+
+  const expenses = expensesData ?? [];
+
+  function formatDate(d: string) {
+    return new Date(d).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+
+  function fmt(amount: number) {
+    return `${Number(amount).toLocaleString("fr-FR", { minimumFractionDigits: 0 })} F`;
+  }
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -95,6 +116,39 @@ export default async function VendorDetailPage(props: { params: Params }) {
           </CardContent>
         </Card>
       )}
+
+      <Separator />
+
+      <div>
+        <h2 className="text-lg font-semibold mb-3">Dépenses</h2>
+        {expenses.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Aucune dépense enregistrée pour ce fournisseur</p>
+        ) : (
+          <div className="space-y-2">
+            {expenses.map((e) => {
+              const category = Array.isArray(e.category) ? e.category[0] : e.category;
+              return (
+                <Link key={e.id} href={`../expenses/${e.id}`}>
+                  <Card className="hover:shadow-sm transition-all hover:-translate-y-0.5 cursor-pointer">
+                    <CardContent className="flex items-center justify-between p-3 text-sm">
+                      <div>
+                        <span className="font-medium">{e.description || "—"}</span>
+                        <span className="text-muted-foreground ml-2">{formatDate(e.expense_date)}</span>
+                        {category && (
+                          <span className="text-xs text-muted-foreground ml-2">· {category.name}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium">{fmt(e.amount)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

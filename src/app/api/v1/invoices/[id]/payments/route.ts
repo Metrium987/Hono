@@ -144,6 +144,27 @@ export async function POST(
       }
     }
 
+    // Update account_receivables when payment is recorded (Phase 4 — AR auto-sync)
+    const { data: ar } = await auth.supabase
+      .from("account_receivables")
+      .select("id, paid_amount, total_amount")
+      .eq("invoice_id", id)
+      .maybeSingle();
+
+    if (ar) {
+      const newArPaid = parseFloat(String(ar.paid_amount)) + amount;
+      const newBalance = parseFloat(String(ar.total_amount)) - newArPaid;
+      const arStatus = newBalance <= 0 ? "paid" : newArPaid > 0 ? "partial" : "pending";
+      await auth.supabase
+        .from("account_receivables")
+        .update({
+          paid_amount: Math.round(newArPaid * 100) / 100,
+          balance: Math.max(0, Math.round(newBalance * 100) / 100),
+          status: arStatus,
+        })
+        .eq("id", ar.id);
+    }
+
     // Send payment confirmation email if invoice is now fully paid
     if (!wasAlreadyPaid && isNowPaid && resend) {
       try {

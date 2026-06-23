@@ -79,18 +79,28 @@ export default async function QuoteDetailPage(props: { params: Params }) {
 
   const teamId = perm.teamId;
 
-  const { data: quote, error } = await supabase
-    .from("quotes")
-    .select(`
-      id, quote_number, status, issue_date, validity_date,
-      subtotal_ht, tax_amount, total_ttc, notes, converted_to_invoice_id,
-      customer:customer_id(company_name, contact_name, email),
-      currency:currency_id(code, symbol),
-      items:quote_items(*, tax_rates:tax_rate_id(name, rate))
-    `)
-    .eq("id", id)
-    .eq("team_id", teamId)
-    .single<QuoteWithRelations>();
+  const [{ data: quote, error }, { data: pendingApproval }] = await Promise.all([
+    supabase
+      .from("quotes")
+      .select(`
+        id, quote_number, status, issue_date, validity_date,
+        subtotal_ht, tax_amount, total_ttc, notes, converted_to_invoice_id,
+        customer:customer_id(company_name, contact_name, email),
+        currency:currency_id(code, symbol),
+        items:quote_items(*, tax_rates:tax_rate_id(name, rate))
+      `)
+      .eq("id", id)
+      .eq("team_id", teamId)
+      .single<QuoteWithRelations>(),
+    supabase
+      .from("approvals")
+      .select("id, status")
+      .eq("team_id", teamId)
+      .eq("entity_type", "quote")
+      .eq("entity_id", id)
+      .eq("status", "pending")
+      .maybeSingle(),
+  ]);
 
   if (error || !quote) notFound();
 
@@ -113,6 +123,9 @@ export default async function QuoteDetailPage(props: { params: Params }) {
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold tracking-tight">{quote.quote_number}</h1>
             <Badge variant={STATUS_VARIANT[quote.status] ?? "default"}>{statusT(quote.status)}</Badge>
+            {pendingApproval && (
+              <Badge variant="warning">Approbation en attente</Badge>
+            )}
           </div>
           {customer && (
             <p className="text-sm text-muted-foreground mt-0.5">

@@ -29,7 +29,7 @@ export default async function VendorsPage(props: { searchParams: SearchParams })
 
   const teamId = perm.teamId;
 
-  let query = supabase.from("vendors").select("*", { count: "exact" }).eq("team_id", teamId);
+  let query = supabase.from("vendors").select("id, name, contact_name, email, phone, n_tahiti, notes, created_at", { count: "exact" }).eq("team_id", teamId);
   if (search) {
     query = query.or(`name.ilike.%${search}%,contact_name.ilike.%${search}%,email.ilike.%${search}%`);
   }

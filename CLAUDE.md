@@ -60,7 +60,7 @@ Owners (`is_owner = true` in `team_members`) bypass all permission checks.
 
 ### Database
 
-18 migration files in `supabase/migrations/`. Numbering: `00001_schema_complet.sql` contains the full initial schema (migrations 00004-00026 were squashed into it). Feature migrations resume at `00027_` → `00041_`. The DB timezone is `Pacific/Tahiti`. Extensions in use: `uuid-ossp`, `vector` (pgvector), `pg_trgm`, `pgcrypto`.
+18 migration files in `supabase/migrations/`. Numbering: `00001_schema_complet.sql` contains the full initial schema (migrations 00004-00026 were squashed into it). Feature migrations resume at `00027_` → `00042_`. The DB timezone is `Pacific/Tahiti`. Extensions in use: `uuid-ossp`, `vector` (pgvector), `pg_trgm`, `pgcrypto`.
 
 All business tables have `team_id` and RLS policies scoped to it via `get_teams_for_authenticated_user()`. A custom JWT hook (`custom_access_token_hook`) injects `team_id`, `role_name`, `is_owner`, and `permissions` into the access token.
 

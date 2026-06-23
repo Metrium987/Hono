@@ -30,10 +30,10 @@ export function PaymentEvidenceSection({
   payments: Payment[];
 }) {
   const [evidence, setEvidence] = useState<Evidence[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(payments.length > 0);
 
   useEffect(() => {
-    if (!payments.length) { setLoading(false); return; }
+    if (!payments.length) return;
     Promise.all(
       payments.map((p) =>
         fetch(`/api/v1/invoices/${invoiceId}/payments/${p.id}/evidence?team_id=${teamId}`)

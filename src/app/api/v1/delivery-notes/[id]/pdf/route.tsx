@@ -33,7 +33,7 @@ export async function GET(
 
     const { data: team, error: teamError } = await auth.supabase
       .from("teams")
-      .select("name, email, phone, address_line1, address_line2, city, island, postal_code, n_tahiti, rcs_number")
+      .select("name, email, phone, address_line1, address_line2, city, island, postal_code, n_tahiti, rcs_number, is_franchise_en_base")
       .eq("id", teamId)
       .single();
 
@@ -99,6 +99,7 @@ export async function GET(
         postal_code: team.postal_code ?? null,
         n_tahiti: team.n_tahiti ?? null,
         rcs_number: team.rcs_number ?? null,
+        is_franchise_en_base: (team as { is_franchise_en_base?: boolean }).is_franchise_en_base ?? false,
       },
       customer,
     };

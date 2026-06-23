@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import { checkPagePermission } from "@/lib/auth/page-auth";
 import { ForbiddenPage } from "@/components/erp/forbidden-page";
-import { InventoryCountDetailClient } from "./inventory-count-detail-client";
+import { InventoryCountDetailClient, type Count } from "./inventory-count-detail-client";
 
 type Params = Promise<{ locale: string; id: string }>;
 
@@ -35,7 +35,7 @@ export default async function InventoryCountDetailPage({ params }: { params: Par
   return (
     <InventoryCountDetailClient
       teamId={perm.teamId}
-      count={count as any}
+      count={count as unknown as Count}
     />
   );
 }

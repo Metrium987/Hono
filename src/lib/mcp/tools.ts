@@ -32,7 +32,7 @@ export function registerTools(
       { search: z.string().optional().describe("Filtre par nom ou SKU") },
       async ({ search }) => {
         let q = supabase.from("products").select("id, name, description, price_ht, sku, type, current_stock, is_active").eq("team_id", teamId).eq("is_active", true).order("name");
-        if (search) q = q.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
+        if (search) { const s = search.replace(/[,()'";%_]/g, ""); if (s) q = q.or(`name.ilike.%${s}%,sku.ilike.%${s}%`); }
         const { data, error } = await q.limit(50);
         if (error) return textResult(`Erreur : ${error.message}`);
         return jsonResult(data);
@@ -59,7 +59,7 @@ export function registerTools(
       { search: z.string().optional().describe("Filtre par nom, email ou N° Tahiti") },
       async ({ search }) => {
         let q = supabase.from("customers").select("id, company_name, contact_name, email, phone, n_tahiti, is_b2b").eq("team_id", teamId).order("company_name");
-        if (search) q = q.or(`company_name.ilike.%${search}%,contact_name.ilike.%${search}%,email.ilike.%${search}%`);
+        if (search) { const s = search.replace(/[,()'";%_]/g, ""); if (s) q = q.or(`company_name.ilike.%${s}%,contact_name.ilike.%${s}%,email.ilike.%${s}%`); }
         const { data, error } = await q.limit(50);
         if (error) return textResult(`Erreur : ${error.message}`);
         return jsonResult(data);
@@ -187,7 +187,7 @@ export function registerTools(
 
         const { error: itemsErr } = await supabase.from("quote_items").insert(lineItems.map(li => ({ ...li, quote_id: newQuote.id })));
         if (itemsErr) {
-          await supabase.from("quotes").delete().eq("id", newQuote.id);
+          await supabase.from("quotes").update({ deleted_at: new Date().toISOString() }).eq("id", newQuote.id);
           return textResult(`Erreur création lignes : ${itemsErr.message}`);
         }
 

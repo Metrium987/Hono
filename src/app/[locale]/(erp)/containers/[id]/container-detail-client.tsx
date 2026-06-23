@@ -22,7 +22,7 @@ type ContainerItem = {
   product_id: string | null;
   product: Product | null;
 };
-type Container = {
+export type Container = {
   id: string;
   container_number: string;
   status: string;

@@ -86,7 +86,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ data }, { status: 201 });
+    // Auto-create approval request if amount exceeds threshold (Phase 6.1)
+    // Default threshold: 50 000 F CFP — can be configured per team via team settings
+    const APPROVAL_THRESHOLD = 50000;
+    if (amount > APPROVAL_THRESHOLD && auth.userId) {
+      await auth.supabase.from("approvals").insert({
+        team_id: teamId,
+        approval_type: "expense_approval",
+        status: "pending",
+        entity_type: "expense",
+        entity_id: data.id,
+        requested_by: auth.userId,
+        metadata: { amount, description, threshold: APPROVAL_THRESHOLD },
+      });
+    }
+
+    return NextResponse.json({ data, requires_approval: amount > APPROVAL_THRESHOLD }, { status: 201 });
   });
 }
 

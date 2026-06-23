@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,30 +62,45 @@ export default async function DeliveryNoteDetailPage({ params }: { params: Param
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="../delivery-notes"><ArrowLeft className="h-5 w-5" /></Link>
-        </Button>
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">{dn.note_number}</h1>
-            <Badge variant={STATUS_VARIANTS[dn.status] ?? "secondary"}>
-              {STATUS_LABELS[dn.status] ?? dn.status}
-            </Badge>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" asChild>
+            <Link href="../delivery-notes"><ArrowLeft className="h-5 w-5" /></Link>
+          </Button>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight">{dn.note_number}</h1>
+              <Badge variant={STATUS_VARIANTS[dn.status] ?? "secondary"}>
+                {STATUS_LABELS[dn.status] ?? dn.status}
+              </Badge>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Créé le {formatDate(dn.created_at)}
+              {dn.dispatched_at && <> · Expédié le {formatDate(dn.dispatched_at)}</>}
+              {dn.delivered_at && <> · Livré le {formatDate(dn.delivered_at)}</>}
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Créé le {formatDate(dn.created_at)}
-            {dn.dispatched_at && <> · Expédié le {formatDate(dn.dispatched_at)}</>}
-            {dn.delivered_at && <> · Livré le {formatDate(dn.delivered_at)}</>}
-          </p>
         </div>
+        <Button variant="outline" size="sm" asChild>
+          <a href={`/api/v1/delivery-notes/${id}/pdf?team_id=${perm.teamId}`} download>
+            <Download className="h-4 w-4 mr-2" />
+            Télécharger PDF
+          </a>
+        </Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader><CardTitle className="text-base">Commande associée</CardTitle></CardHeader>
           <CardContent className="text-sm space-y-1">
-            <p><span className="text-muted-foreground">N° commande :</span> {order?.order_number ?? "—"}</p>
+            <p>
+              <span className="text-muted-foreground">N° commande :</span>{" "}
+              {order ? (
+                <Link href={`../orders/${order.id}`} className="hover:text-primary hover:underline transition-colors">
+                  {order.order_number}
+                </Link>
+              ) : "—"}
+            </p>
           </CardContent>
         </Card>
 

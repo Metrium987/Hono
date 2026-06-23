@@ -56,9 +56,8 @@ export async function GET(request: NextRequest) {
     if (status) query = query.eq("status", status);
     if (customerId) query = query.eq("customer_id", customerId);
     if (search) {
-      query = query.or(
-        `invoice_number.ilike.%${search}%,notes.ilike.%${search}%`
-      );
+      const s = search.replace(/[,()'";%_]/g, "");
+      if (s) query = query.or(`invoice_number.ilike.%${s}%,notes.ilike.%${s}%`);
     }
 
     query = query
@@ -237,6 +236,19 @@ export async function POST(request: NextRequest) {
       invoice_id: invoice.id,
       event_type: "created",
       payload: { items_count: items.length, total_ttc },
+      created_by: auth.userId,
+    });
+
+    // Auto-create account receivable entry (Phase 4 — AR auto-sync)
+    await auth.supabase.from("account_receivables").insert({
+      team_id: teamId,
+      customer_id,
+      invoice_id: invoice.id,
+      total_amount: Math.round(total_ttc * 100) / 100,
+      paid_amount: 0,
+      balance: Math.round(total_ttc * 100) / 100,
+      status: "pending",
+      due_date,
       created_by: auth.userId,
     });
 

@@ -38,7 +38,7 @@ export default async function CustomerDetailPage(props: { params: Params }) {
   const { data: team } = await supabase.from("teams").select("is_educational_mode").eq("id", teamId).single();
   const isEducational = team?.is_educational_mode ?? false;
 
-  const [invoicesRes, quotesRes] = await Promise.all([
+  const [invoicesRes, quotesRes, ordersRes] = await Promise.all([
     supabase
       .from("invoices")
       .select("id, invoice_number, issue_date, total_ttc, status, paid_amount, currency:currency_id(symbol)")
@@ -52,10 +52,18 @@ export default async function CustomerDetailPage(props: { params: Params }) {
       .eq("customer_id", id)
       .order("issue_date", { ascending: false })
       .limit(10),
+    supabase
+      .from("orders")
+      .select("id, status, source, created_at")
+      .eq("customer_id", id)
+      .eq("team_id", teamId)
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
 
   const invoices = invoicesRes.data ?? [];
   const quotes = quotesRes.data ?? [];
+  const orders = ordersRes.data ?? [];
 
   function fmt(amount: number, symbol = "F") {
     return `${amount.toLocaleString("fr-FR", { minimumFractionDigits: 0 })} ${symbol}`;
@@ -203,6 +211,34 @@ export default async function CustomerDetailPage(props: { params: Params }) {
                       <span className="font-medium">{fmt(q.total_ttc)}</span>
                       <Badge variant={q.status === "accepted" ? "success" : q.status === "draft" ? "secondary" : "default"}>
                         {q.status}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold mb-3">Commandes</h2>
+        {orders.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Aucune commande</p>
+        ) : (
+          <div className="space-y-2">
+            {orders.map((o) => (
+              <Link key={o.id} href={`../orders/${o.id}`}>
+                <Card className="hover:shadow-sm transition-all hover:-translate-y-0.5 cursor-pointer">
+                  <CardContent className="flex items-center justify-between p-3 text-sm">
+                    <div>
+                      <span className="font-mono text-xs text-muted-foreground">{o.id.slice(0, 8)}</span>
+                      <span className="text-muted-foreground ml-2">{formatDate(o.created_at)}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground">{o.source === "storefront" ? "Boutique" : "ERP"}</span>
+                      <Badge variant={o.status === "completed" ? "success" : o.status === "cancelled" ? "destructive" : "secondary"}>
+                        {o.status}
                       </Badge>
                     </div>
                   </CardContent>

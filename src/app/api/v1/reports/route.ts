@@ -24,9 +24,63 @@ export async function GET(request: NextRequest) {
           return NextResponse.json({ error: "customer_id is required for client-statement report" }, { status: 400 });
         }
         return handleClientStatement(supabase, teamId, customerId, dateFrom, dateTo);
+      case "ar-aging":
+        return handleArAging(supabase, teamId);
       default:
         return NextResponse.json({ error: `Unknown report type: ${type}` }, { status: 400 });
     }
+  });
+}
+
+// ---------- AR Aging Report ----------
+async function handleArAging(supabase: ReturnType<typeof createClient>, teamId: string) {
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data: ars } = await supabase
+    .from("account_receivables")
+    .select("id, total_amount, paid_amount, balance, due_date, status, customer:customer_id(company_name, contact_name)")
+    .eq("team_id", teamId)
+    .neq("status", "paid")
+    .neq("status", "written_off")
+    .order("due_date", { ascending: true });
+
+  const buckets = { current: 0, d30: 0, d60: 0, d90: 0, over90: 0 };
+  const byCustomer = new Map<string, { name: string; balance: number }>();
+
+  for (const ar of ars ?? []) {
+    const balance = parseFloat(String(ar.balance)) || 0;
+    const daysOverdue = Math.floor((new Date(today).getTime() - new Date(ar.due_date).getTime()) / 86400000);
+
+    if (daysOverdue <= 0) buckets.current += balance;
+    else if (daysOverdue <= 30) buckets.d30 += balance;
+    else if (daysOverdue <= 60) buckets.d60 += balance;
+    else if (daysOverdue <= 90) buckets.d90 += balance;
+    else buckets.over90 += balance;
+
+    const rawCustomer = ar.customer;
+    const cust = Array.isArray(rawCustomer) ? rawCustomer[0] : rawCustomer;
+    const custName = (cust as { company_name?: string; contact_name?: string } | null)?.company_name
+      ?? (cust as { company_name?: string; contact_name?: string } | null)?.contact_name
+      ?? ar.id;
+    const existing = byCustomer.get(custName);
+    byCustomer.set(custName, { name: custName, balance: (existing?.balance ?? 0) + balance });
+  }
+
+  const totalBalance = Object.values(buckets).reduce((s, v) => s + v, 0);
+
+  return NextResponse.json({
+    data: {
+      as_of: today,
+      total_balance: Math.round(totalBalance * 100) / 100,
+      aging: {
+        current: Math.round(buckets.current * 100) / 100,
+        "1-30_days": Math.round(buckets.d30 * 100) / 100,
+        "31-60_days": Math.round(buckets.d60 * 100) / 100,
+        "61-90_days": Math.round(buckets.d90 * 100) / 100,
+        "over_90_days": Math.round(buckets.over90 * 100) / 100,
+      },
+      by_customer: Array.from(byCustomer.values()).sort((a, b) => b.balance - a.balance),
+    },
   });
 }
 
@@ -87,22 +141,34 @@ async function handlePnl(supabase: ReturnType<typeof createClient>, teamId: stri
     categoryMap.set(catName, (categoryMap.get(catName) ?? 0) + parseFloat(exp.amount as string || "0"));
   }
 
+  // Commissions versées dans la période (Phase 8.2)
+  const { data: commissionsData } = await supabase
+    .from("invoice_commissions")
+    .select("amount, invoice:invoice_id(issue_date)")
+    .eq("team_id", teamId)
+    .eq("status", "paid");
+
+  const totalCommissions = (commissionsData ?? []).reduce((sum: number, c: { amount: string }) => sum + parseFloat(String(c.amount) || "0"), 0);
+
   const totalRevenue = totalInvoiced + totalOtherIncome;
-  const netIncome = totalRevenue - totalExpenses;
+  const totalCosts = totalExpenses + totalCommissions;
+  const netIncome = totalRevenue - totalCosts;
 
   return NextResponse.json({
     data: {
       period: { from: dateFrom, to: dateTo },
       revenue: {
         total_invoiced: totalInvoiced,
+        total_collected: totalCollected,
         other_income: totalOtherIncome,
         total_revenue: totalRevenue,
       },
       expenses: { total: totalExpenses, by_category: Object.fromEntries(categoryMap) },
-      net_income: netIncome,
+      commissions_paid: Math.round(totalCommissions * 100) / 100,
+      net_income: Math.round(netIncome * 100) / 100,
       metrics: {
         profit_margin_percent: totalRevenue > 0 ? Math.round((netIncome / totalRevenue) * 100) : 0,
-        expense_ratio_percent: totalRevenue > 0 ? Math.round((totalExpenses / totalRevenue) * 100) : 0,
+        expense_ratio_percent: totalRevenue > 0 ? Math.round((totalCosts / totalRevenue) * 100) : 0,
       },
     },
   });

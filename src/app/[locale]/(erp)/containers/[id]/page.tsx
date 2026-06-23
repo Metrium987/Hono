@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import { checkPagePermission } from "@/lib/auth/page-auth";
 import { ForbiddenPage } from "@/components/erp/forbidden-page";
-import ContainerDetailClient from "./container-detail-client";
+import ContainerDetailClient, { type Container } from "./container-detail-client";
 
 type Params = Promise<{ locale: string; id: string }>;
 
@@ -42,7 +42,7 @@ export default async function ContainerDetailPage({ params }: { params: Params }
 
   return (
     <ContainerDetailClient
-      container={container as any}
+      container={container as unknown as Container}
       vendors={vendors ?? []}
       teamId={perm.teamId}
       locale={locale}

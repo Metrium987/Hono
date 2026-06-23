@@ -5,7 +5,10 @@ import { QuoteForm } from "../quote-form";
 import { checkPagePermission } from "@/lib/auth/page-auth";
 import { ForbiddenPage } from "@/components/erp/forbidden-page";
 
-export default async function NewQuotePage() {
+type SearchParams = Promise<{ customer_id?: string; subject?: string }>;
+
+export default async function NewQuotePage(props: { searchParams: SearchParams }) {
+  const searchParams = await props.searchParams;
   const perm = await checkPagePermission("quotes", "write");
   if (!perm.allowed) return <ForbiddenPage module="quotes" action="write" />;
 
@@ -24,6 +27,9 @@ export default async function NewQuotePage() {
     supabase.from("tax_rates").select("id, name, rate, is_active").eq("team_id", teamId),
   ]);
 
+  const prefilledCustomerId = searchParams.customer_id ?? "";
+  const prefilledSubject = searchParams.subject ?? "";
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div>
@@ -35,6 +41,10 @@ export default async function NewQuotePage() {
         currencies={currenciesRes.data ?? []}
         taxRates={taxRatesRes.data ?? []}
         teamId={teamId}
+        initialData={{
+          customer_id: prefilledCustomerId,
+          notes: prefilledSubject,
+        }}
       />
     </div>
   );

@@ -54,7 +54,7 @@ type InvoiceWithRelations = {
   paid_amount: number;
   legal_mentions: string | null;
   currency: { symbol?: string | null } | Array<{ symbol?: string | null }> | null;
-  customer: { company_name: string | null; contact_name: string; email: string | null; phone: string | null } | Array<{ company_name: string | null; contact_name: string; email: string | null; phone: string | null }> | null;
+  customer: { id: string; company_name: string | null; contact_name: string; email: string | null; phone: string | null } | Array<{ id: string; company_name: string | null; contact_name: string; email: string | null; phone: string | null }> | null;
   team: { name: string } | Array<{ name: string }> | null;
   items: InvoiceItem[];
   payments: InvoicePayment[];
@@ -111,6 +111,7 @@ export default async function InvoiceDetailPage(props: { params: Params }) {
   if (error || !invoice) notFound();
 
   const currency = Array.isArray(invoice.currency) ? invoice.currency[0] : invoice.currency;
+  const invoiceCustomer = Array.isArray(invoice.customer) ? invoice.customer[0] : invoice.customer;
   const items: InvoiceItem[] = Array.isArray(invoice.items) ? invoice.items : [];
   const payments: InvoicePayment[] = Array.isArray(invoice.payments) ? invoice.payments : [];
   const totalTtc = parseFloat(invoice.total_ttc) || 0;
@@ -284,13 +285,16 @@ export default async function InvoiceDetailPage(props: { params: Params }) {
           <Card>
             <CardHeader><CardTitle className="text-sm font-medium">{det("client_title")}</CardTitle></CardHeader>
             <CardContent className="text-sm space-y-1">
-              {invoice.customer && (
+              {invoiceCustomer && (
                 <>
-                  <p className="font-medium">
-                    {(Array.isArray(invoice.customer) ? invoice.customer[0]?.company_name ?? invoice.customer[0]?.contact_name : invoice.customer.company_name ?? invoice.customer.contact_name) as string}
-                  </p>
-                  <p className="text-muted-foreground">{(Array.isArray(invoice.customer) ? invoice.customer[0]?.email : invoice.customer.email) as string}</p>
-                  <p className="text-muted-foreground">{(Array.isArray(invoice.customer) ? invoice.customer[0]?.phone : invoice.customer.phone) as string}</p>
+                  <Link
+                    href={`../customers/${invoiceCustomer.id}`}
+                    className="font-medium hover:text-primary hover:underline transition-colors"
+                  >
+                    {invoiceCustomer.company_name ?? invoiceCustomer.contact_name}
+                  </Link>
+                  {invoiceCustomer.email && <p className="text-muted-foreground">{invoiceCustomer.email}</p>}
+                  {invoiceCustomer.phone && <p className="text-muted-foreground">{invoiceCustomer.phone}</p>}
                 </>
               )}
             </CardContent>

@@ -15,6 +15,7 @@ export type DeliveryNotePdfTeam = {
   postal_code: string | null;
   n_tahiti: string | null;
   rcs_number: string | null;
+  is_franchise_en_base: boolean;
 };
 
 export type DeliveryNotePdfCustomer = {
@@ -234,13 +235,24 @@ export function DeliveryNotePdfDocument({ data }: { data: DeliveryNotePdfData })
           )}
         </View>
 
+        {/* ── Franchise en base notice ── */}
+        {team.is_franchise_en_base && (
+          <View style={{ marginBottom: 12, padding: 8, backgroundColor: COLORS.background }}>
+            <Text style={{ fontSize: 8, color: COLORS.muted, fontStyle: "italic" }}>
+              TVA non applicable, franchise en base
+            </Text>
+          </View>
+        )}
+
         {/* ── Items table ── */}
         <View style={styles.table}>
           <View style={styles.tableHeader}>
             <Text style={[styles.tableHeaderCell, styles.colProduct]}>Produit</Text>
             <Text style={[styles.tableHeaderCell, styles.colSku]}>SKU</Text>
             <Text style={[styles.tableHeaderCell, styles.colQty]}>Qté</Text>
-            <Text style={[styles.tableHeaderCell, styles.colUnit]}>Prix unitaire</Text>
+            {!team.is_franchise_en_base && (
+              <Text style={[styles.tableHeaderCell, styles.colUnit]}>Prix unitaire</Text>
+            )}
           </View>
           {items.length === 0 ? (
             <View style={styles.tableRow}>
@@ -258,11 +270,13 @@ export function DeliveryNotePdfDocument({ data }: { data: DeliveryNotePdfData })
                 <Text style={[styles.colQty, { fontSize: 9 }]}>
                   {item.quantity}
                 </Text>
-                <Text style={[styles.colUnit, { fontSize: 9 }]}>
-                  {item.unit_price !== null
-                    ? `${Number(item.unit_price).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F`
-                    : "—"}
-                </Text>
+                {!team.is_franchise_en_base && (
+                  <Text style={[styles.colUnit, { fontSize: 9 }]}>
+                    {item.unit_price !== null
+                      ? `${Number(item.unit_price).toLocaleString("fr-FR", { minimumFractionDigits: 2 })} F`
+                      : "—"}
+                  </Text>
+                )}
               </View>
             ))
           )}

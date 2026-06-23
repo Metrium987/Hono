@@ -15,7 +15,7 @@ type CountItem = {
   counted_qty: number | null; difference: number | null; notes: string | null;
   product: Product;
 };
-type Count = {
+export type Count = {
   id: string; status: string; notes: string | null; created_at: string;
   warehouse: { id: string; name: string; type: string } | null;
   items: CountItem[];

@@ -253,6 +253,7 @@ export function CalendarClient({
         if (res.ok) {
           const { data } = await res.json();
           setEvents(prev => prev.map(e => e.id === editEvent.id ? data : e));
+          // @schedule-x types declare start/end as PlainDate|ZonedDateTime but accept strings at runtime
           calendarApp?.events.update({
             id: data.id, title: data.title,
             start: toSXDate(data.starts_at, data.is_all_day),
