@@ -4,6 +4,8 @@ import { z } from "zod";
 
 type ItemInput = { description?: string; quantity?: string | number; unit_price_ht?: string | number; tax_rate_id?: string | null; product_id?: string | null; group_id?: string | null; sort_order?: number };
 
+type ExportFormat = "json" | "csv";
+
 const InvoiceItemSchema = z.object({
   description: z.string().max(1000).optional(),
   quantity: z.union([z.string(), z.number()]),
@@ -40,6 +42,7 @@ export async function GET(request: NextRequest) {
     const status = params.get("status");
     const customerId = params.get("customer_id");
     const rawSearch = params.get("search");
+    const format = (params.get("format") as ExportFormat | null) ?? "json";
     // Sanitiser les caractères spéciaux PostgREST (virgule, parenthèses, guillemets)
     const search = rawSearch ? rawSearch.replace(/[,()'"]/g, "").trim() : null;
 
@@ -68,6 +71,47 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (format === "csv") {
+      const header = [
+        "invoice_number",
+        "issue_date",
+        "due_date",
+        "customer_name",
+        "n_tahiti",
+        "subtotal_ht",
+        "tax_amount",
+        "total_ttc",
+        "paid_amount",
+        "status",
+      ].join(",");
+
+      const rows = (data ?? [])
+        .map((row) => {
+          const customer = Array.isArray(row.customer) ? row.customer[0] : (row.customer as { company_name?: string; n_tahiti?: string } | null);
+          return [
+            row.invoice_number ?? "",
+            row.issue_date ?? "",
+            row.due_date ?? "",
+            (customer?.company_name ?? "").replace(/"/g, '""'),
+            (customer?.n_tahiti ?? "").replace(/"/g, '""'),
+            row.subtotal_ht ?? 0,
+            row.tax_amount ?? 0,
+            row.total_ttc ?? 0,
+            row.paid_amount ?? 0,
+            row.status ?? "",
+          ].join(",");
+        })
+        .filter((row) => row.trim().length > 0);
+
+      const csv = [header, ...rows].join("\n");
+      return new NextResponse(csv, {
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="factures-export-${new Date().toISOString().slice(0, 10)}.csv"`,
+        },
+      });
     }
 
     return NextResponse.json({

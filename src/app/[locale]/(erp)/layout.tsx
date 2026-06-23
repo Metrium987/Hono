@@ -39,9 +39,8 @@ export default async function ErpLayout({
     : (activeTeam.teams?.name ?? "Mon Entreprise");
   const userEmail = user.email ?? "";
 
-  // Fetch user's role permissions for UI filtering
   let userPermissions: Record<string, string[]> | null = null;
-  let isOwner = activeTeam.is_owner;
+  const isOwner = activeTeam.is_owner;
 
   if (activeTeam.role_id) {
     const { data: role } = await supabase
@@ -49,26 +48,39 @@ export default async function ErpLayout({
       .select("permissions")
       .eq("id", activeTeam.role_id)
       .single();
-
     if (role?.permissions) {
       userPermissions = role.permissions as Record<string, string[]>;
     }
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
-      <ErpSidebar teamName={teamName} permissions={userPermissions} isOwner={isOwner} />
-      <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex h-[100dvh] overflow-hidden bg-background">
+      {/* Sidebar — hidden on mobile, visible md+ */}
+      <div className="hidden md:flex shrink-0">
+        <ErpSidebar
+          teamName={teamName}
+          permissions={userPermissions}
+          isOwner={isOwner}
+        />
+      </div>
+
+      {/* Main content column */}
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <ErpHeader
           userEmail={userEmail}
           teamName={teamName}
           teamId={teamId}
           locale={locale}
         />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main
+          id="main-content"
+          className="flex-1 overflow-y-auto p-4 sm:p-6"
+          tabIndex={-1}
+        >
           {children}
         </main>
       </div>
+
       <Toaster richColors position="bottom-right" />
     </div>
   );

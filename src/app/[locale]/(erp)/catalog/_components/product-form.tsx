@@ -7,7 +7,8 @@ import Link from "next/link";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { useRef, useState, useEffect, useCallback } from "react";
+import { ArrowLeft, Loader2, AlertCircle, ImagePlus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +72,8 @@ export type ProductFormProps = {
   initialData?: Partial<FormValues>;
 };
 
+type ProductImage = { id: string; storage_path: string; position: number; alt_text: string | null; public_url: string };
+
 export function ProductForm({
   teamId, productId, currencies, taxRates, categories, brands, backHref, initialData,
 }: ProductFormProps) {
@@ -79,6 +82,54 @@ export function ProductForm({
   const common = useTranslations("common");
 
   const isEdit = !!productId;
+
+  // ── Image upload state ──
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [images, setImages] = useState<ProductImage[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+
+  const loadImages = useCallback(async () => {
+    if (!productId) return;
+    const res = await fetch(`/api/v1/products/${productId}/image?team_id=${teamId}`).catch(() => null);
+    if (!res?.ok) return;
+    const json = await res.json().catch(() => null);
+    if (json?.data) setImages(json.data);
+  }, [productId, teamId]);
+
+  useEffect(() => { loadImages(); }, [loadImages]);
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !productId) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/v1/products/${productId}/image?team_id=${teamId}`, {
+        method: "POST",
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Erreur upload");
+      setImages((prev) => [...prev, data.data]);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Erreur");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
+
+  async function handleImageDelete(imageId: string) {
+    if (!productId) return;
+    const res = await fetch(`/api/v1/products/${productId}/image?team_id=${teamId}&image_id=${imageId}`, {
+      method: "DELETE",
+    });
+    if (res.ok) setImages((prev) => prev.filter((img) => img.id !== imageId));
+  }
 
   const {
     register,
@@ -497,6 +548,62 @@ export function ProductForm({
             </div>
           </CardContent>
         </Card>
+
+        {/* ── Images produit (edit uniquement) ── */}
+        {isEdit && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-base">Images produit</CardTitle>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                Ajouter
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+            </CardHeader>
+            <CardContent>
+              {uploadError && (
+                <p className="text-xs text-destructive mb-3">{uploadError}</p>
+              )}
+              {images.length === 0 && !uploading && (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  Aucune image. Cliquez sur &quot;Ajouter&quot; pour uploader.
+                </p>
+              )}
+              <div className="grid grid-cols-3 gap-3">
+                {images.map((img) => {
+                  const url = img.public_url || `${supabaseUrl}/storage/v1/object/public/product-images/${img.storage_path}`;
+                  return (
+                    <div key={img.id} className="relative group rounded-md overflow-hidden border aspect-square">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt={img.alt_text ?? ""} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => handleImageDelete(img.id)}
+                        className="absolute top-1 right-1 bg-black/60 text-white rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {errors.root && (
           <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2">

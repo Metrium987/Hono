@@ -5,196 +5,162 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
-  FileText,
-  FileSignature,
-  Package,
-  Users,
-  BarChart3,
-  Settings,
-  Receipt,
-  ChevronLeft,
-  TrendingDown,
-  TrendingUp,
-  Truck,
-  ShoppingCart,
-  Tag,
-  Bell,
-  Wallet,
-  BookOpen,
-  Target,
-  Percent,
-  Trophy,
-  Activity,
-  CalendarDays,
-  KanbanSquare,
-  RefreshCw,
-  Layers,
-  Upload,
-  PackageCheck,
-  Warehouse,
-  ClipboardList,
-  Box,
-  CreditCard,
-  DollarSign,
-  Banknote,
-  Store,
-  Plug,
-  AlertTriangle,
-  CheckSquare,
+  FileText, FileSignature, Receipt, ShoppingCart, RefreshCw,
+  Users, KanbanSquare, CalendarDays, Bell,
+  Package, Tag, Layers, Percent, Upload,
+  PackageCheck, Warehouse, ClipboardList, Box,
+  TrendingDown, TrendingUp, Truck, CreditCard, DollarSign, Banknote,
+  Wallet, BookOpen, Target,
+  Activity, Trophy, AlertTriangle, CheckSquare,
+  BarChart3, Settings, Store, Plug, ChevronLeft,
 } from "lucide-react";
 import { useState, useMemo } from "react";
-import { Button } from "@/components/ui/button";
 
-type NavItem = {
-  key: string;
-  href: string;
-  icon: React.ElementType;
-};
+type NavItem  = { key: string; href: string; icon: React.ElementType };
+type NavGroup = { sectionKey: string; items: NavItem[] };
 
-type NavGroup = {
-  sectionKey: string;
-  items: NavItem[];
-};
-
-// Map each nav item key to its RBAC permission module.
-// Items not listed (or set to null) are visible to everyone.
+/* ─── Permission map ─────────────────────────────────────────────────────── */
 const ITEM_MODULES: Record<string, string | null> = {
-  invoices: "invoices",
-  quotes: "quotes",
-  credit_notes: "credit_notes",
-  orders: "orders",
+  invoices:           "invoices",
+  quotes:             "quotes",
+  orders:             "orders",
+  credit_notes:       "credit_notes",
   recurring_invoices: "invoices",
-  delivery_notes: "orders",
-  clients: "clients",
-  crm_board: "crm",
-  reminders: "reminders",
-  products: "catalog",
-  categories: "catalog",
-  promotions: "promotions",
-  brands: "catalog",
-  catalog_import: "catalog",
-  expenses: "expenses",
-  income: "income",
-  vendors: "clients",
-  treasury: "reports",
-  revenue_book: "reports",
-  break_even: "reports",
-  receivables: "finance",
+  clients:            "clients",
+  crm_board:          "crm",
+  calendar:           "calendar",
+  reminders:          "reminders",
+  products:           "catalog",
+  categories:         "catalog",
+  brands:             "catalog",
+  promotions:         "promotions",
+  catalog_import:     "catalog",
+  delivery_notes:     "orders",
+  warehouses:         "inventory",
+  inventory_counts:   "inventory",
+  containers:         "inventory",
+  expenses:           "expenses",
+  income:             "income",
+  vendors:            "clients",
+  receivables:        "finance",
   vendor_commissions: "finance",
-  cash_closures: "finance",
-  warehouses: "inventory",
-  inventory_counts: "inventory",
-  containers: "inventory",
-  marketplace: "marketplace",
-  integrations: "integrations",
-  alerts: "governance",
-  approvals: "governance",
-  calendar: "calendar",
-  my_activity: null,
-  team_performance: "reports",
-  reports: "reports",
-  settings: "settings",
+  cash_closures:      "finance",
+  treasury:           "reports",
+  revenue_book:       "reports",
+  break_even:         "reports",
+  my_activity:        null,
+  team_performance:   "reports",
+  alerts:             "governance",
+  approvals:          "governance",
+  marketplace:        "marketplace",
+  integrations:       "integrations",
+  reports:            "reports",
+  settings:           "settings",
 };
 
+/* ─── Navigation structure ───────────────────────────────────────────────── */
+/*
+ * Logique métier pour un ERP PF :
+ * 1. FACTURATION   — le flux documentaire principal (devis → commande → facture)
+ * 2. CRM & AGENDA  — gestion des relations client (clients, pipeline, agenda, relances)
+ * 3. CATALOGUE     — référentiel produits et tarification
+ * 4. LOGISTIQUE    — flux physique (livraisons, entrepôts, stock)
+ * 5. FINANCE       — flux financiers (dépenses, recettes, trésorerie)
+ * 6. ÉQUIPE        — activité interne, gouvernance, alertes
+ *
+ * En bas (toujours visibles) : rapports globaux + paramètres
+ * Marketplace/Intégrations : section technique bottom
+ */
 const NAV_GROUPS: NavGroup[] = [
   {
-    sectionKey: "commerce_section",
+    sectionKey: "commerce_section", // label → "Facturation"
     items: [
       { key: "invoices",           href: "/invoices",           icon: FileText },
       { key: "quotes",             href: "/quotes",             icon: FileSignature },
-      { key: "credit_notes",       href: "/credit-notes",       icon: Receipt },
       { key: "orders",             href: "/orders",             icon: ShoppingCart },
-      { key: "delivery_notes",     href: "/delivery-notes",     icon: PackageCheck },
+      { key: "credit_notes",       href: "/credit-notes",       icon: Receipt },
       { key: "recurring_invoices", href: "/recurring-invoices", icon: RefreshCw },
     ],
   },
   {
-    sectionKey: "crm_section",
+    sectionKey: "crm_section", // label → "CRM & Agenda"
     items: [
       { key: "clients",   href: "/customers", icon: Users },
       { key: "crm_board", href: "/crm-board", icon: KanbanSquare },
+      { key: "calendar",  href: "/calendar",  icon: CalendarDays },
       { key: "reminders", href: "/reminders", icon: Bell },
     ],
   },
   {
     sectionKey: "catalog_section",
     items: [
-      { key: "products",      href: "/catalog",             icon: Package },
-      { key: "categories",    href: "/catalog/categories",  icon: Tag },
-      { key: "brands",        href: "/catalog/brands",      icon: Layers },
-      { key: "promotions",    href: "/promotions",          icon: Percent },
+      { key: "products",       href: "/catalog",            icon: Package },
+      { key: "categories",     href: "/catalog/categories", icon: Tag },
+      { key: "brands",         href: "/catalog/brands",     icon: Layers },
+      { key: "promotions",     href: "/promotions",         icon: Percent },
       { key: "catalog_import", href: "/catalog/import",     icon: Upload },
     ],
   },
   {
     sectionKey: "logistics_section",
     items: [
-      { key: "warehouses",       href: "/warehouses",       icon: Warehouse },
-      { key: "inventory_counts", href: "/inventory-counts", icon: ClipboardList },
-      { key: "containers",       href: "/containers",       icon: Box },
+      { key: "delivery_notes",  href: "/delivery-notes",  icon: PackageCheck },
+      { key: "warehouses",      href: "/warehouses",      icon: Warehouse },
+      { key: "inventory_counts",href: "/inventory-counts",icon: ClipboardList },
+      { key: "containers",      href: "/containers",      icon: Box },
     ],
   },
   {
     sectionKey: "finance_section",
     items: [
-      { key: "expenses",           href: "/expenses",            icon: TrendingDown },
-      { key: "income",             href: "/income",              icon: TrendingUp },
-      { key: "vendors",            href: "/vendors",             icon: Truck },
-      { key: "receivables",        href: "/finance/receivables",         icon: CreditCard },
-      { key: "vendor_commissions", href: "/vendor-commissions",  icon: DollarSign },
-      { key: "cash_closures",      href: "/finance/cash-closures",       icon: Banknote },
-      { key: "treasury",           href: "/treasury",            icon: Wallet },
-      { key: "revenue_book",       href: "/revenue-book",        icon: BookOpen },
-      { key: "break_even",         href: "/break-even",          icon: Target },
-    ],
-  },
-  {
-    sectionKey: "marketplace_section",
-    items: [
-      { key: "marketplace",  href: "/marketplace",  icon: Store },
-      { key: "integrations", href: "/integrations", icon: Plug },
-    ],
-  },
-  {
-    sectionKey: "governance_section",
-    items: [
-      { key: "alerts",    href: "/alerts",    icon: AlertTriangle },
-      { key: "approvals", href: "/approvals", icon: CheckSquare },
+      { key: "expenses",           href: "/expenses",              icon: TrendingDown },
+      { key: "income",             href: "/income",                icon: TrendingUp },
+      { key: "vendors",            href: "/vendors",               icon: Truck },
+      { key: "receivables",        href: "/finance/receivables",   icon: CreditCard },
+      { key: "vendor_commissions", href: "/vendor-commissions",    icon: DollarSign },
+      { key: "cash_closures",      href: "/finance/cash-closures", icon: Banknote },
+      { key: "treasury",           href: "/treasury",              icon: Wallet },
+      { key: "revenue_book",       href: "/revenue-book",          icon: BookOpen },
+      { key: "break_even",         href: "/break-even",            icon: Target },
     ],
   },
   {
     sectionKey: "team_section",
     items: [
-      { key: "calendar",         href: "/calendar",          icon: CalendarDays },
-      { key: "my_activity",      href: "/my-activity",       icon: Activity },
-      { key: "team_performance", href: "/team-performance",  icon: Trophy },
+      { key: "my_activity",      href: "/my-activity",      icon: Activity },
+      { key: "team_performance", href: "/team-performance", icon: Trophy },
+      { key: "alerts",           href: "/alerts",           icon: AlertTriangle },
+      { key: "approvals",        href: "/approvals",        icon: CheckSquare },
     ],
   },
 ];
 
 const BOTTOM_ITEMS: NavItem[] = [
-  { key: "reports",  href: "/reports",  icon: BarChart3 },
-  { key: "settings", href: "/settings", icon: Settings },
+  { key: "marketplace",  href: "/marketplace",  icon: Store },
+  { key: "integrations", href: "/integrations", icon: Plug },
+  { key: "reports",      href: "/reports",      icon: BarChart3 },
+  { key: "settings",     href: "/settings",     icon: Settings },
 ];
 
+/* ─── Types ──────────────────────────────────────────────────────────────── */
 type ErpSidebarProps = {
   teamName: string;
   permissions: Record<string, string[]> | null;
   isOwner: boolean;
 };
 
-function hasModuleAccess(
+function hasAccess(
   permissions: Record<string, string[]> | null,
   isOwner: boolean,
   module: string | null
 ): boolean {
-  if (module === null) return true; // no restriction
-  if (isOwner) return true; // owner bypass
+  if (module === null) return true;
+  if (isOwner) return true;
   if (!permissions) return false;
-  const perms = permissions[module];
-  return Array.isArray(perms) && perms.includes("read");
+  return Array.isArray(permissions[module]) && permissions[module].includes("read");
 }
 
+/* ─── Component ──────────────────────────────────────────────────────────── */
 export function ErpSidebar({ teamName, permissions, isOwner }: ErpSidebarProps) {
   const pathname = usePathname();
   const t = useTranslations("nav");
@@ -203,99 +169,172 @@ export function ErpSidebar({ teamName, permissions, isOwner }: ErpSidebarProps) 
   const locale = pathname.match(/^\/([a-z]{2})\//)?.[1] ?? "fr";
   const relativePath = pathname.replace(/^\/[a-z]{2}/, "");
 
-  // Filter nav groups based on RBAC permissions
-  const filteredGroups = useMemo(() => {
-    return NAV_GROUPS
-      .map((group) => ({
-        ...group,
-        items: group.items.filter((item) =>
-          hasModuleAccess(permissions, isOwner, ITEM_MODULES[item.key] ?? null)
-        ),
-      }))
-      .filter((group) => group.items.length > 0);
-  }, [permissions, isOwner]);
+  const visibleGroups = useMemo(
+    () =>
+      NAV_GROUPS
+        .map((g) => ({
+          ...g,
+          items: g.items.filter((item) =>
+            hasAccess(permissions, isOwner, ITEM_MODULES[item.key] ?? null)
+          ),
+        }))
+        .filter((g) => g.items.length > 0),
+    [permissions, isOwner]
+  );
 
-  const filteredBottom = useMemo(
+  const visibleBottom = useMemo(
     () =>
       BOTTOM_ITEMS.filter((item) =>
-        hasModuleAccess(permissions, isOwner, ITEM_MODULES[item.key] ?? null)
+        hasAccess(permissions, isOwner, ITEM_MODULES[item.key] ?? null)
       ),
     [permissions, isOwner]
   );
 
-  function NavLink({ href, icon: Icon, labelKey }: { href: string; icon: React.ElementType; labelKey: string }) {
-    const isActive = relativePath === href || (href !== "/" && relativePath.startsWith(href));
+  function NavLink({ href, icon: Icon, labelKey }: {
+    href: string;
+    icon: React.ElementType;
+    labelKey: string;
+  }) {
+    const isActive =
+      relativePath === href ||
+      (href !== "/" && relativePath.startsWith(href));
+
     return (
       <Link
         href={`/${locale}${href}`}
+        aria-current={isActive ? "page" : undefined}
         className={cn(
-          "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-sm font-medium transition-colors duration-150",
+          "flex items-center gap-2.5 rounded-[8px] px-2.5 py-[7px]",
+          "text-[13px] font-medium leading-snug select-none",
+          "transition-colors duration-150 ease-out",
+          "min-h-[32px]",          // accessible touch target height
           isActive
-            ? "bg-primary/10 text-primary"
-            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            ? "bg-primary/[0.08] text-primary dark:bg-primary/[0.16]"
+            : [
+                "text-foreground/65 dark:text-white/55",
+                "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]",
+                "hover:text-foreground dark:hover:text-white",
+              ].join(" ")
         )}
+        title={collapsed ? t(labelKey) : undefined}
       >
-        <Icon className="h-4 w-4 shrink-0" />
-        {!collapsed && <span className="truncate">{t(labelKey)}</span>}
+        <Icon
+          className={cn(
+            "h-[15px] w-[15px] shrink-0",
+            isActive
+              ? "text-primary"
+              : "text-foreground/35 dark:text-white/35 group-hover:text-foreground/60"
+          )}
+          aria-hidden="true"
+        />
+        {!collapsed && (
+          <span className="truncate">{t(labelKey)}</span>
+        )}
       </Link>
     );
   }
 
   return (
     <aside
+      role="navigation"
+      aria-label="Navigation principale"
+      style={{
+        width: collapsed ? 56 : 220,
+        /* P0 fix: transition-[width] instead of transition-all to avoid
+           animating layout-thrash properties like height/padding/margin */
+        transition: "width 200ms cubic-bezier(0.4,0,0.2,1)",
+      }}
       className={cn(
-        "flex flex-col border-r bg-card transition-all duration-200 ease-out",
-        collapsed ? "w-16" : "w-56"
+        "flex flex-col shrink-0 overflow-hidden",
+        "bg-[var(--color-sidebar)]",
+        "border-r border-black/[0.08] dark:border-white/[0.08]",
       )}
     >
-      {/* Brand */}
-      <div className={cn(
-        "flex items-center border-b",
-        collapsed ? "h-12 justify-center" : "h-12 gap-2.5 px-3"
-      )}>
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[0.5rem] bg-primary text-primary-foreground text-xs font-bold tracking-tight">
+      {/* ── Brand / Team ───────────────────────────────────────────────── */}
+      <div
+        className={cn(
+          "flex items-center h-12 shrink-0",
+          "border-b border-black/[0.06] dark:border-white/[0.06]",
+          collapsed ? "justify-center" : "gap-2.5 px-4"
+        )}
+      >
+        <div
+          className="flex h-[26px] w-[26px] shrink-0 items-center justify-center
+                     rounded-[7px] bg-primary text-primary-foreground
+                     text-[11px] font-bold tracking-tight select-none"
+          aria-hidden="true"
+        >
           H
         </div>
         {!collapsed && (
-          <span className="text-sm font-semibold truncate">{teamName}</span>
+          <span className="text-[13px] font-semibold tracking-tight truncate text-foreground">
+            {teamName}
+          </span>
         )}
       </div>
 
-      {/* Groups — filtré par permissions RBAC */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
-        {filteredGroups.map((group) => (
+      {/* ── Main navigation ────────────────────────────────────────────── */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2.5 px-2 space-y-3">
+        {visibleGroups.map((group) => (
           <div key={group.sectionKey}>
             {!collapsed && (
-              <p className="px-2.5 mb-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+              <p className="px-2.5 mb-1 text-[11px] font-medium text-foreground/40 dark:text-white/35">
                 {t(group.sectionKey)}
               </p>
             )}
-            <div className="space-y-0.5">
+            {collapsed && (
+              <div className="h-px mx-1.5 bg-black/[0.06] dark:bg-white/[0.06] mb-1" aria-hidden="true" />
+            )}
+            <div className="space-y-px">
               {group.items.map((item) => (
-                <NavLink key={item.href} href={item.href} icon={item.icon} labelKey={item.key} />
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  icon={item.icon}
+                  labelKey={item.key}
+                />
               ))}
             </div>
           </div>
         ))}
       </nav>
 
-      {/* Bottom — reports + settings (filtré) */}
-      {filteredBottom.length > 0 && (
-        <div className="border-t px-2 py-2 space-y-0.5">
-          {filteredBottom.map((item) => (
-            <NavLink key={item.href} href={item.href} icon={item.icon} labelKey={item.key} />
+      {/* ── Bottom fixed items (reports / settings / integrations) ──────── */}
+      {visibleBottom.length > 0 && (
+        <div className="shrink-0 border-t border-black/[0.06] dark:border-white/[0.06] px-2 py-2 space-y-px">
+          {visibleBottom.map((item) => (
+            <NavLink
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              labelKey={item.key}
+            />
           ))}
         </div>
       )}
 
-      {/* Collapse toggle */}
-      <div className="border-t p-1.5">
+      {/* ── Collapse toggle ─────────────────────────────────────────────── */}
+      <div className="shrink-0 border-t border-black/[0.06] dark:border-white/[0.06] p-1.5">
         <button
-          className="flex w-full items-center justify-center rounded-[0.375rem] h-7 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors duration-150"
-          onClick={() => setCollapsed(!collapsed)}
-          aria-label={collapsed ? "Déplier le menu" : "Replier le menu"}
+          onClick={() => setCollapsed((c) => !c)}
+          aria-label={collapsed ? "Déplier la navigation" : "Replier la navigation"}
+          aria-expanded={!collapsed}
+          className={cn(
+            "flex w-full items-center justify-center rounded-[8px]",
+            "h-8 min-h-[32px]",   // accessible touch target
+            "text-foreground/30 hover:text-foreground/55",
+            "dark:text-white/20 dark:hover:text-white/45",
+            "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]",
+            "transition-colors duration-150"
+          )}
         >
-          <ChevronLeft className={cn("h-3.5 w-3.5 transition-transform duration-200 ease-out", collapsed && "rotate-180")} />
+          <ChevronLeft
+            className={cn(
+              "h-3.5 w-3.5 transition-transform duration-200 ease-out",
+              collapsed && "rotate-180"
+            )}
+            aria-hidden="true"
+          />
         </button>
       </div>
     </aside>

@@ -1,43 +1,125 @@
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Hono ERP — Apple Human Interface Guidelines Design System 2026
+   Primary: Jade d'Autorité oklch(0.52 0.13 158)
+   Neutral: macOS UIKit semantic token mapping
+   Radius: 12px default, 16px cards — matches Apple's control vocabulary
+   Font: -apple-system, BlinkMacSystemFont → Geist fallback
+   Elevation: shadow-only on floating surfaces; solid fills for surfaces
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 @theme {
-  /* ── Jade d'Autorité — Hono ERP 2026 ─────────────────────────────────────
-     Primary hue 158 (forest jade): distinctive, financial, non-tropical.
-     All neutrals are tinted toward hue 162 for palette cohesion.
-  */
-  --color-background:           oklch(0.12 0.008 162);
-  --color-foreground:           oklch(0.97 0.005 162);
+  /* ── Brand accent ──────────────────────────────────────────────────────── */
   --color-primary:              oklch(0.52 0.13 158);
   --color-primary-foreground:   oklch(0.985 0 0);
-  --color-card:                 oklch(0.18 0.012 162);
-  --color-card-foreground:      oklch(0.97 0.005 162);
-  --color-popover:              oklch(0.18 0.012 162);
-  --color-popover-foreground:   oklch(0.97 0.005 162);
-  --color-secondary:            oklch(0.25 0.014 162);
-  --color-secondary-foreground: oklch(0.97 0.005 162);
-  --color-muted:                oklch(0.22 0.01 162);
-  --color-muted-foreground:     oklch(0.68 0.035 162);
-  --color-accent:               oklch(0.25 0.014 162);
-  --color-accent-foreground:    oklch(0.97 0.005 162);
   --color-destructive:          oklch(0.577 0.245 27.325);
   --color-destructive-foreground: oklch(0.985 0 0);
-  --color-border:               oklch(0.26 0.014 162);
-  --color-input:                oklch(0.26 0.014 162);
   --color-ring:                 oklch(0.52 0.13 158);
-  --radius: 0.625rem;
+
+  /* ── Light mode (macOS systemGroupedBackground family) ─────────────────── */
+  --color-background:           #F2F2F7;          /* systemGroupedBackground   */
+  --color-foreground:           #1C1C1E;          /* label                     */
+  --color-card:                 #FFFFFF;          /* systemBackground          */
+  --color-card-foreground:      #1C1C1E;
+  --color-popover:              #FFFFFF;
+  --color-popover-foreground:   #1C1C1E;
+  --color-secondary:            #E5E5EA;          /* secondarySystemGrouped    */
+  --color-secondary-foreground: #3A3A3C;          /* secondaryLabel            */
+  --color-muted:                #E5E5EA;
+  --color-muted-foreground:     #6C6C70;          /* tertiaryLabel (4.5:1 on white) */
+  --color-accent:               rgba(60,60,67,0.06);   /* tertiaryFill        */
+  --color-accent-foreground:    #1C1C1E;
+  --color-border:               rgba(60,60,67,0.12);   /* separator           */
+  --color-input:                rgba(60,60,67,0.06);   /* quarternaryFill     */
+
+  /* ── Sidebar surface (légèrement plus sombre que le fond) ─────────────── */
+  --color-sidebar:             #F0F0F5;   /* macOS sidebar tint — un cran sous #F2F2F7 */
+  --color-sidebar-foreground:  #1C1C1E;
+
+  /* ── Apple radius scale ────────────────────────────────────────────────── */
+  --radius:     0.75rem;   /* 12px — buttons, controls, inputs   */
+  --radius-sm:  0.375rem;  /* 6px  — badges, chips               */
+  --radius-lg:  1rem;      /* 16px — cards, sheets               */
+  --radius-xl:  1.25rem;   /* 20px — large cards, modals         */
 }
 
+/* ── Dark mode (class-based OR system prefers-color-scheme) ─────────────── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-sidebar:              #1C1C1E;               /* macOS sidebar dark */
+    --color-sidebar-foreground:   #FFFFFF;
+    --color-background:           #000000;               /* Black */
+    --color-foreground:           #FFFFFF;
+    --color-card:                 #1C1C1E;               /* secondarySystemBackground */
+    --color-card-foreground:      #FFFFFF;
+    --color-popover:              #2C2C2E;               /* tertiarySystemBackground  */
+    --color-popover-foreground:   #FFFFFF;
+    --color-secondary:            #2C2C2E;
+    --color-secondary-foreground: rgba(235,235,245,0.6); /* secondaryLabel dark */
+    --color-muted:                #2C2C2E;
+    --color-muted-foreground:     #8E8E93;               /* tertiaryLabel dark  */
+    --color-accent:               rgba(255,255,255,0.06);
+    --color-accent-foreground:    #FFFFFF;
+    --color-border:               rgba(255,255,255,0.10);
+    --color-input:                rgba(255,255,255,0.08);
+  }
+}
+
+[data-theme="dark"], .dark {
+  --color-sidebar:              #1C1C1E;
+  --color-sidebar-foreground:   #FFFFFF;
+  --color-background:           #000000;
+  --color-foreground:           #FFFFFF;
+  --color-card:                 #1C1C1E;
+  --color-card-foreground:      #FFFFFF;
+  --color-popover:              #2C2C2E;
+  --color-popover-foreground:   #FFFFFF;
+  --color-secondary:            #2C2C2E;
+  --color-secondary-foreground: rgba(235,235,245,0.6);
+  --color-muted:                #2C2C2E;
+  --color-muted-foreground:     #8E8E93;
+  --color-accent:               rgba(255,255,255,0.06);
+  --color-accent-foreground:    #FFFFFF;
+  --color-border:               rgba(255,255,255,0.10);
+  --color-input:                rgba(255,255,255,0.08);
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
 body {
   background: var(--color-background);
   color: var(--color-foreground);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  /* Apple system font → Geist fallback for non-Apple */
+  font-family: -apple-system, BlinkMacSystemFont, var(--font-geist-sans),
+               "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 code, pre, kbd, samp {
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-family: "SF Mono", ui-monospace, var(--font-geist-mono), "Cascadia Code", monospace;
 }
 
-/* Tiptap editor placeholder (from @tiptap/extension-placeholder) */
+/* ── macOS-style thin scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar               { width: 8px; height: 8px; }
+::-webkit-scrollbar-track         { background: transparent; }
+::-webkit-scrollbar-thumb         {
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  background-color: rgba(60,60,67,0.18);
+}
+::-webkit-scrollbar-thumb:hover   { background-color: rgba(60,60,67,0.30); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) ::-webkit-scrollbar-thumb { background-color: rgba(255,255,255,0.16); }
+  :root:not([data-theme="light"]) ::-webkit-scrollbar-thumb:hover { background-color: rgba(255,255,255,0.28); }
+}
+.dark ::-webkit-scrollbar-thumb       { background-color: rgba(255,255,255,0.16); }
+.dark ::-webkit-scrollbar-thumb:hover { background-color: rgba(255,255,255,0.28); }
+
+/* ── Tiptap ──────────────────────────────────────────────────────────────── */
 .ProseMirror p.is-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
@@ -45,36 +127,29 @@ code, pre, kbd, samp {
   pointer-events: none;
   height: 0;
 }
-
-/* Tiptap prose styles */
-.ProseMirror {
-  outline: none;
-}
-.ProseMirror ul,
-.ProseMirror ol {
-  padding-left: 1.25rem;
-}
+.ProseMirror { outline: none; }
+.ProseMirror ul, .ProseMirror ol { padding-left: 1.25rem; }
 .ProseMirror ul { list-style-type: disc; }
 .ProseMirror ol { list-style-type: decimal; }
 .ProseMirror strong { font-weight: 600; }
-.ProseMirror em { font-style: italic; }
+.ProseMirror em    { font-style: italic; }
 
-/* Schedule-X dark theme — mapped to Jade d'Autorité palette */
+/* ── Schedule-X calendar (dark mapping → Jade) ───────────────────────────── */
 .is-dark {
-  --sx-color-primary:                  oklch(0.52 0.13 158);
-  --sx-color-on-primary:               oklch(0.985 0 0);
-  --sx-color-primary-container:        oklch(0.28 0.065 158);
-  --sx-color-on-primary-container:     oklch(0.985 0 0);
-  --sx-color-surface:                  oklch(0.18 0.012 162);
-  --sx-color-surface-dim:              oklch(0.12 0.008 162);
-  --sx-color-surface-bright:           oklch(0.26 0.014 162);
-  --sx-color-on-surface:               oklch(0.97 0.005 162);
-  --sx-color-surface-container:        oklch(0.18 0.012 162);
-  --sx-color-surface-container-low:    oklch(0.15 0.01 162);
-  --sx-color-surface-container-high:   oklch(0.26 0.014 162);
-  --sx-color-background:               oklch(0.12 0.008 162);
-  --sx-color-on-background:            oklch(0.97 0.005 162);
-  --sx-color-outline:                  oklch(0.50 0.035 162);
-  --sx-color-outline-variant:          oklch(0.26 0.014 162);
-  --sx-internal-color-text:            oklch(0.97 0.005 162);
+  --sx-color-primary:                oklch(0.52 0.13 158);
+  --sx-color-on-primary:             oklch(0.985 0 0);
+  --sx-color-primary-container:      oklch(0.28 0.065 158);
+  --sx-color-on-primary-container:   oklch(0.985 0 0);
+  --sx-color-surface:                #1C1C1E;
+  --sx-color-surface-dim:            #000000;
+  --sx-color-surface-bright:         #2C2C2E;
+  --sx-color-on-surface:             #FFFFFF;
+  --sx-color-surface-container:      #1C1C1E;
+  --sx-color-surface-container-low:  #0A0A0A;
+  --sx-color-surface-container-high: #2C2C2E;
+  --sx-color-background:             #000000;
+  --sx-color-on-background:          #FFFFFF;
+  --sx-color-outline:                rgba(255,255,255,0.20);
+  --sx-color-outline-variant:        rgba(255,255,255,0.10);
+  --sx-internal-color-text:          #FFFFFF;
 }

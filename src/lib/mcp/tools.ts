@@ -720,7 +720,7 @@ export function registerTools(
       "Crée une commande.",
       {
         customer_id: z.string(),
-        currency_id: z.string(),
+        currency_id: z.string().describe("UUID de la devise"),
         notes: z.string().optional(),
         items: z.array(z.object({
           product_id: z.string().optional(),
@@ -732,7 +732,7 @@ export function registerTools(
       async ({ customer_id, currency_id, notes, items }) => {
         const { data: order, error } = await supabase.from("orders").insert({ team_id: teamId, customer_id, currency_id, status: "pending", notes: notes ?? null }).select("id").single();
         if (error || !order) return textResult(`Erreur : ${error?.message}`);
-        await supabase.from("order_items").insert(items.map((it, i) => ({ order_id: order.id, team_id: teamId, product_id: it.product_id ?? null, description: it.description, quantity: it.quantity, unit_price_ht: it.unit_price_ht, line_total_ht: it.quantity * it.unit_price_ht, sort_order: i })));
+        await supabase.from("order_items").insert(items.map((it, i) => ({ order_id: order.id, team_id: teamId, product_id: it.product_id ?? null, description: it.description, quantity: it.quantity, unit_price_ht: it.unit_price_ht, line_total_ht: Math.round(it.quantity * it.unit_price_ht * 100) / 100, sort_order: i })));
         return textResult(`Commande créée. ID : ${order.id}`);
       }
     );

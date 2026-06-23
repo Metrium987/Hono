@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getPortalSession } from "@/lib/portal/session";
+import { PaymentProofForm } from "./payment-proof-form";
 
 type InvoiceItem = {
   id: string;
@@ -211,6 +212,15 @@ export default async function PortalInvoiceDetailPage(
           )}
         </CardContent>
       </Card>
+
+      {/* Payment proof form for unpaid invoices */}
+      {["sent", "viewed", "partial", "overdue"].includes(invoice.status) && remaining > 0 && (
+        <PaymentProofForm
+          invoiceId={invoice.id}
+          totalRemaining={Math.round(remaining)}
+          currencySymbol={currency?.symbol ?? "F"}
+        />
+      )}
 
       {invoice.notes && (
         <Card>

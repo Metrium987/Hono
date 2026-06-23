@@ -1,10 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+// Supabase Edge Function: recurring-billing
+// Génère les factures récurrentes dont next_generation_date <= aujourd'hui.
+// Déclenché quotidiennement via pg_cron (ou appel manuel).
+//
+// Note: La logique est aussi disponible via Vercel Cron (GET /api/cron/generate-recurring).
+// Cette Edge Function permet le déclenchement via Supabase Dashboard / pg_net.
 
-// GET /api/cron/generate-recurring
-// Vercel Cron — quotidien 06h Tahiti (UTC−10 = 16:00 UTC)
-// Génère les factures récurrentes dont next_generation_date <= aujourd'hui
-export const maxDuration = 60;
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabase = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+);
 
 function addFrequency(date: Date, frequency: string, intervalCount: number): Date {
   const d = new Date(date);
@@ -29,38 +35,28 @@ function addFrequency(date: Date, frequency: string, intervalCount: number): Dat
   return d;
 }
 
-export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
+Deno.serve(async () => {
   const today = new Date().toISOString().split("T")[0];
 
   const { data: templates, error } = await supabase
     .from("recurring_invoices")
-    .select(`
-      *,
-      items:recurring_invoice_items(*)
-    `)
+    .select("*, items:recurring_invoice_items(*)")
     .eq("is_active", true)
     .lte("next_generation_date", today)
     .or(`end_date.is.null,end_date.gte.${today}`)
     .limit(100);
 
   if (error) {
-    console.error("[cron/generate-recurring]", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("[recurring-billing]", error.message);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
-  // Pré-charger tous les tax_rates nécessaires en une seule requête (évite N+1)
+  // Pré-charger tous les tax_rates en une requête
   const allItems = (templates ?? []).flatMap((tpl) => tpl.items ?? []);
-  const taxRateIds = [...new Set(allItems.map((i) => i.tax_rate_id).filter(Boolean))] as string[];
+  const taxRateIds = [...new Set(allItems.map((i: { tax_rate_id?: string }) => i.tax_rate_id).filter(Boolean))] as string[];
   const taxRateMap = new Map<string, number>();
   if (taxRateIds.length > 0) {
     const { data: taxRates } = await supabase
@@ -72,27 +68,19 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Phase 1 : génération séquentielle des numéros de facture (évite les doublons)
   let generated = 0;
   let skipped = 0;
-  const invoiceJobs: {
-    tpl: typeof templates[0];
-    invoiceNumber: string;
-    subtotalHt: number;
-    taxAmount: number;
-    dueDate: string;
-  }[] = [];
 
   for (const tpl of templates ?? []) {
     try {
-      const { data: numData } = await supabase
-        .rpc("generate_next_invoice_number", { p_team_id: tpl.team_id });
+      const { data: numData } = await supabase.rpc("generate_next_invoice_number", {
+        p_team_id: tpl.team_id,
+      });
 
       const invoiceNumber = numData as string;
-
+      const items = tpl.items ?? [];
       let subtotalHt = 0;
       let taxAmount = 0;
-      const items = tpl.items ?? [];
 
       for (const item of items) {
         const lineHt = parseFloat(String(item.quantity)) * parseFloat(String(item.unit_price_ht));
@@ -105,18 +93,7 @@ export async function GET(request: NextRequest) {
 
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + (tpl.payment_terms ?? 30));
-
-      invoiceJobs.push({ tpl, invoiceNumber, subtotalHt, taxAmount, dueDate: dueDate.toISOString().split("T")[0] });
-    } catch (err) {
-      console.error("[cron/generate-recurring] erreur pour", tpl.id, err);
-      skipped++;
-    }
-  }
-
-  // Phase 2 : tous les inserts/updates en parallèle
-  const results = await Promise.allSettled(
-    invoiceJobs.map(async ({ tpl, invoiceNumber, subtotalHt, taxAmount, dueDate }) => {
-      const items = tpl.items ?? [];
+      const dueDateStr = dueDate.toISOString().split("T")[0];
 
       const { data: invoice, error: invErr } = await supabase
         .from("invoices")
@@ -127,7 +104,7 @@ export async function GET(request: NextRequest) {
           invoice_number: invoiceNumber,
           status: "draft",
           issue_date: today,
-          due_date: dueDate,
+          due_date: dueDateStr,
           payment_terms: tpl.payment_terms ?? 30,
           subtotal_ht: Math.round(subtotalHt * 100) / 100,
           tax_amount: Math.round(taxAmount * 100) / 100,
@@ -141,15 +118,14 @@ export async function GET(request: NextRequest) {
 
       if (items.length > 0) {
         const { error: itemsErr } = await supabase.from("invoice_items").insert(
-          items.map((item: { description: string; quantity: number; unit_price_ht: number; tax_rate_id: string | null; product_id: string | null; position: number }) => ({
+          items.map((item: { description: string; quantity: number; unit_price_ht: number; tax_rate_id?: string | null; product_id?: string | null }) => ({
             invoice_id: invoice.id,
             description: item.description,
             quantity: item.quantity,
             unit_price_ht: item.unit_price_ht,
-            line_total_ht: parseFloat(String(item.quantity)) * parseFloat(String(item.unit_price_ht)),
+            line_total_ht: Math.round(parseFloat(String(item.quantity)) * parseFloat(String(item.unit_price_ht)) * 100) / 100,
             tax_rate_id: item.tax_rate_id ?? null,
             product_id: item.product_id ?? null,
-            position: item.position ?? 0,
           }))
         );
         if (itemsErr) throw new Error(itemsErr.message);
@@ -159,24 +135,24 @@ export async function GET(request: NextRequest) {
       const nextDateStr = nextDate.toISOString().split("T")[0];
       const shouldDeactivate = tpl.end_date && nextDateStr > tpl.end_date;
 
-      const { error: updateErr } = await supabase.from("recurring_invoices").update({
-        next_generation_date: nextDateStr,
-        last_generated_at: new Date().toISOString(),
-        is_active: shouldDeactivate ? false : true,
-      }).eq("id", tpl.id);
+      await supabase
+        .from("recurring_invoices")
+        .update({
+          next_generation_date: nextDateStr,
+          last_generated_at: new Date().toISOString(),
+          is_active: shouldDeactivate ? false : true,
+        })
+        .eq("id", tpl.id);
 
-      if (updateErr) throw new Error(updateErr.message);
       generated++;
-    })
-  );
-
-  for (const r of results) {
-    if (r.status === "rejected") {
-      console.error("[cron/generate-recurring] erreur phase 2:", r.reason);
+    } catch (err) {
+      console.error("[recurring-billing] erreur pour", tpl.id, err);
       skipped++;
     }
   }
 
-  console.info(`[cron/generate-recurring] ${generated} générées, ${skipped} ignorées`);
-  return NextResponse.json({ ok: true, generated, skipped });
-}
+  console.info(`[recurring-billing] ${generated} générées, ${skipped} ignorées`);
+  return new Response(JSON.stringify({ ok: true, generated, skipped }), {
+    headers: { "Content-Type": "application/json" },
+  });
+});

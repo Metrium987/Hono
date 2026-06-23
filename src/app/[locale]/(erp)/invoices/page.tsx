@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LinkSegmentedControl } from "@/components/ui/segmented-control";
 import { checkPagePermission } from "@/lib/auth/page-auth";
 import { ForbiddenPage } from "@/components/erp/forbidden-page";
 import { InvoicesListClient, type InvoiceRow } from "./invoices-list-client";
@@ -21,28 +22,44 @@ export default async function InvoicesPage(props: { searchParams: SearchParams }
   if (!perm.allowed) return <ForbiddenPage module="invoices" />;
 
   const t = await getTranslations("invoices_page");
-  const common = await getTranslations("common");
   const statusT = await getTranslations("invoice_status");
 
   const cookieStore = await cookies();
   const supabase = createClient(cookieStore);
 
-  // Build query
+  // Counts per status for badge display
+  const [
+    { count: totalCount },
+    { count: draftCount },
+    { count: sentCount },
+    { count: paidCount },
+    { count: overdueCount },
+    { count: cancelledCount },
+  ] = await Promise.all([
+    supabase.from("invoices").select("*", { count: "exact", head: true }).eq("team_id", perm.teamId).is("deleted_at", null),
+    supabase.from("invoices").select("*", { count: "exact", head: true }).eq("team_id", perm.teamId).eq("status", "draft").is("deleted_at", null),
+    supabase.from("invoices").select("*", { count: "exact", head: true }).eq("team_id", perm.teamId).eq("status", "sent").is("deleted_at", null),
+    supabase.from("invoices").select("*", { count: "exact", head: true }).eq("team_id", perm.teamId).eq("status", "paid").is("deleted_at", null),
+    supabase.from("invoices").select("*", { count: "exact", head: true }).eq("team_id", perm.teamId).eq("status", "overdue").is("deleted_at", null),
+    supabase.from("invoices").select("*", { count: "exact", head: true }).eq("team_id", perm.teamId).eq("status", "cancelled").is("deleted_at", null),
+  ]);
+
+  // List query
   let query = supabase
     .from("invoices")
-    .select("id, invoice_number, status, total_ttc, paid_amount, issue_date, due_date, customer:customer_id(company_name, contact_name), currency:currency_id(symbol)", { count: "exact" })
+    .select(
+      "id, invoice_number, status, total_ttc, paid_amount, issue_date, due_date, customer:customer_id(company_name, contact_name), currency:currency_id(symbol)",
+      { count: "exact" }
+    )
     .eq("team_id", perm.teamId)
     .is("deleted_at", null);
 
-  if (status) {
-    query = query.eq("status", status);
-  }
+  if (status) query = query.eq("status", status);
 
   const { data: rawInvoices, count } = await query
     .order("issue_date", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  // Supabase join returns arrays — extract first element for joins
   type RawInvoice = {
     id: string; invoice_number: string; status: string;
     total_ttc: number; paid_amount: number;
@@ -50,6 +67,7 @@ export default async function InvoicesPage(props: { searchParams: SearchParams }
     customer: { company_name: string | null; contact_name: string }[] | null;
     currency: { symbol: string }[] | null;
   };
+
   const invoices: InvoiceRow[] = ((rawInvoices ?? []) as RawInvoice[]).map((inv) => ({
     id: inv.id,
     invoice_number: inv.invoice_number,
@@ -64,42 +82,43 @@ export default async function InvoicesPage(props: { searchParams: SearchParams }
 
   const totalPages = Math.ceil((count ?? 0) / limit);
 
+  const filterSegments = [
+    { value: "",          label: t("filter_all"),           href: ".",                count: totalCount ?? 0 },
+    { value: "draft",     label: statusT("draft_plural"),   href: "?status=draft",    count: draftCount ?? 0 },
+    { value: "sent",      label: statusT("sent_plural"),    href: "?status=sent",     count: sentCount ?? 0 },
+    { value: "overdue",   label: statusT("overdue_plural"), href: "?status=overdue",  count: overdueCount ?? 0 },
+    { value: "paid",      label: statusT("paid_plural"),    href: "?status=paid",     count: paidCount ?? 0 },
+    { value: "cancelled", label: statusT("cancelled_plural"), href: "?status=cancelled", count: cancelledCount ?? 0 },
+  ] as const;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-[22px] font-semibold tracking-tight text-wrap-balance">
+            {t("title")}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {t("subtitle", { count: count ?? 0 })}
           </p>
         </div>
         <Button asChild>
           <Link href="./new">
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="h-4 w-4" />
             {t("new_invoice")}
           </Link>
         </Button>
       </div>
 
-      {/* Status filter tabs */}
-      <div className="flex flex-wrap gap-2">
-        {["", "draft", "sent", "paid", "overdue", "cancelled"].map((s) => {
-          const label = s === "" ? t("filter_all") : s === "draft" ? statusT("draft_plural") : s === "sent" ? statusT("sent_plural") : s === "paid" ? statusT("paid_plural") : s === "overdue" ? statusT("overdue_plural") : statusT("cancelled_plural");
-          const href = s ? `?status=${s}` : "."
-          return (
-            <Link key={s} href={href}>
-              <Button variant={status === s ? "default" : "outline"} size="sm">
-                {label}
-              </Button>
-            </Link>
-          );
-        })}
-      </div>
+      {/* Filter — Apple HIG segmented control */}
+      <LinkSegmentedControl
+        segments={filterSegments}
+        value={status as "" | "draft" | "sent" | "paid" | "overdue" | "cancelled"}
+      />
 
-      {/* Client component handles interactive features */}
       <InvoicesListClient
-        invoices={invoices ?? []}
+        invoices={invoices}
         currentPage={page}
         totalPages={totalPages}
         baseUrl="."

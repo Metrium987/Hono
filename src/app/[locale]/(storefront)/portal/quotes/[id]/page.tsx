@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getPortalSession } from "@/lib/portal/session";
+import { PortalQuoteActions } from "./quote-actions";
 
 type QuoteItem = {
   id: string;
@@ -102,7 +103,7 @@ export default async function PortalQuoteDetailPage(
         Retour aux devis
       </Link>
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 gap-4">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight">{quote.quote_number}</h1>
@@ -113,6 +114,9 @@ export default async function PortalQuoteDetailPage(
             {quote.validity_date && ` — Valable jusqu'au ${new Date(quote.validity_date).toLocaleDateString("fr-FR")}`}
           </p>
         </div>
+        {(quote.status === "sent" || quote.status === "viewed") && (
+          <PortalQuoteActions quoteId={quote.id} />
+        )}
       </div>
 
       {/* Items table */}

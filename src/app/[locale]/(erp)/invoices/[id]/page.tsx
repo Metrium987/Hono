@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { RecordPaymentForm } from "./record-payment-form";
 import { PaymentsList } from "./payments-list";
 import { PaymentEvidenceSection } from "./payment-evidence-section";
+import { ClientPaymentProofs } from "./client-payment-proofs";
 import { DeleteInvoiceDialog } from "./delete-invoice-dialog";
 import { SendInvoiceButton } from "./send-invoice-button";
 import { checkPagePermission } from "@/lib/auth/page-auth";
@@ -249,7 +250,10 @@ export default async function InvoiceDetailPage(props: { params: Params }) {
             </CardContent>
           </Card>
 
-          {/* Payment evidence */}
+          {/* Client-submitted payment declarations */}
+          <ClientPaymentProofs invoiceId={id} teamId={teamId} />
+
+          {/* Payment evidence (staff-uploaded files) */}
           <PaymentEvidenceSection invoiceId={id} teamId={teamId} payments={payments} />
 
           {/* Events */}

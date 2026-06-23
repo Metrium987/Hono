@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -118,6 +118,7 @@ export default async function IncomePage(props: { searchParams: SearchParams }) 
                 <th className="text-left p-3 font-medium">{t("th_category")}</th>
                 <th className="text-left p-3 font-medium">{t("th_client")}</th>
                 <th className="text-right p-3 font-medium">{t("th_amount")}</th>
+                <th className="w-10 p-3" />
               </tr>
             </thead>
             <tbody>
@@ -129,7 +130,7 @@ export default async function IncomePage(props: { searchParams: SearchParams }) 
                 </tr>
               ) : (
                 income.map((inc) => (
-                  <tr key={inc.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
+                  <tr key={inc.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors group">
                     <td className="p-3">{formatDate(inc.income_date)}</td>
                     <td className="p-3 font-medium">{inc.description}</td>
                     <td className="p-3">
@@ -140,6 +141,14 @@ export default async function IncomePage(props: { searchParams: SearchParams }) 
                     </td>
                     <td className="p-3 text-right font-medium">
                       {formatCurrency(inc.amount, inc.currency?.symbol ?? "F")}
+                    </td>
+                    <td className="p-3 text-right">
+                      <Link
+                        href={`./income/${inc.id}/edit`}
+                        className="inline-flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Link>
                     </td>
                   </tr>
                 ))

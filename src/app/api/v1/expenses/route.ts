@@ -2,6 +2,8 @@
 import { withAuth, requirePermission } from "@/lib/auth/api-auth";
 import { z } from "zod";
 
+type ExportFormat = "json" | "csv";
+
 const CreateExpenseSchema = z.object({
   category_id: z.string().uuid().optional().nullable(),
   vendor_id: z.string().uuid().optional().nullable(),
@@ -14,7 +16,7 @@ const CreateExpenseSchema = z.object({
   notes: z.string().max(5000).optional().nullable(),
 });
 
-// GET /api/v1/expenses â€” List expenses for a team
+// GET /api/v1/expenses — List expenses for a team
 export async function GET(request: NextRequest) {
   return withAuth(request, async (auth, teamId, params) => {
     requirePermission(auth, "expenses", "read");
@@ -25,6 +27,7 @@ export async function GET(request: NextRequest) {
     const vendorId = params.get("vendor_id");
     const dateFrom = params.get("date_from");
     const dateTo = params.get("date_to");
+    const format = (params.get("format") as ExportFormat | null) ?? "json";
 
     let query = auth.supabase
       .from("expenses")
@@ -48,6 +51,47 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (format === "csv") {
+      const header = [
+        "expense_date",
+        "description",
+        "vendor_name",
+        "category",
+        "amount",
+        "currency",
+      ].join(",");
+
+      const rows = (data ?? [])
+        .map((row) => {
+          const vendor = Array.isArray(row.vendor) ? row.vendor[0] : (row.vendor as { name?: string } | null);
+          const category = Array.isArray(row.category) ? row.category[0] : (row.category as { name?: string } | null);
+
+          const amount = typeof row.amount === "number" ? row.amount.toFixed(2) : String(row.amount ?? 0);
+          const description = String(row.description ?? "").replace(/"/g, '""');
+          const vendorName = String(vendor?.name ?? row.vendor_name ?? "").replace(/"/g, '""');
+          const categoryName = String(category?.name ?? "").replace(/"/g, '""');
+          const currency = String((row.currency as { code?: string } | null)?.code ?? row.currency_id ?? "").replace(/"/g, '""');
+
+          return [
+            row.expense_date ?? "",
+            description,
+            vendorName,
+            categoryName,
+            amount,
+            currency,
+          ].join(",");
+        })
+        .filter((row) => row.trim().length > 0);
+
+      const csv = [header, ...rows].join("\n");
+      return new NextResponse(csv, {
+        headers: {
+          "Content-Type": "text/csv; charset=utf-8",
+          "Content-Disposition": `attachment; filename="depenses-export-${new Date().toISOString().slice(0, 10)}.csv"`,
+        },
+      });
     }
 
     return NextResponse.json({

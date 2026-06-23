@@ -8,6 +8,31 @@ const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
 type Params = Promise<{ id: string }>;
 
+// GET /api/v1/products/[id]/image — List product images
+export async function GET(request: NextRequest, { params }: { params: Params }) {
+  const { id: productId } = await params;
+
+  return withAuth(request, async (auth, teamId) => {
+    requirePermission(auth, "catalog", "read");
+
+    const { data, error } = await auth.supabase
+      .from("product_images")
+      .select("id, storage_path, position, alt_text")
+      .eq("product_id", productId)
+      .order("position", { ascending: true });
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+    const enriched = (data ?? []).map((img) => ({
+      ...img,
+      public_url: `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${img.storage_path}`,
+    }));
+
+    return NextResponse.json({ data: enriched });
+  });
+}
+
 // POST /api/v1/products/[id]/image — Upload a product image
 export async function POST(request: NextRequest, { params }: { params: Params }) {
   const { id: productId } = await params;

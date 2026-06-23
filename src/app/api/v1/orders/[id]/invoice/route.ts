@@ -14,7 +14,7 @@ export async function POST(
     // Fetch order with items and customer
     const { data: order, error: orderError } = await auth.supabase
       .from("orders")
-      .select("id, customer_id, status, items:order_items(id, description, quantity, unit_price_ht, product_id)")
+      .select("id, customer_id, status, items:order_items(id, description, quantity, unit_price_ht, line_total_ht, product_id)")
       .eq("id", id)
       .eq("team_id", teamId)
       .single();
@@ -45,11 +45,11 @@ export async function POST(
       return NextResponse.json({ error: "No default currency configured" }, { status: 400 });
     }
 
-    // Calculate totals (no tax by default — invoice can be edited after)
+    // Calculate totals from order item line_total_ht when available
+
     const subtotal_ht = items.reduce((sum, item) => {
-      const qty = parseFloat(String(item.quantity)) || 1;
-      const price = parseFloat(String(item.unit_price_ht ?? 0)) || 0;
-      return sum + qty * price;
+      const raw = item.line_total_ht ?? ((parseFloat(String(item.quantity)) || 1) * (parseFloat(String(item.unit_price_ht ?? 0)) || 0));
+      return sum + parseFloat(String(raw));
     }, 0);
 
     const total_ttc = subtotal_ht;
@@ -81,7 +81,7 @@ export async function POST(
         tax_amount: 0,
         total_ttc: Math.round(total_ttc * 100) / 100,
         currency_id: currencies.id,
-        notes: `Généré depuis commande ${id.slice(0, 8)}`,
+        notes: `Généré depuis commande ${id.slice(0, 8)} — Brouillon : vérifier et ajuster les taux de TVA avant envoi`,
         created_by: auth.userId,
       })
       .select()

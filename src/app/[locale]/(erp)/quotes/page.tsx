@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LinkSegmentedControl } from "@/components/ui/segmented-control";
 import { QuotesListClient } from "./quotes-list-client";
 import { checkPagePermission } from "@/lib/auth/page-auth";
 import { ForbiddenPage } from "@/components/erp/forbidden-page";
@@ -30,14 +31,33 @@ export default async function QuotesPage(props: { searchParams: SearchParams }) 
   const teamId = perm.teamId;
   if (!teamId) return <div>{common("no_team")}</div>;
 
+  // Status counts for badges
+  const [
+    { count: totalCount },
+    { count: draftCount },
+    { count: sentCount },
+    { count: acceptedCount },
+    { count: rejectedCount },
+    { count: expiredCount },
+  ] = await Promise.all([
+    supabase.from("quotes").select("*", { count: "exact", head: true }).eq("team_id", teamId).is("deleted_at", null),
+    supabase.from("quotes").select("*", { count: "exact", head: true }).eq("team_id", teamId).eq("status", "draft").is("deleted_at", null),
+    supabase.from("quotes").select("*", { count: "exact", head: true }).eq("team_id", teamId).eq("status", "sent").is("deleted_at", null),
+    supabase.from("quotes").select("*", { count: "exact", head: true }).eq("team_id", teamId).eq("status", "accepted").is("deleted_at", null),
+    supabase.from("quotes").select("*", { count: "exact", head: true }).eq("team_id", teamId).eq("status", "rejected").is("deleted_at", null),
+    supabase.from("quotes").select("*", { count: "exact", head: true }).eq("team_id", teamId).eq("status", "expired").is("deleted_at", null),
+  ]);
+
   let query = supabase
     .from("quotes")
-    .select("id, quote_number, status, total_ttc, issue_date, validity_date, customer:customer_id(company_name, contact_name), currency:currency_id(symbol)", { count: "exact" })
-    .eq("team_id", teamId);
+    .select(
+      "id, quote_number, status, total_ttc, issue_date, validity_date, customer:customer_id(company_name, contact_name), currency:currency_id(symbol)",
+      { count: "exact" }
+    )
+    .eq("team_id", teamId)
+    .is("deleted_at", null);
 
-  if (status) {
-    query = query.eq("status", status);
-  }
+  if (status) query = query.eq("status", status);
 
   const { data: rawQuotes, count } = await query
     .order("issue_date", { ascending: false })
@@ -63,37 +83,46 @@ export default async function QuotesPage(props: { searchParams: SearchParams }) 
 
   const totalPages = Math.ceil((count ?? 0) / limit);
 
+  const filterSegments = [
+    { value: "",         label: t("filter_all"),              href: ".",                 count: totalCount ?? 0 },
+    { value: "draft",    label: statusT("draft_plural"),      href: "?status=draft",     count: draftCount ?? 0 },
+    { value: "sent",     label: statusT("sent_plural"),       href: "?status=sent",      count: sentCount ?? 0 },
+    { value: "accepted", label: statusT("accepted_plural"),   href: "?status=accepted",  count: acceptedCount ?? 0 },
+    { value: "rejected", label: statusT("rejected_plural"),   href: "?status=rejected",  count: rejectedCount ?? 0 },
+    { value: "expired",  label: statusT("expired_plural"),    href: "?status=expired",   count: expiredCount ?? 0 },
+  ] as const;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("title")}</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-[22px] font-semibold tracking-tight text-wrap-balance">
+            {t("title")}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {t("subtitle", { count: count ?? 0 })}
           </p>
         </div>
         <Button asChild>
           <Link href="./new">
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="h-4 w-4" />
             {t("new_quote")}
           </Link>
         </Button>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {["", "draft", "sent", "accepted", "rejected", "expired", "converted"].map((s) => {
-          const labels: Record<string, string> = { "": t("filter_all"), draft: statusT("draft_plural"), sent: statusT("sent_plural"), accepted: statusT("accepted_plural"), rejected: statusT("rejected_plural"), expired: statusT("expired_plural"), converted: statusT("converted_plural") };
-          return (
-            <Link key={s} href={s ? `?status=${s}` : "."}>
-              <Button variant={status === s ? "default" : "outline"} size="sm">
-                {labels[s] ?? s}
-              </Button>
-            </Link>
-          );
-        })}
-      </div>
+      <LinkSegmentedControl
+        segments={filterSegments}
+        value={status as "" | "draft" | "sent" | "accepted" | "rejected" | "expired"}
+      />
 
-      <QuotesListClient quotes={quotes} currentPage={page} totalPages={totalPages} baseUrl="." currentStatus={status} />
+      <QuotesListClient
+        quotes={quotes}
+        currentPage={page}
+        totalPages={totalPages}
+        baseUrl="."
+        currentStatus={status}
+      />
     </div>
   );
 }
